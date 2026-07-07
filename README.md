@@ -24,7 +24,7 @@ This isn't prompt engineering. This is **orchestrated development** — a battle
 
 ## Features
 
-- **🧠 75+ Skills** — Specialized capabilities from security audits to AI video generation, installed on demand
+- **🧠 95+ Skills** — Specialized capabilities from security audits to AI video generation, installed on demand
 - **🔄 Universal IDE Sync** — Install once, sync to Antigravity, Claude Code, Codex, Cursor, Kilo Code, Pi, and Windsurf
 - **🏗️ Full Project Lifecycle** — From genesis (planning) through design, build, and finalize — with verification gates at every step
 - **🎭 Specialized Agent Modes** — Orchestrator, Architect, Coder, Debugger, Reviewer — each with purpose-built workflows
@@ -147,7 +147,7 @@ See [TakomiFlow Onboarding](docs/takomi-flow-onboarding.md) and [TakomiFlow Publ
 
 ## Skill Ecosystem
 
-Think of skills as specialized team members you can summon on demand. Takomi ships **75+ skills** organized by category.
+Think of skills as specialized team members you can summon on demand. Takomi ships **95+ skills** organized by category.
 
 ### Core Skills (Default Install)
 
@@ -176,7 +176,7 @@ npx -y skills add https://github.com/JStaRFilms/VibeCode-Protocol-Suite
 
 **Convex** — `convex`, `convex-agents`, `convex-best-practices`, `convex-component-authoring`, `convex-cron-jobs`, `convex-file-storage`, `convex-functions`, `convex-http-actions`, `convex-migrations`, `convex-realtime`, `convex-schema-validator`, `convex-security-audit`, `convex-security-check`
 
-**Frontend / UI** — `frontend-design`, `web-design-guidelines`, `building-native-ui`, `ui-ux-pro-max`, `component-analysis`, `21st-dev-components`, `stitch`, `webapp-testing`
+**Frontend / UI** — `frontend-design`, `web-design-guidelines`, `building-native-ui`, `ui-ux-pro-max`, `component-analysis`, `21st-dev-components`, `stitch`, `webapp-testing`, `figma`
 
 **Docs / Office / Extraction** — `pdf`, `docx`, `pptx`, `xlsx`, `high-fidelity-extraction`, `crafting-effective-readmes`, `exam-creator-skill`
 
@@ -184,7 +184,9 @@ npx -y skills add https://github.com/JStaRFilms/VibeCode-Protocol-Suite
 
 **AI Media / Content Creation** — `ai-avatar-video`, `ai-marketing-videos`, `ai-podcast-creation`, `ai-product-photography`, `ai-social-media-content`, `ai-voice-cloning`, `takomi-flow`
 
-**Creative / Video / Art** — `algorithmic-art`, `blender-mcp-scene-director`, `takomi-flow`, `remotion`, `remotion-real-ui-video`, `youtube-pipeline`, `ai-avatar-video`, `ai-marketing-videos`, `photo-book-builder`
+**Creative / Video / Art** — `algorithmic-art`, `blender-mcp-scene-director`, `takomi-flow`, `remotion`, `remotion-real-ui-video`, `youtube-pipeline`, `ai-avatar-video`, `ai-marketing-videos`, `photo-book-builder`, `hyperframes`, `general-video`, `motion-graphics`
+
+**HyperFrames** — `hyperframes`, `hyperframes-core`, `hyperframes-keyframes`, `hyperframes-animation`, `hyperframes-creative`, `hyperframes-media`, `hyperframes-registry`, `hyperframes-cli`, `remotion-to-hyperframes`, `media-use`, `embedded-captions`, `faceless-explainer`, `general-video`, `motion-graphics`, `music-to-video`, `pr-to-video`, `product-launch-video`, `slideshow`, `talking-head-recut`, `website-to-video`
 
 **Skill Building / Prompting / Orchestration** — `skill-creator`, `prompt-engineering`, `subagent-driven-development`, `spawn-task`
 
@@ -322,6 +324,7 @@ Takomi-original skills, workflows, and runtime extensions — including `21st-de
 | **[Vercel AI SDK](https://github.com/vercel/ai)** | AI SDK reference, Web Design Guidelines |
 | **[UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** | Premium design intelligence |
 | **[Remotion](https://github.com/remotion-dev/skills)** | Programmatic video creation |
+| **[HyperFrames](https://github.com/heygen-com/hyperframes)** | HTML-native video creation and animation framework: HyperFrames core, keyframes, creative, media OS, animation engine, registry, CLI, and specialized creator workflows (product launch, website showcase, faceless explainer, music video, PR walkthrough, overlays, captions) |
 | **[Subagent Development](https://github.com/obra/superpowers)** | Advanced implementation planning |
 | **[Context7](https://github.com/upstash/context7)** | Library documentation fetcher |
 | **[Audit Website](https://github.com/squirrelscan/skills)** | Professional website auditor |

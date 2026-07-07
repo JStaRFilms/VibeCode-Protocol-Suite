@@ -134,6 +134,7 @@ Core skills listed above.
 - `21st-dev-components`
 - `stitch`
 - `webapp-testing`
+- `figma`
 
 ### Docs / Office / Extraction
 - `pdf`
@@ -142,6 +143,7 @@ Core skills listed above.
 - `xlsx`
 - `high-fidelity-extraction`
 - `crafting-effective-readmes`
+- `exam-creator-skill`
 
 ### Marketing / SEO / Copy
 - `copywriting`
@@ -173,6 +175,31 @@ Optional and not default:
 - `youtube-pipeline`
 - `ai-avatar-video`
 - `ai-marketing-videos`
+- `hyperframes`
+- `general-video`
+- `motion-graphics`
+
+### HyperFrames
+- `hyperframes`
+- `hyperframes-core`
+- `hyperframes-keyframes`
+- `hyperframes-animation`
+- `hyperframes-creative`
+- `hyperframes-media`
+- `hyperframes-registry`
+- `hyperframes-cli`
+- `remotion-to-hyperframes`
+- `media-use`
+- `embedded-captions`
+- `faceless-explainer`
+- `general-video`
+- `motion-graphics`
+- `music-to-video`
+- `pr-to-video`
+- `product-launch-video`
+- `slideshow`
+- `talking-head-recut`
+- `website-to-video`
 
 ### Skill Building / Prompting / Orchestration
 - `skill-creator`
