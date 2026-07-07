@@ -169,6 +169,7 @@ Optional and not default:
 - `algorithmic-art`
 - `blender-mcp-scene-director`
 - `remotion`
+- `remotion-real-ui-video`
 - `youtube-pipeline`
 - `ai-avatar-video`
 - `ai-marketing-videos`

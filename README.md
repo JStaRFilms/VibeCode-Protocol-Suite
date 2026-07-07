@@ -24,7 +24,7 @@ This isn't prompt engineering. This is **orchestrated development** — a battle
 
 ## Features
 
-- **🧠 72+ Skills** — Specialized capabilities from security audits to AI video generation, installed on demand
+- **🧠 75+ Skills** — Specialized capabilities from security audits to AI video generation, installed on demand
 - **🔄 Universal IDE Sync** — Install once, sync to Antigravity, Claude Code, Codex, Cursor, Kilo Code, Pi, and Windsurf
 - **🏗️ Full Project Lifecycle** — From genesis (planning) through design, build, and finalize — with verification gates at every step
 - **🎭 Specialized Agent Modes** — Orchestrator, Architect, Coder, Debugger, Reviewer — each with purpose-built workflows
@@ -147,7 +147,7 @@ See [TakomiFlow Onboarding](docs/takomi-flow-onboarding.md) and [TakomiFlow Publ
 
 ## Skill Ecosystem
 
-Think of skills as specialized team members you can summon on demand. Takomi ships **72+ skills** organized by category.
+Think of skills as specialized team members you can summon on demand. Takomi ships **75+ skills** organized by category.
 
 ### Core Skills (Default Install)
 
@@ -184,7 +184,7 @@ npx -y skills add https://github.com/JStaRFilms/VibeCode-Protocol-Suite
 
 **AI Media / Content Creation** — `ai-avatar-video`, `ai-marketing-videos`, `ai-podcast-creation`, `ai-product-photography`, `ai-social-media-content`, `ai-voice-cloning`, `takomi-flow`
 
-**Creative / Video / Art** — `algorithmic-art`, `blender-mcp-scene-director`, `takomi-flow`, `remotion`, `youtube-pipeline`, `ai-avatar-video`, `ai-marketing-videos`, `photo-book-builder`
+**Creative / Video / Art** — `algorithmic-art`, `blender-mcp-scene-director`, `takomi-flow`, `remotion`, `remotion-real-ui-video`, `youtube-pipeline`, `ai-avatar-video`, `ai-marketing-videos`, `photo-book-builder`
 
 **Skill Building / Prompting / Orchestration** — `skill-creator`, `prompt-engineering`, `subagent-driven-development`, `spawn-task`
 

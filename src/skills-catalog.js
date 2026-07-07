@@ -153,6 +153,7 @@ export const SKILL_CATEGORIES = [
       'blender-mcp-scene-director',
       'takomi-flow',
       'remotion',
+      'remotion-real-ui-video',
       'youtube-pipeline',
       'ai-avatar-video',
       'ai-marketing-videos',
