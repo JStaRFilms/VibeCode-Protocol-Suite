@@ -31,9 +31,12 @@ Do not commit or move those credential/state files into the repository.
 
 - Registers provider: `oauth-router`
 - Exposes selectable models such as:
+  - `oauth-router/gpt-5.6-luna`
+  - `oauth-router/gpt-5.6-sol`
+  - `oauth-router/gpt-5.6-terra`
+  - `oauth-router/gpt-5.5`
   - `oauth-router/gpt-5.4`
   - `oauth-router/gpt-5.4-mini`
-  - `oauth-router/gpt-4o`
 - Supports multiple accounts per upstream
 - Stores credentials separately from extension source
 - Tracks account health, cooldowns, failures, and routing metadata
@@ -78,13 +81,13 @@ Do not commit or move those credential/state files into the repository.
 - Auth mode: OAuth
 - OAuth provider: `openai-codex`
 - API: `openai-codex-responses`
-- Default models: `gpt-5.1`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.5`
+- Default models: `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`
 
 ### `openai-compatible`
 
 - Auth mode: API key fallback
 - API: `openai-responses`
-- Default models: `gpt-4o`, `gpt-4.1`, `o4-mini`
+- Default models: `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`
 
 ## Setup / verification
 
