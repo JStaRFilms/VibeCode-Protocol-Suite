@@ -34,7 +34,6 @@ import {
   type VibeLifecycleStage,
 } from "../../../src/pi-takomi-core";
 import {
-  renderRuntimeStatus,
   renderRuntimeWidget,
   renderTakomiHeader,
   TakomiFooterComponent,
@@ -689,10 +688,11 @@ function installTakomiFooter(ctx: ExtensionContext, stateRef: { current: TakomiS
   ctx.ui.setFooter((tui, theme, footerData) => new TakomiFooterComponent(tui, theme, footerData, ctx, () => stateRef.current));
 }
 
-// Mutable state ref so the footer closure always reads the latest state
-const footerStateRef: { current: TakomiState; installed: boolean } = { current: cloneState(DEFAULT_STATE), installed: false };
-
-async function refreshUi(ctx: ExtensionContext, state: TakomiState) {
+async function refreshUi(
+  ctx: ExtensionContext,
+  state: TakomiState,
+  footerStateRef: { current: TakomiState; context?: ExtensionContext },
+) {
   if (!ctx.hasUI) return;
   ctx.ui.setTitle("Takomi");
   ctx.ui.setHeader((_tui, theme) => ({
@@ -702,17 +702,25 @@ async function refreshUi(ctx: ExtensionContext, state: TakomiState) {
     },
   }));
   footerStateRef.current = state;
-  ctx.ui.setStatus("takomi-runtime", renderRuntimeStatus(ctx.ui.theme, state));
+
+  // The mode indicator belongs in the widget above the editor. Keeping a
+  // second setStatus copy makes Pi's default footer duplicate it whenever a
+  // custom footer is replaced or a session is rebound.
+  ctx.ui.setStatus("takomi-runtime", undefined);
   const widget = renderRuntimeWidget(ctx.ui.theme, state);
   ctx.ui.setWidget("takomi-runtime", widget.length > 0 ? widget : undefined);
-  if (!footerStateRef.installed) {
+
+  // A replacement session receives a fresh UI context even when extension
+  // modules remain cached. Install once per context, not once per module.
+  if (footerStateRef.context !== ctx) {
     installTakomiFooter(ctx, footerStateRef);
-    footerStateRef.installed = true;
+    footerStateRef.context = ctx;
   }
 }
 
 export default function takomiRuntime(pi: ExtensionAPI) {
   let state = cloneState(DEFAULT_STATE);
+  const footerStateRef: { current: TakomiState; context?: ExtensionContext } = { current: state };
   const subagentController = getTakomiSubagentController();
   const contextPanel = new TakomiContextPanel();
   let runtimeCtx: ExtensionContext | undefined;
@@ -798,7 +806,7 @@ export default function takomiRuntime(pi: ExtensionAPI) {
     mutator();
     persistState();
     syncContextPanelState();
-    await refreshUi(ctx, state);
+    await refreshUi(ctx, state, footerStateRef);
     const resolvedMessage = typeof message === "function" ? message() : message;
     if (resolvedMessage) ctx.ui.notify(resolvedMessage, "info");
   }
@@ -910,7 +918,7 @@ export default function takomiRuntime(pi: ExtensionAPI) {
 
     persistState();
     syncContextPanelState();
-    await refreshUi(ctx, state);
+    await refreshUi(ctx, state, footerStateRef);
     const label = state.modeSource === "idle" ? "idle" : `${state.modeSource}:${state.stage ?? state.role}`;
     return `Takomi mode set to ${label}${state.modeReason ? ` (${state.modeReason})` : ""}.`;
   }
@@ -1137,7 +1145,7 @@ ${stateJson}`
         state.modeReason = state.modeReason ?? "board task update";
         persistState();
         syncContextPanelState();
-        await refreshUi(ctx, state);
+        await refreshUi(ctx, state, footerStateRef);
         const nextState = buildSessionState(
           sessionState.sessionId,
           sessionState.title,
@@ -1197,7 +1205,7 @@ ${stateJson}`
         state.modeReason = `expanded ${params.stage} stage`;
         persistState();
         syncContextPanelState();
-        await refreshUi(ctx, state);
+        await refreshUi(ctx, state, footerStateRef);
 
         return {
           content: [{ type: "text", text: `Expanded ${params.stage} stage in session ${nextState.sessionId}.\n\nDocs: ${paths.root}\nState: ${paths.stateFile}\n\n${buildTaskRows(nextState.tasks)}` }],
@@ -1242,7 +1250,7 @@ ${stateJson}`
       state.modeReason = "orchestrator session";
       persistState();
       syncContextPanelState();
-      await refreshUi(ctx, state);
+      await refreshUi(ctx, state, footerStateRef);
 
       return {
         content: [{ type: "text", text: `Created Takomi orchestrator session ${nextState.sessionId} in hybrid mode\n\nDocs: ${paths.root}\nState: ${paths.stateFile}\n\n${buildTaskRows(nextState.tasks) || "No tasks provided."}` }],
@@ -1356,7 +1364,7 @@ ${stateJson}`
     }
     persistState();
     syncContextPanelState();
-    await refreshUi(ctx, state);
+    await refreshUi(ctx, state, footerStateRef);
 
     const routingPolicy = await resolveTakomiRoutingPolicy(runtimeCwd);
     const optionalFeatureContext = (() => {
@@ -1458,7 +1466,7 @@ ${stateJson}`
 
     syncContextPanelState();
     contextPanel.rebuildFromSession(ctx);
-    await refreshUi(ctx, state);
+    await refreshUi(ctx, state, footerStateRef);
     contextPanel.show(ctx);
     flushPendingSubagentEvents();
   });

@@ -18,6 +18,7 @@ import type { ContextManagerConfig } from "./types";
 export default function takomiContextManager(pi: ExtensionAPI) {
   const state = createState();
   let config: ContextManagerConfig = DEFAULT_CONFIG;
+  let duplicateExtensionWarnings: Array<{ toolName: string; paths: string[] }> = [];
 
   registerSkillTools(pi, state);
   registerPolicyTools(pi, state);
@@ -27,21 +28,30 @@ export default function takomiContextManager(pi: ExtensionAPI) {
 
   pi.on("session_start", async (_event, ctx) => {
     config = await loadConfig(ctx.cwd);
-    state.policies = await discoverPolicies(ctx.cwd, config);
-    state.skills = mergeSkills(await discoverSkillsFromFilesystem(ctx.cwd));
+    [state.policies, duplicateExtensionWarnings] = await Promise.all([
+      discoverPolicies(ctx.cwd, config),
+      detectDuplicateTakomiExtensions(ctx.cwd),
+    ]);
+
+    // Pi already discovers skills while building systemPromptOptions. Rewalking
+    // every global/project skill tree here made startup block on thousands of
+    // filesystem calls, then repeated the same work before the first request.
+    // Keep filesystem discovery lazy for direct skill-tool calls and as a
+    // compatibility fallback when Pi supplies no skill metadata.
+    state.skills = new Map();
     state.report.cwd = ctx.cwd;
-    state.report.skillCount = state.skills.size;
+    state.report.skillCount = 0;
     restoreReportFromSession(state, ctx);
   });
 
   pi.on("before_agent_start", async (event, ctx) => {
-    config = await loadConfig(ctx.cwd);
-    state.policies = await discoverPolicies(ctx.cwd, config);
-    const duplicateExtensionWarnings = await detectDuplicateTakomiExtensions(ctx.cwd);
     const optionSkills = collectSkillsFromOptions(event.systemPromptOptions);
     const xmlSkills = collectSkillsFromXml(event.systemPrompt);
-    const filesystemSkills = await discoverSkillsFromFilesystem(ctx.cwd);
-    state.skills = mergeSkills([...filesystemSkills, ...optionSkills, ...xmlSkills]);
+    const suppliedSkills = [...optionSkills, ...xmlSkills];
+    const filesystemSkills = suppliedSkills.length === 0
+      ? await discoverSkillsFromFilesystem(ctx.cwd)
+      : [];
+    state.skills = mergeSkills([...filesystemSkills, ...suppliedSkills]);
 
     const candidates = findCandidates(event.prompt, state.skills, config);
     const rewrite = rewritePrompt(event.systemPrompt, state.skills, candidates, config);

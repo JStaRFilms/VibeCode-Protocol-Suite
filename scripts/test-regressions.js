@@ -8,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { hashPath, copyOwnedTree } from '../src/owned-tree.js';
 import { collectTakomiStats } from '../src/takomi-stats.js';
+import { getSourceCheckoutLaunchArgs } from '../src/pi-harness.js';
 
 const execFileAsync = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,11 @@ try {
   const { stdout } = await execFileAsync(process.execPath, [cli, 'sync', 'not-a-target'], { cwd: repoRoot, env });
   assert.match(stdout, /Unsupported sync target: not-a-target/, 'legacy sync alias should route to sync handling');
   assert.doesNotMatch(stdout, /Unsupported upgrade target/, 'legacy sync alias must not route to upgrade/refresh handling');
+
+  const sourceLaunchArgs = getSourceCheckoutLaunchArgs(repoRoot);
+  assert.ok(sourceLaunchArgs.includes('--no-extensions'), 'source checkout launch must disable duplicate global extension discovery');
+  assert.equal(sourceLaunchArgs.filter((arg) => arg === '--extension').length, 5, 'source checkout launch must explicitly load one Takomi extension set');
+  assert.deepEqual(getSourceCheckoutLaunchArgs(tempRoot), [], 'ordinary projects must retain normal global extension discovery');
 
   const tree = path.join(tempRoot, 'tree');
   const outside = path.join(tempRoot, 'outside-secret.txt');

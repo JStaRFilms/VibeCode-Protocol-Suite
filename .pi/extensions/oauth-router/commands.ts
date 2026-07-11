@@ -275,11 +275,7 @@ export function formatUsageRawReport(runtime: RouterRuntime, accountId?: string)
 
 function emitReport(ctx: ExtensionCommandContext, text: string) {
   const lines = text.split(/\r?\n/);
-  const visibleLines = [
-    "oauth-router report (UI-only; not sent to the agent)",
-    ...lines,
-  ];
-  ctx.ui.setWidget("oauth-router-report", visibleLines, { placement: "belowEditor" });
+  ctx.ui.setWidget("oauth-router-report", lines, { placement: "belowEditor" });
   ctx.ui.notify(lines[0] || "oauth-router report updated", "info");
 }
 

@@ -120,10 +120,7 @@ export default function (pi: ExtensionAPI) {
     description: "Show a detailed oauth-router report in the UI only",
     handler: async (_args, ctx) => {
       const report = formatStatusReport(runtime);
-      ctx.ui.setWidget("oauth-router-report", [
-        "oauth-router debug report (UI-only; not sent to the agent)",
-        ...report.split(/\r?\n/),
-      ], { placement: "belowEditor" });
+      ctx.ui.setWidget("oauth-router-report", report.split(/\r?\n/), { placement: "belowEditor" });
       ctx.ui.notify("oauth-router debug report updated", "info");
     },
   });
