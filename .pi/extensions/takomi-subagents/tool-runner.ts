@@ -8,6 +8,7 @@ import { resolveAgentName } from "./agent-aliases";
 import { discoverTakomiAgents, type TakomiAgentConfig, type TakomiAgentScope } from "./agents";
 import { createTakomiDelegationPlan, renderTakomiDelegationPlan } from "./delegation-plan";
 import { createTakomiPiSubagentsEngine } from "./pi-subagents-engine";
+import { createTakomiUxTasks, withTakomiUxDetails } from "./subagent-ux";
 
 type ChecklistItem = string | { text: string; done?: boolean };
 
@@ -367,12 +368,19 @@ export async function executeTakomiSubagentTool(
       : mode === "parallel"
         ? { ...params, cwd: rootCwd, tasks, agentScope }
         : { ...params, cwd: rootCwd, chain: tasks, agentScope };
+    const uxTasks = createTakomiUxTasks(tasks);
+    const nativeOnUpdate = onUpdate
+      ? (partial: any) => onUpdate({
+          ...partial,
+          details: withTakomiUxDetails(partial?.details, uxTasks),
+        })
+      : undefined;
 
     const nativeResult: any = await engine.execute(
       "takomi-tool",
       nativeParams,
       signal,
-      onUpdate as any,
+      nativeOnUpdate as any,
       ctx,
     );
 
@@ -390,7 +398,7 @@ export async function executeTakomiSubagentTool(
     return {
       ...nativeResult,
       details: {
-        ...(nativeResult?.details ?? {}),
+        ...withTakomiUxDetails(nativeResult?.details, uxTasks),
         takomi,
       },
     };

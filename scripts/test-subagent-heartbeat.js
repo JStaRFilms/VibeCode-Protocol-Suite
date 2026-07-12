@@ -65,37 +65,36 @@ try {
   assert.equal(heartbeat.getTakomiSubagentHeartbeatFrame(firstContext), 1, "first row keeps an isolated frame");
   assert.equal(heartbeat.getTakomiSubagentHeartbeatFrame(secondContext), 2, "second row keeps an isolated frame");
 
-  // Exercise the real Takomi renderer around a native-renderer seam. This checks
-  // executable frame forwarding and returned native output, rather than source text.
+  // Exercise the renderer heartbeat integration. Rendering the same partial row
+  // must reuse Takomi's timer rather than creating a second animation timer.
   const textStubUrl = dataModule(`
-    export class Text {
-      constructor(text, x, y) { this.text = text; this.x = x; this.y = y; }
+    export class Text { constructor(text, x, y) { this.text = text; this.x = x; this.y = y; } }
+    export class Spacer { constructor(lines) { this.lines = lines; } }
+    export class Container { constructor() { this.children = []; } addChild(child) { this.children.push(child); } }
+    export function visibleWidth(value) { return [...value].length; }
+  `);
+  const uxUrl = await transpile("subagent-ux.ts", { "@earendil-works/pi-tui": textStubUrl });
+  const internalsRenderStubUrl = dataModule(`
+    export function renderNativeSubagentResult(_result, options) {
+      return { text: options.expanded ? "native expanded" : "takomi_subagent running" };
     }
   `);
-  const nativeStubUrl = dataModule(`
-    export function renderNativeSubagentResult(result, options, theme, frame) {
-      const rendered = { kind: "native-subagent", frame, expanded: options.expanded, result, theme };
-      globalThis.__takomiNativeRenderCalls.push(rendered);
-      return rendered;
-    }
-  `);
-  globalThis.__takomiNativeRenderCalls = [];
   const nativeRenderUrl = await transpile("native-render.ts", {
     "@earendil-works/pi-tui": textStubUrl,
-    "./pi-subagents-internal": nativeStubUrl,
+    "./pi-subagents-internal": internalsRenderStubUrl,
+    "./subagent-ux": uxUrl,
     "./result-heartbeat": heartbeatUrl,
   });
   const nativeRender = await import(nativeRenderUrl);
   const theme = { fg: (_color, value) => value, bold: (value) => value };
-  const partialResult = { content: [{ type: "text", text: "running" }], details: { results: [{ agent: "worker" }] } };
+  const partialResult = { content: [{ type: "text", text: "running" }], details: { mode: "single", results: [{ agent: "worker", progress: { status: "running" } }] } };
+  const flatten = (component) => component?.text ?? component?.children?.map(flatten).filter(Boolean).join("\n") ?? "";
 
   const firstRendered = nativeRender.renderTakomiSubagentResult(partialResult, { expanded: false, isPartial: true }, theme, firstContext);
   const secondRendered = nativeRender.renderTakomiSubagentResult(partialResult, { expanded: true, isPartial: true }, theme, secondContext);
-  assert.strictEqual(firstRendered, globalThis.__takomiNativeRenderCalls[0], "Takomi must return native compact output when available");
-  assert.strictEqual(secondRendered, globalThis.__takomiNativeRenderCalls[1], "Takomi must return native expanded output when available");
-  assert.equal(firstRendered.frame, 1, "native compact rendering receives the first row frame");
-  assert.equal(secondRendered.frame, 2, "native expanded rendering receives the second row frame");
-  assert.equal(callbacks.size, 2, "native rendering must not create a conflicting second timer");
+  assert.match(flatten(firstRendered), /takomi_subagent running/, "compact partial rendering remains active");
+  assert.match(flatten(secondRendered), /native expanded/, "expanded partial rendering remains available");
+  assert.equal(callbacks.size, 2, "renderer must not create a conflicting second timer");
   assert.equal(firstContext.state.subagentResultAnimationTimer, undefined, "Takomi must not install the native legacy timer");
 
   nativeRender.renderTakomiSubagentResult(partialResult, { expanded: false, isPartial: false }, theme, firstContext);
@@ -165,7 +164,6 @@ try {
   console.log("✓ takomi subagent heartbeat cadence, concurrency, rendering, and lifecycle tests passed");
 } finally {
   heartbeat.clearAllTakomiSubagentResultHeartbeats();
-  delete globalThis.__takomiNativeRenderCalls;
   globalThis.setInterval = originalSetInterval;
   globalThis.clearInterval = originalClearInterval;
 }

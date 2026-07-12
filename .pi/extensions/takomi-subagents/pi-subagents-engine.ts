@@ -92,6 +92,7 @@ function buildTakomiTaskPrompt(task: TakomiSubagentToolTask): string {
     ? [
         "Checklist:",
         ...task.checklist.map((item) => typeof item === "string" ? `- [ ] ${item}` : `- [${item.done ? "x" : " "}] ${item.text}`),
+        "When an item's state changes, report that exact item in explicit assistant progress/final output as a markdown checkbox. Mark it complete only after it is actually complete.",
       ].join("\n")
     : "";
   const takomiContext = [

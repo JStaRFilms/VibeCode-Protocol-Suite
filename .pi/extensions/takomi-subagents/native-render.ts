@@ -1,8 +1,17 @@
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import { Container, Spacer, Text, type Component } from "@earendil-works/pi-tui";
 import type { TakomiSubagentToolParams } from "./tool-runner";
 import { renderNativeSubagentResult, type Details } from "./pi-subagents-internal";
+import {
+  boundNarrative,
+  explicitAssistantTexts,
+  finalAnswer,
+  resolvedChecklist,
+  sanitizeUntrustedText,
+  sanitizeUntrustedValue,
+  type TakomiUxTask,
+} from "./subagent-ux";
 import {
   clearTakomiSubagentResultHeartbeat,
   ensureTakomiSubagentResultHeartbeat,
@@ -11,6 +20,20 @@ import {
 } from "./result-heartbeat";
 
 type ToolResult = AgentToolResult<Details>;
+const FALLBACK_RENDER_WIDTH = 80;
+const COMPACT_CUSTOM_LINE_BUDGET = 3;
+const EXPANDED_CUSTOM_LINE_BUDGET = 2;
+const COMPACT_NARRATIVE_LINE_BUDGET = 2;
+const NARRATIVE_PREFIX = "  ↳ ";
+
+class WidthAwareLines implements Component {
+  constructor(private readonly buildLines: (width: number) => string[]) {}
+  render(width: number): string[] {
+    const available = Number.isFinite(width) && width > 0 ? Math.floor(width) : FALLBACK_RENDER_WIDTH;
+    return this.buildLines(available);
+  }
+  invalidate(): void {}
+}
 
 function taskList(params: TakomiSubagentToolParams): Array<{ agent: string; task: string }> {
   if (params.chain?.length) return params.chain;
@@ -20,47 +43,27 @@ function taskList(params: TakomiSubagentToolParams): Array<{ agent: string; task
 }
 
 export function renderTakomiSubagentCall(params: TakomiSubagentToolParams, theme: Theme) {
-  const tasks = taskList(params);
-  const mode = params.chain?.length ? "chain" : params.tasks?.length ? "parallel" : "single";
+  const safeParams = sanitizeUntrustedValue(params);
+  const tasks = taskList(safeParams);
+  const mode = safeParams.chain?.length ? "chain" : safeParams.tasks?.length ? "parallel" : "single";
   if (tasks.length === 1) {
-    return new Text(
-      `${theme.fg("toolTitle", theme.bold("takomi_subagent "))}${theme.fg("accent", tasks[0]?.agent || "?")}`,
-      0,
-      0,
-    );
+    return new Text(`${theme.fg("toolTitle", theme.bold("takomi_subagent "))}${theme.fg("accent", tasks[0]?.agent || "?")}`, 0, 0);
   }
-  return new Text(
-    `${theme.fg("toolTitle", theme.bold("takomi_subagent "))}${mode} (${tasks.length})`,
-    0,
-    0,
-  );
+  return new Text(`${theme.fg("toolTitle", theme.bold("takomi_subagent "))}${mode} (${tasks.length})`, 0, 0);
 }
 
 function resultText(result: ToolResult): string {
-  return typeof (result as any)?.content === "string"
+  const text = typeof (result as any)?.content === "string"
     ? (result as any).content
     : Array.isArray((result as any)?.content)
       ? (result as any).content.map((part: any) => part?.text ?? "").filter(Boolean).join("\n")
       : JSON.stringify((result as any)?.details ?? {}, null, 2);
+  return sanitizeUntrustedText(text);
 }
 
 function extractPolicyNames(text: string): string[] {
   const policyMatch = text.match(/Required policies:\n((?:- .+\n?)+)/);
-  return policyMatch?.[1]
-    ?.split("\n")
-    .map((line) => line.replace(/^[-\s]+/, "").trim())
-    .filter(Boolean) ?? [];
-}
-
-function summarizeCollapsedResult(text: string, status: string, theme: Theme): string {
-  const policies = extractPolicyNames(text);
-  const lineCount = text ? text.split(/\r?\n/).length : 0;
-  const label = policies.length > 0
-    ? `policy context loaded: ${policies.join(", ")}`
-    : `${lineCount} result line${lineCount === 1 ? "" : "s"} hidden`;
-  const icon = status === "failed" ? "⚠" : status === "running" ? "…" : "✓";
-  const color = status === "failed" ? "warning" : status === "running" ? "accent" : "success";
-  return `${theme.fg(color, `${icon} takomi_subagent ${status}`)}${theme.fg("dim", ` · ${label} (ctrl+o to expand)`)}`;
+  return policyMatch?.[1]?.split("\n").map((line) => line.replace(/^[-\s]+/, "").trim()).filter(Boolean) ?? [];
 }
 
 function isPolicyGateBlock(text: string): boolean {
@@ -70,128 +73,154 @@ function isPolicyGateBlock(text: string): boolean {
 }
 
 function renderPolicyGateBlock(text: string, expanded: boolean | undefined, theme: Theme): string {
-  const policies = extractPolicyNames(text);
-  const lineCount = text ? text.split(/\r?\n/).length : 0;
+  const safeText = sanitizeUntrustedText(text);
+  const policies = extractPolicyNames(safeText);
   const policyLabel = policies.length ? policies.join(", ") : "required policy";
   if (!expanded) {
     return [
       theme.fg("warning", "⚠ takomi_subagent blocked"),
       theme.fg("dim", `Required policy context loaded for this session: ${policyLabel}.`),
-      theme.fg("dim", `Retry the original tool call. ${lineCount} policy lines hidden (ctrl+o to expand).`),
+      theme.fg("dim", "Retry the original tool call. Ctrl+O shows the complete policy detail."),
     ].join("\n");
   }
   return [
     theme.fg("warning", "⚠ takomi_subagent blocked"),
     theme.fg("dim", "Policy context was loaded and passed back to the model; retry the original call."),
-    theme.fg("dim", "Press ctrl+o again to collapse."),
     "",
-    text,
+    safeText,
   ].join("\n");
 }
 
-function recentOutputLines(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean).slice(-3);
-  if (typeof value === "string") return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).slice(-3);
-  return [];
+function uxTasks(details: any): TakomiUxTask[] {
+  return Array.isArray(details?.takomiUx?.tasks) ? details.takomiUx.tasks : [];
 }
 
-function normalizeLiveStatus(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  if (value === "complete") return "completed";
-  if (value === "in-progress") return "running";
-  if (value === "timed-out") return "failed";
-  return value;
+function taskFor(tasks: TakomiUxTask[], row: any, index: number): TakomiUxTask {
+  return tasks[index] ?? { agent: row?.agent ?? `task ${index + 1}`, task: row?.task ?? "", checklist: [] };
 }
 
-function rawLiveStatus(row: any): string {
-  const explicit = normalizeLiveStatus(
-    typeof row?.progress?.status === "string" ? row.progress.status
-      : typeof row?.status === "string" ? row.status
-        : undefined,
-  );
-  if (explicit) return explicit;
-
-  const exitCode = typeof row?.exitCode === "number" ? row.exitCode
-    : typeof row?.code === "number" ? row.code
-      : undefined;
-  if (exitCode === 0) return "completed";
-  if (exitCode === undefined || exitCode === null || exitCode === -1) return "running";
-  return "failed";
+function checklistFor(task: TakomiUxTask, row: any): ReturnType<typeof resolvedChecklist> {
+  const texts = explicitAssistantTexts(row);
+  if (typeof row?.finalOutput === "string") texts.push(row.finalOutput);
+  return resolvedChecklist(task.checklist, texts);
 }
 
-function isLiveTerminalStatus(status: string): boolean {
-  return ["completed", "failed", "blocked", "detached", "paused"].includes(status);
+function normalizedLine(value: string): string {
+  return sanitizeUntrustedText(value).replace(/\s+/g, " ").trim();
 }
 
-function displayLiveStatus(status: string, allRowsTerminal: boolean): string {
-  // Native pi-subagents can emit one last partial update after the child process
-  // reaches exitCode 0 but before the takomi_subagent tool result has actually
-  // settled. In that window the tool card is still partial/running, so showing a
-  // child as "completed" is misleading. Call it finalizing until Pi renders the
-  // real final result.
-  if (allRowsTerminal && status === "completed") return "finalizing";
-  return status;
+function nativePreview(row: any): string {
+  const output = typeof row?.truncation?.text === "string" && row.truncation.text.trim()
+    ? row.truncation.text
+    : finalAnswer(row);
+  return output.split(/\r?\n/).find((line: string) => line.trim())?.trim() ?? "";
 }
 
-function livePartialText(result: ToolResult, theme: Theme): string {
-  const details = (result as any)?.details ?? {};
-  const results = Array.isArray(details.results) ? details.results : [];
-  const progress = Array.isArray(details.progress) ? details.progress : [];
-  const rows = results.length ? results : progress;
-  const rawStatuses = rows.map(rawLiveStatus);
-  const allRowsTerminal = rows.length > 0 && rawStatuses.every(isLiveTerminalStatus);
-  const titleStatus = allRowsTerminal ? "finalizing" : "running";
-  const lines = [
-    theme.fg("toolTitle", theme.bold(`takomi_subagent ${titleStatus}`)),
-    theme.fg("dim", "Live detail is bounded while streaming so manual scroll/ctrl+o does not jump on every token."),
-  ];
-
-  if (!rows.length) {
-    const text = resultText(result).split(/\r?\n/).find((line) => line.trim())?.trim();
-    lines.push(theme.fg("dim", text || "Waiting for subagent progress…"));
-    return lines.join("\n");
+function compactNarratives(rows: any[], isPartial: boolean): string[] {
+  const narratives: string[] = [];
+  for (const row of rows) {
+    const source = isPartial ? explicitAssistantTexts(row).at(-1) ?? "" : finalAnswer(row);
+    const lines = source.split(/\r?\n/).map(normalizedLine).filter(Boolean);
+    if (!isPartial && rows.length === 1 && lines.length && normalizedLine(nativePreview(row)) === lines[0]) lines.shift();
+    for (const line of lines) {
+      if (narratives.some((existing) => normalizedLine(existing) === line)) continue;
+      narratives.push(line);
+      if (narratives.length >= COMPACT_NARRATIVE_LINE_BUDGET) return narratives;
+    }
   }
-
-  rows.slice(0, 6).forEach((row: any, index: number) => {
-    const status = displayLiveStatus(rawStatuses[index] ?? rawLiveStatus(row), allRowsTerminal);
-    const agent = row.agent ?? `task ${index + 1}`;
-    const task = String(row.task ?? "").replace(/\s+/g, " ").trim();
-    const currentTool = row.currentTool ?? row.progress?.currentTool;
-    const tokens = row.tokens ?? row.progress?.tokens ?? row.usage?.output;
-    const tail = recentOutputLines(row.recentOutput ?? row.progress?.recentOutput ?? row.finalOutput ?? row.output);
-    lines.push(theme.fg("accent", `${index + 1}. ${agent} ${theme.fg("dim", `[${status}]`)}`));
-    if (task) lines.push(theme.fg("dim", `   ${task.slice(0, 140)}${task.length > 140 ? "…" : ""}`));
-    if (currentTool || tokens) lines.push(theme.fg("muted", `   ${[currentTool ? `tool:${currentTool}` : "", tokens ? `tokens:${tokens}` : ""].filter(Boolean).join(" | ")}`));
-    for (const line of tail) lines.push(theme.fg("dim", `   › ${line.slice(0, 160)}${line.length > 160 ? "…" : ""}`));
-  });
-  if (rows.length > 6) lines.push(theme.fg("muted", `… ${rows.length - 6} more running item${rows.length - 6 === 1 ? "" : "s"}`));
-  lines.push(theme.fg("muted", "Final output will use the normal expandable native subagent renderer."));
-  return lines.join("\n");
+  return narratives;
 }
 
-export function renderTakomiSubagentResult(result: ToolResult, options: { expanded?: boolean; isPartial?: boolean }, theme: Theme, context: TakomiSubagentRenderContext & { isError?: boolean }): any {
+function checklistSummary(rows: any[], tasks: TakomiUxTask[]): { summary: string; expanded: string } | undefined {
+  const checklists = rows.map((row, index) => checklistFor(taskFor(tasks, row, index), row));
+  const items = checklists.flat();
+  if (!items.length) return undefined;
+  const done = items.filter((item) => item.done).length;
+  const reported = items.filter((item) => item.done && item.stateSource === "agent-reported").length;
+  const summary = `checklist ${done}/${items.length} complete${reported ? ` · ${reported} agent-reported` : ""}`;
+  if (rows.length !== 1) return { summary, expanded: `Checklist: ${done}/${items.length} complete${reported ? ` (${reported} agent-reported)` : ""}` };
+  const labels = items.map((item) => `[${item.done ? "x" : " "}] ${item.text}`);
+  return { summary, expanded: `Checklist: ${labels.join(" · ")}` };
+}
+
+function compactAddition(details: any, isPartial: boolean, theme: Theme): Component | undefined {
+  const rows = Array.isArray(details?.results) ? details.results : [];
+  if (!rows.length) return undefined;
+  const tasks = uxTasks(details);
+  const narratives = compactNarratives(rows, isPartial);
+  const checklist = checklistSummary(rows, tasks);
+  if (!narratives.length && !checklist) return undefined;
+
+  return new WidthAwareLines((width) => {
+    const lines: string[] = [];
+    const narrativeWidth = Math.max(1, width - NARRATIVE_PREFIX.length);
+    for (const narrative of narratives) {
+      const bounded = boundNarrative(narrative, { maxLines: 1, maxColumns: narrativeWidth, from: "start" });
+      if (bounded.lines[0]) lines.push(theme.fg("dim", `${NARRATIVE_PREFIX}${bounded.lines[0]}`));
+    }
+    if (checklist && lines.length < COMPACT_CUSTOM_LINE_BUDGET) {
+      const bounded = boundNarrative(checklist.summary, { maxLines: 1, maxColumns: Math.max(1, width - 2), from: "start" });
+      if (bounded.lines[0]) lines.push(theme.fg("muted", `  ${bounded.lines[0]}`));
+    }
+    return lines.slice(0, COMPACT_CUSTOM_LINE_BUDGET);
+  });
+}
+
+function expandedAddition(details: any, theme: Theme): Component | undefined {
+  const rows = Array.isArray(details?.results) ? details.results : [];
+  if (!rows.length) return undefined;
+  const checklist = checklistSummary(rows, uxTasks(details));
+  if (!checklist) return undefined;
+
+  return new WidthAwareLines((width) => boundNarrative(checklist.expanded, {
+    maxLines: EXPANDED_CUSTOM_LINE_BUDGET,
+    maxColumns: width,
+    from: "start",
+  }).lines.slice(0, EXPANDED_CUSTOM_LINE_BUDGET).map((line) => theme.fg("dim", line)));
+}
+
+function compose(
+  native: Component | undefined,
+  addition: Component | undefined,
+  fallback: Component,
+  errorNotice?: Component,
+): Component {
+  if (!native && !addition && !errorNotice) return fallback;
+  const container = new Container();
+  if (errorNotice) container.addChild(errorNotice);
+  if (errorNotice && (native || addition)) container.addChild(new Spacer(1));
+  if (native) container.addChild(native);
+  if (native && addition) container.addChild(new Spacer(1));
+  if (addition) container.addChild(addition);
+  return container;
+}
+
+export function renderTakomiSubagentResult(
+  result: ToolResult,
+  options: { expanded?: boolean; isPartial?: boolean },
+  theme: Theme,
+  context: TakomiSubagentRenderContext & { isError?: boolean },
+): any {
   if (options.isPartial) ensureTakomiSubagentResultHeartbeat(context);
   else clearTakomiSubagentResultHeartbeat(context);
 
-  const status = ((result as any)?.isError || context?.isError) ? "failed" : options.isPartial ? "running" : "completed";
-  const text = resultText(result);
+  const safeResult = sanitizeUntrustedValue(result);
+  const text = resultText(safeResult);
+  if (isPolicyGateBlock(text)) return new Text(renderPolicyGateBlock(text, options.expanded, theme), 0, 0);
 
-  if (isPolicyGateBlock(text)) {
-    return new Text(renderPolicyGateBlock(text, options.expanded, theme), 0, 0);
-  }
-
-  const native = renderNativeSubagentResult(result, options, theme, getTakomiSubagentHeartbeatFrame(context));
-  if (options.isPartial && native) return native;
-
-  if (options.isPartial) {
-    if (options.expanded) return new Text(livePartialText(result, theme), 0, 0);
-    return new Text(summarizeCollapsedResult(text, status, theme), 0, 0);
-  }
-
-  if (native) return native;
-
-  if (!options.expanded) {
-    return new Text(summarizeCollapsedResult(text, status, theme), 0, 0);
-  }
-  return new Text(`${theme.fg("toolTitle", theme.bold(`takomi_subagent ${status}`))}\n${text || "No result content."}`, 0, 0);
+  const frame = getTakomiSubagentHeartbeatFrame(context);
+  const native = renderNativeSubagentResult(
+    safeResult,
+    { expanded: options.expanded === true, isPartial: options.isPartial === true },
+    theme,
+    frame,
+  ) as Component | undefined;
+  const details: any = (safeResult as any)?.details ?? {};
+  const addition = options.expanded
+    ? expandedAddition(details, theme)
+    : compactAddition(details, options.isPartial === true, theme);
+  const isError = Boolean((safeResult as any)?.isError || context?.isError);
+  const errorNotice = isError ? new Text(theme.fg("error", "takomi_subagent failed"), 0, 0) : undefined;
+  const fallback = new Text(`${isError ? `${theme.fg("error", "failed")}\n` : ""}${text || "No result content."}`, 0, 0);
+  return compose(native, addition, fallback, errorNotice);
 }
