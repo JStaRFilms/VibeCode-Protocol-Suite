@@ -139,6 +139,32 @@ function overallStatus(issues: ReportIssue[]): { label: string; next: string; wa
   return { label: "⚠ Attention Required", next: actionable[0].fix, warningCount: actionable.length };
 }
 
+export type ContextReportPresentation = {
+  status: "success" | "warning" | "error" | "pending";
+  summary: string;
+  attentionCount: number;
+};
+
+/** Structured execution metadata shared by context_report renderers. */
+export function contextReportPresentation(state: ContextManagerState): ContextReportPresentation {
+  syncReportLedger(state);
+  const issues = collectIssues(state);
+  const overall = overallStatus(issues);
+  const actionable = issues.filter((issue) => issue.severity !== "info");
+  const status = issues.length === 0
+    ? "success"
+    : actionable.some((issue) => issue.severity === "failed" || issue.severity === "blocked")
+      ? "error"
+      : actionable.length > 0
+        ? "warning"
+        : "pending";
+  return {
+    status,
+    summary: overall.label.replace(/^[^\w]+\s*/, ""),
+    attentionCount: overall.warningCount,
+  };
+}
+
 function promptRewriteState(state: ContextManagerState): string {
   const rewrite = state.report.promptRewrite;
   if (!rewrite.attempted) return "Not run yet";
