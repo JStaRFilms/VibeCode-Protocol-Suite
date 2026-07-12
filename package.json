@@ -39,7 +39,7 @@
     "postinstall": "node src/postinstall.js",
     "test": "npm run test:typecheck && npm run test:regressions && npm run test:skills",
     "test:typecheck": "tsc --noEmit",
-    "test:regressions": "node scripts/test-regressions.js",
+    "test:regressions": "node scripts/test-regressions.js && node scripts/test-subagent-heartbeat.js",
     "test:skills": "node scripts/test-skill-selection.js",
     "takomi-flow:doctor": "node plugins/takomi-flow/scripts/takomi-flow.mjs doctor",
     "takomi-flow:selftest": "node plugins/takomi-flow/scripts/takomi-flow.mjs selftest",

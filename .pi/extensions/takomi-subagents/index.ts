@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { renderTakomiSubagentCall, renderTakomiSubagentResult } from "./native-render";
 import { loadPiSubagentsInternals } from "./pi-subagents-internal";
+import { clearAllTakomiSubagentResultHeartbeats } from "./result-heartbeat";
 import { executeTakomiSubagentTool } from "./tool-runner";
 
 const ChecklistItemSchema = Type.Object({
@@ -109,4 +110,12 @@ export default async function takomiSubagents(pi: ExtensionAPI) {
   // renderer and lose the native compact/expanded details shown by `subagent`.
   await loadPiSubagentsInternals();
   registerSubagentTool(pi);
+
+  // Tool rows normally settle and clear their own heartbeat. A turn can also end
+  // without Pi rendering a final result (for example, after an abnormal tool
+  // interruption), so clear abandoned same-session rows at agent_end as well as
+  // stale rows at session replacement/shutdown boundaries.
+  pi.on("agent_end", () => clearAllTakomiSubagentResultHeartbeats());
+  pi.on("session_start", () => clearAllTakomiSubagentResultHeartbeats());
+  pi.on("session_shutdown", () => clearAllTakomiSubagentResultHeartbeats());
 }

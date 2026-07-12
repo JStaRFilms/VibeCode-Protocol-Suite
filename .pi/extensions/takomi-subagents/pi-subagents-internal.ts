@@ -27,15 +27,13 @@ export async function loadPiSubagentsInternals() {
     DEFAULT_ARTIFACT_CONFIG: sharedTypesModule.DEFAULT_ARTIFACT_CONFIG,
     TEMP_ARTIFACTS_DIR: sharedTypesModule.TEMP_ARTIFACTS_DIR,
     renderSubagentResult: renderModule.renderSubagentResult,
-    clearLegacyResultAnimationTimer: renderModule.clearLegacyResultAnimationTimer,
   };
   return cachedInternals;
 }
 
-export function renderNativeSubagentResult(result: unknown, options: unknown, theme: unknown, context: unknown): unknown | undefined {
+export function renderNativeSubagentResult(result: unknown, options: unknown, theme: unknown, frame?: number): unknown | undefined {
   if (!cachedInternals?.renderSubagentResult) return undefined;
-  cachedInternals.clearLegacyResultAnimationTimer?.(context);
-  return cachedInternals.renderSubagentResult(result, options, theme);
+  return cachedInternals.renderSubagentResult(result, options, theme, frame);
 }
 
 export type SubagentParamsLike = any;

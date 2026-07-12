@@ -3,6 +3,12 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import type { TakomiSubagentToolParams } from "./tool-runner";
 import { renderNativeSubagentResult, type Details } from "./pi-subagents-internal";
+import {
+  clearTakomiSubagentResultHeartbeat,
+  ensureTakomiSubagentResultHeartbeat,
+  getTakomiSubagentHeartbeatFrame,
+  type TakomiSubagentRenderContext,
+} from "./result-heartbeat";
 
 type ToolResult = AgentToolResult<Details>;
 
@@ -163,7 +169,10 @@ function livePartialText(result: ToolResult, theme: Theme): string {
   return lines.join("\n");
 }
 
-export function renderTakomiSubagentResult(result: ToolResult, options: { expanded?: boolean; isPartial?: boolean }, theme: Theme, context: any): any {
+export function renderTakomiSubagentResult(result: ToolResult, options: { expanded?: boolean; isPartial?: boolean }, theme: Theme, context: TakomiSubagentRenderContext & { isError?: boolean }): any {
+  if (options.isPartial) ensureTakomiSubagentResultHeartbeat(context);
+  else clearTakomiSubagentResultHeartbeat(context);
+
   const status = ((result as any)?.isError || context?.isError) ? "failed" : options.isPartial ? "running" : "completed";
   const text = resultText(result);
 
@@ -171,7 +180,7 @@ export function renderTakomiSubagentResult(result: ToolResult, options: { expand
     return new Text(renderPolicyGateBlock(text, options.expanded, theme), 0, 0);
   }
 
-  const native = renderNativeSubagentResult(result, options, theme, context);
+  const native = renderNativeSubagentResult(result, options, theme, getTakomiSubagentHeartbeatFrame(context));
   if (options.isPartial && native) return native;
 
   if (options.isPartial) {
