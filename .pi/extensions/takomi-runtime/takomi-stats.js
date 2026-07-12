@@ -15,29 +15,47 @@ const pc = {
   magenta: ansi(35, 39),
 };
 
+// USD per million tokens: input, cache read, output, cache write.
+// OAuth-router's configured catalog is merged over these fallbacks at runtime,
+// keeping Stats aligned with custom/new models without another hard-coded edit.
 const PRICES = {
-  'gpt-5.5': [5.00, 0.50, 30.00],
-  'gpt-5.4': [2.50, 0.25, 15.00],
-  'gpt-5.4-mini': [0.75, 0.075, 4.50],
-  'gpt-5.4-nano': [0.20, 0.02, 1.25],
-  'gpt-5.3-codex': [2.50, 0.25, 15.00],
-  'gpt-5.2-codex': [1.75, 0.175, 14.00],
-  'gpt-5-codex': [1.25, 0.125, 10.00],
-  'gpt-5.2': [1.75, 0.175, 14.00],
-  'gpt-5.1': [1.25, 0.125, 10.00],
-  'gpt-5': [1.25, 0.125, 10.00],
-  'gpt-5-mini': [0.25, 0.025, 2.00],
-  'gpt-4.1': [2.00, 0.50, 8.00],
-  'gpt-4o': [2.50, 1.25, 10.00],
-  'o4-mini': [1.10, 0.275, 4.40],
-  'claude-sonnet-4-6': [3.00, 0.30, 15.00],
+  'gpt-5.6-luna': [1.00, 0.10, 6.00, 1.25],
+  'gpt-5.6-sol': [5.00, 0.50, 30.00, 6.25],
+  'gpt-5.6-terra': [2.50, 0.25, 15.00, 3.125],
+  'gpt-5.5': [5.00, 0.50, 30.00, 6.25],
+  'gpt-5.4': [2.50, 0.25, 15.00, 3.125],
+  'gpt-5.4-mini': [0.75, 0.075, 4.50, 0.9375],
+  'gpt-5.4-nano': [0.20, 0.02, 1.25, 0.25],
+  'gpt-5.3-codex': [2.50, 0.25, 15.00, 3.125],
+  'gpt-5.2-codex': [1.75, 0.175, 14.00, 2.1875],
+  'gpt-5-codex': [1.25, 0.125, 10.00, 1.5625],
+  'gpt-5.2': [1.75, 0.175, 14.00, 2.1875],
+  'gpt-5.1': [1.25, 0.125, 10.00, 1.5625],
+  'gpt-5': [1.25, 0.125, 10.00, 1.5625],
+  'gpt-5-mini': [0.25, 0.025, 2.00, 0.3125],
+  'gpt-4.1': [2.00, 0.50, 8.00, 2.00],
+  'gpt-4o': [2.50, 1.25, 10.00, 2.50],
+  'o4-mini': [1.10, 0.275, 4.40, 1.10],
+  'claude-sonnet-4-6': [3.00, 0.30, 15.00, 3.75],
 };
 
 async function exists(target) { try { await fs.access(target); return true; } catch { return false; } }
 function safeJson(line) { try { return JSON.parse(line); } catch { return null; } }
 function dayOf(ts) { return typeof ts === 'string' && ts.length >= 10 ? ts.slice(0, 10) : 'unknown'; }
-function add(map, key, patch) { const row = map.get(key) || { key, input: 0, cache: 0, output: 0, total: 0, cost: 0, events: 0 }; for (const [k,v] of Object.entries(patch)) row[k] = (row[k] || 0) + (Number(v) || 0); if (!Object.prototype.hasOwnProperty.call(patch, 'events')) row.events += 1; map.set(key, row); }
-function cost(model, input, cache, output, additiveCache = true) { const p = PRICES[model]; if (!p) return 0; const nonCached = additiveCache ? input : Math.max(input - cache, 0); return (nonCached*p[0] + cache*p[1] + output*p[2]) / 1_000_000; }
+function add(map, key, patch) { const row = map.get(key) || { key, input: 0, cache: 0, cacheWrite: 0, output: 0, total: 0, cost: 0, events: 0 }; for (const [k,v] of Object.entries(patch)) row[k] = (row[k] || 0) + (Number(v) || 0); if (!Object.prototype.hasOwnProperty.call(patch, 'events')) row.events += 1; map.set(key, row); }
+function cost(model, input, cache, output, cacheWrite = 0, prices = PRICES) { const p = prices[model]; if (!p) return 0; return (input*p[0] + cache*p[1] + output*p[2] + cacheWrite*(p[3] ?? p[0])) / 1_000_000; }
+async function loadPrices(home) {
+  const prices = { ...PRICES };
+  const configPath = path.join(home, '.pi', 'agent', 'oauth-router', 'config.json');
+  try {
+    const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+    for (const model of config.models || []) {
+      if (!model?.id || !model?.cost) continue;
+      prices[model.id] = [model.cost.input || 0, model.cost.cacheRead || 0, model.cost.output || 0, model.cost.cacheWrite ?? model.cost.input ?? 0];
+    }
+  } catch {}
+  return prices;
+}
 function fmtTokens(n) { if (n >= 1e9) return `${(n/1e9).toFixed(2)}B`; if (n >= 1e6) return `${(n/1e6).toFixed(1)}M`; if (n >= 1e3) return `${(n/1e3).toFixed(1)}K`; return String(Math.round(n || 0)); }
 function fmtMoney(n) { return `$${(n || 0).toFixed(n > 100 ? 0 : 2)}`; }
 function ms(n) { if (!n) return '-'; const s = Math.round(n/1000); if (s < 60) return `${s}s`; const m = Math.floor(s/60); if (m < 60) return `${m}m ${s%60}s`; const h = Math.floor(m/60); return `${h}h ${m%60}m`; }
@@ -117,7 +135,7 @@ function pushTask(taskRows, task) {
   taskRows.push(task);
 }
 
-async function scanPiSessions(root, source, events, sessionRows = [], taskRows = []) {
+async function scanPiSessions(root, source, events, sessionRows = [], taskRows = [], prices = PRICES) {
   for (const file of await files(root)) {
     let provider = 'unknown', model = 'unknown', session = path.basename(file, '.jsonl'), cwd = '', currentTask = null;
     const row = { key: session, session, source, file, project: projectKey(file), cwd, start: '', end: '', turns: 0, messages: 0, toolCalls: 0, subagentCalls: 0, roles: new Map(), stages: new Map(), workflows: new Map(), activeMs: 0, activityTimestamps: [] };
@@ -170,7 +188,7 @@ async function scanPiSessions(root, source, events, sessionRows = [], taskRows =
         }
       }
       const u = msg && msg.usage;
-      if (u) events.push({ source, file, timestamp: obj.timestamp, day: dayOf(obj.timestamp), session, provider, model, project: projectKey(file), kind: 'usage', input: +u.input||0, cache: +u.cacheRead||0, output: +u.output||0, total: +u.totalTokens||0, cost: cost(model, +u.input||0, +u.cacheRead||0, +u.output||0, true) });
+      if (u) events.push({ source, file, timestamp: obj.timestamp, day: dayOf(obj.timestamp), session, provider, model, project: projectKey(file), kind: 'usage', input: +u.input||0, cache: +u.cacheRead||0, cacheWrite: +u.cacheWrite||0, output: +u.output||0, total: +u.totalTokens||0, cost: cost(model, +u.input||0, +u.cacheRead||0, +u.output||0, +u.cacheWrite||0, prices) });
       }
     } catch {
       continue;
@@ -193,18 +211,19 @@ export async function collectTakomiStats(opts = {}) {
   const home = opts.home || os.homedir();
   const cwd = opts.cwd || process.cwd();
   const rawEvents = [], rawSessions = [], rawTasks = [];
+  const prices = await loadPrices(home);
   const globalSessions = path.resolve(path.join(home, '.pi', 'agent', 'sessions'));
   const projectSessions = path.resolve(path.join(cwd, '.pi', 'agent', 'sessions'));
-  await scanPiSessions(globalSessions, 'pi-global', rawEvents, rawSessions, rawTasks);
-  if (projectSessions !== globalSessions) await scanPiSessions(projectSessions, 'pi-project', rawEvents, rawSessions, rawTasks);
-  await scanPiSessions(path.join(cwd, '.pi', 'takomi'), 'takomi-project', rawEvents, rawSessions, rawTasks);
+  await scanPiSessions(globalSessions, 'pi-global', rawEvents, rawSessions, rawTasks, prices);
+  if (projectSessions !== globalSessions) await scanPiSessions(projectSessions, 'pi-project', rawEvents, rawSessions, rawTasks, prices);
+  await scanPiSessions(path.join(cwd, '.pi', 'takomi'), 'takomi-project', rawEvents, rawSessions, rawTasks, prices);
   const sinceDay = parseSince(opts.since);
   const events = rawEvents.filter(e => !sinceDay || e.day >= sinceDay);
   const sessionRows = rawSessions.filter(s => !sinceDay || dayOf(s.end || s.start) >= sinceDay);
   const taskRows = rawTasks.filter(t => !sinceDay || dayOf(t.end || t.start) >= sinceDay);
   const runs = await scanRunHistory(path.join(home, '.pi', 'agent', 'run-history.jsonl'));
   const byDay = new Map(), byModel = new Map(), bySource = new Map(), byProject = new Map(), byTool = new Map(), byRole = new Map(), byStage = new Map(), byWorkflow = new Map();
-  let totals = { input: 0, cache: 0, output: 0, total: 0, cost: 0, events: events.filter(e => e.kind === 'usage').length, toolCalls: 0, turns: 0 };
+  let totals = { input: 0, cache: 0, cacheWrite: 0, output: 0, total: 0, cost: 0, events: events.filter(e => e.kind === 'usage').length, toolCalls: 0, turns: 0 };
   for (const s of sessionRows) { totals.toolCalls += s.toolCalls; totals.turns += s.turns; }
   for (const e of events) {
     if (e.kind === 'tool') { add(byTool, e.tool || 'unknown', { total: 0, events: 1 }); continue; }
@@ -214,7 +233,7 @@ export async function collectTakomiStats(opts = {}) {
       add(byWorkflow, e.workflow || 'unknown', { total: 0, events: 1 });
       continue;
     }
-    totals.input += e.input; totals.cache += e.cache; totals.output += e.output; totals.total += e.total; totals.cost += e.cost;
+    totals.input += e.input; totals.cache += e.cache; totals.cacheWrite += e.cacheWrite || 0; totals.output += e.output; totals.total += e.total; totals.cost += e.cost;
     add(byDay, e.day, e); add(byModel, e.model, e); add(bySource, e.source, e); add(byProject, e.project, e);
   }
   const byAgent = new Map(); let longestRun = null;
@@ -509,7 +528,8 @@ export function renderTakomiStats(stats, opts = {}) {
   // ── Stat Cards Row 1 ─────────────────────────────────────────────────
   const cards1 = [
     statCard(fmtTokens(stats.totals.total), 'Lifetime Tokens'),
-    statCard(fmtTokens(stats.totals.cache), 'Cache Tokens'),
+    statCard(fmtTokens(stats.totals.cache), 'Cache Reads'),
+    statCard(fmtTokens(stats.totals.cacheWrite), 'Cache Writes'),
     statCard(fmtMoney(stats.totals.cost), 'Est. Cost'),
     statCard(String(stats.sessions), 'Sessions'),
     statCard(String(stats.totals.turns), 'Main Turns'),
@@ -677,7 +697,7 @@ export function renderTakomiStats(stats, opts = {}) {
   lines.push('');
   lines.push('  ' + pc.dim(hrule(W - 4)));
   lines.push('  ' + pc.dim('Privacy: metadata only · no raw prompts or transcripts'));
-  lines.push('  ' + pc.dim('Costs are estimates when provider prices are unknown.'));
+  lines.push('  ' + pc.dim('Costs use the oauth-router catalog when available; cache reads and writes are priced separately.'));
   lines.push('');
 
   return lines.join('\n');

@@ -963,7 +963,15 @@ export default function takomiRuntime(pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const scope = params.scope ?? "global";
-      const preview = previewTakomiRoutingPolicy(ctx.cwd, params.policyText, { scope });
+      const availableModels = (() => {
+        try {
+          const available = (ctx as typeof ctx & { modelRegistry?: { getAvailable?: () => Array<{ provider?: string; id?: string; name?: string }> } }).modelRegistry?.getAvailable?.() ?? [];
+          return available.map((model) => `${model.provider ? `${model.provider}/` : ""}${model.id ?? model.name ?? ""}`).filter(Boolean);
+        } catch {
+          return [];
+        }
+      })();
+      const preview = previewTakomiRoutingPolicy(ctx.cwd, params.policyText, { scope, availableModels });
       const result = await installTakomiRoutingPolicy(ctx.cwd, params.policyText, { scope });
       const scopeNote = scope === "global"
         ? "This global policy applies unless a project-local override exists."
@@ -1271,19 +1279,38 @@ ${stateJson}`
       state.enabled = true;
       try {
         const cwd = runtimeCtx?.cwd ?? process.cwd();
-        const preview = previewTakomiRoutingPolicy(cwd, text, { scope: "global" });
+        const availableModels = (() => {
+          try {
+            const available = (runtimeCtx as typeof runtimeCtx & { modelRegistry?: { getAvailable?: () => Array<{ provider?: string; id?: string; name?: string }> } })?.modelRegistry?.getAvailable?.() ?? [];
+            return available.map((model) => `${model.provider ? `${model.provider}/` : ""}${model.id ?? model.name ?? ""}`).filter(Boolean);
+          } catch {
+            return [];
+          }
+        })();
+        const preview = previewTakomiRoutingPolicy(cwd, text, { scope: "global", availableModels });
+        const activePolicy = await resolveTakomiRoutingPolicy(cwd);
+        const replacementWarning = activePolicy.text && activePolicy.text.trim().length > preview.policy.trim().length * 2
+          ? `WARNING: This input is much shorter than the active policy (${preview.policy.length} vs ${activePolicy.text.length} characters). It will replace the file, not merge into it. Inspect any referenced full source before applying.`
+          : "The supplied text replaces the policy file exactly; it is not merged with the current policy.";
         return { action: "transform", text: [
           "Review this Takomi routing policy extraction before it is saved.",
           "",
           "Rules:",
           "- Do not invent providers or model IDs not grounded in the policy.",
-          "- Providerless names like GPT-5.5 are routing intent unless a preferred provider/router is declared.",
-          "- Valid Takomi roles are: general, orchestrator, architect, designer, coder, reviewer.",
-          "- If the extraction is correct and safe, call takomi_apply_routing_policy with scope=global and the exact original policy text.",
-          "- If it is ambiguous or wrong, explain what the user should clarify and do not call the tool.",
+          "- Providerless names are valid routing intent. Require a provider only for executable model overrides.",
+          "- Check the available Pi model registry below before asking whether a named model exists or what its exact ID is.",
+          "- Conditional task routes need not be forced into role-wide agentOverrides.",
+          "- Valid role-wide Takomi overrides are: general, orchestrator, architect, designer, coder, reviewer. Other headings may be policy concepts or execution routes.",
+          "- Preserve the user's complete authored policy. If this is a summary/excerpt and a referenced full source exists, inspect and apply that source rather than overwriting it with the excerpt.",
+          "- If correct and safe, call takomi_apply_routing_policy with scope=global and the complete intended policy text.",
+          "- Ask only for unresolved provider/account choices or genuine ambiguity; do not ask for facts available in registry or files.",
           "",
           "Deterministic extraction:",
           renderRoutingPolicyPreview(preview),
+          "",
+          replacementWarning,
+          "",
+          availableModels.length ? `Available Pi models:\n${availableModels.map((model) => `- ${model}`).join("\n")}` : "Available Pi models: registry unavailable; inspect it before asking the user if possible.",
           "",
           "Original policy text:",
           "```",

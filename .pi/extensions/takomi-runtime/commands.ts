@@ -173,19 +173,40 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
     const policyText = scopeMatch?.[2] ?? trimmed.replace(/^set\s+/i, "");
 
     try {
-      const preview = previewTakomiRoutingPolicy(ctx.cwd, policyText, { scope });
+      const availableModels = (() => {
+        try {
+          const available = (ctx as ExtensionCommandContext & { modelRegistry?: { getAvailable?: () => Array<{ provider?: string; id?: string; name?: string }> } }).modelRegistry?.getAvailable?.() ?? [];
+          return available.map((model) => `${model.provider ? `${model.provider}/` : ""}${model.id ?? model.name ?? ""}`).filter(Boolean);
+        } catch {
+          return [];
+        }
+      })();
+      const [preview, activePolicy] = await Promise.all([
+        Promise.resolve(previewTakomiRoutingPolicy(ctx.cwd, policyText, { scope, availableModels })),
+        resolveTakomiRoutingPolicy(ctx.cwd),
+      ]);
+      const replacementWarning = activePolicy.text && activePolicy.text.trim().length > preview.policy.trim().length * 2
+        ? `WARNING: This input is much shorter than the active policy (${preview.policy.length} vs ${activePolicy.text.length} characters). It will replace the file, not merge into it. If the user referred to a full source file or prior policy, inspect and use that complete text instead.`
+        : "This input replaces the selected policy file exactly; it is not merged with the active policy.";
       const reviewPrompt = [
         "Review this Takomi routing policy extraction before it is saved.",
         "",
         "Rules:",
         "- Do not invent providers or model IDs not grounded in the policy.",
-        "- Providerless names like GPT-5.5 are routing intent unless a preferred provider/router is declared.",
-        "- Valid Takomi roles are: general, orchestrator, architect, designer, coder, reviewer.",
-        "- If the extraction is correct and safe, call takomi_apply_routing_policy with the exact policyText and scope below.",
-        "- If it is ambiguous or wrong, explain what the user should clarify and do not call the tool.",
+        "- Providerless names are valid routing intent. Require a provider only when writing an executable model override.",
+        "- Check the available Pi model registry below before asking the user whether a named model exists or what its exact ID is.",
+        "- Conditional task-shape routes do not need to be forced into role-wide defaults or agentOverrides.",
+        "- Valid role-wide Takomi overrides are: general, orchestrator, architect, designer, coder, reviewer. Other headings may still be policy concepts or execution routes.",
+        "- Preserve the user's full authored policy. If this looks like a summary/excerpt and a richer referenced source exists, inspect that source and apply the complete intended text instead of overwriting it with the excerpt.",
+        "- If the extraction is correct and safe, call takomi_apply_routing_policy with the complete intended policyText and scope below.",
+        "- Ask only for unresolved provider/account choices or genuine policy ambiguity; do not ask for facts available from the registry or files.",
         "",
         "Deterministic extraction:",
         renderRoutingPolicyPreview(preview),
+        "",
+        replacementWarning,
+        "",
+        availableModels.length ? `Available Pi models:\n${availableModels.map((model) => `- ${model}`).join("\n")}` : "Available Pi models: registry unavailable; inspect it before asking the user if possible.",
         "",
         "Original policy text:",
         "```",

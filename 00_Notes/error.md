@@ -13,3 +13,5 @@
    takomi
 
 npm install -g
+
+powershell -ExecutionPolicy Bypass -File .\scripts\pi-dev.ps1 

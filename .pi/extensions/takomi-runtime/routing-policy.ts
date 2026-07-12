@@ -205,7 +205,7 @@ export async function resolveTakomiRoutingPolicy(cwd: string): Promise<ResolvedR
   return { source: "missing" };
 }
 
-export function previewTakomiRoutingPolicy(cwd: string, input: string, options: { scope?: RoutingPolicyInstallScope } = {}): RoutingPolicyPreviewResult {
+export function previewTakomiRoutingPolicy(cwd: string, input: string, options: { scope?: RoutingPolicyInstallScope; availableModels?: string[] } = {}): RoutingPolicyPreviewResult {
   const policy = extractQuotedPolicy(input);
   if (!policy) throw new Error("No routing policy text found. Paste the policy after /takomi routing or inside triple quotes.");
 
@@ -217,7 +217,19 @@ export function previewTakomiRoutingPolicy(cwd: string, input: string, options: 
     ? path.join(cwd, PROJECT_PI_SETTINGS_RELATIVE)
     : GLOBAL_PI_SETTINGS_PATH;
   const { overrides, detected } = deriveSubagentDefaults(policy);
-  return { scope, policy, policyPath, settingsPath, detectedDefaults: detected, overrides };
+
+  // Resolve named model families from Pi's registry for review visibility. These
+  // are conditional routing intents, not role-wide defaults, so do not invent
+  // agentOverrides merely to make the extraction non-empty.
+  const availableModels = [...new Set(options.availableModels ?? [])];
+  for (const alias of ["luna", "sol", "terra"]) {
+    if (!new RegExp(`\\b${alias}\\b`, "i").test(policy)) continue;
+    const matches = availableModels.filter((model) => new RegExp(`(?:^|/)gpt[-_.]?5\\.6[-_.]?${alias}$`, "i").test(model));
+    if (matches.length === 1) detected.push(`${alias[0].toUpperCase()}${alias.slice(1)} intent resolves to ${matches[0]} (conditional route)`);
+    else if (matches.length > 1) detected.push(`${alias[0].toUpperCase()}${alias.slice(1)} intent matches available models: ${matches.join(", ")}`);
+    else detected.push(`${alias[0].toUpperCase()}${alias.slice(1)} remains a providerless conditional routing intent`);
+  }
+  return { scope, policy, policyPath, settingsPath, detectedDefaults: [...new Set(detected)], overrides };
 }
 
 export async function installTakomiRoutingPolicy(cwd: string, input: string, options: { scope?: RoutingPolicyInstallScope } = {}): Promise<RoutingPolicyInstallResult> {
