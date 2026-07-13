@@ -1,5 +1,5 @@
 import { getMarkdownTheme, keyHint } from "@earendil-works/pi-coding-agent";
-import { Container, Markdown, Text } from "@earendil-works/pi-tui";
+import { Container, Markdown, Text, type Component } from "@earendil-works/pi-tui";
 
 type Theme = {
   fg(color: string, text: string): string;
@@ -50,7 +50,9 @@ export function renderCompactCard(options: {
   title: string;
   summary: string;
   metadata?: string;
-}, theme: Theme): Text {
+  /** Items render inline on wide terminals and stack below 80 columns. */
+  responsiveMetadata?: string[];
+}, theme: Theme): Component {
   const status = {
     success: ["✓", "success"],
     warning: ["⚠", "warning"],
@@ -61,11 +63,24 @@ export function renderCompactCard(options: {
   const title = sanitizePresentation(options.title);
   const summary = sanitizePresentation(options.summary);
   const metadata = options.metadata ? sanitizePresentation(options.metadata) : undefined;
-  const lines = [
-    `${theme.fg(color, icon)} ${theme.fg("accent", theme.bold(title))} ${theme.fg("muted", summary)}`,
-    metadata ? theme.fg("dim", `${metadata} · ${keyHint("app.tools.expand", "view details")}`) : theme.fg("dim", keyHint("app.tools.expand", "view details")),
-  ];
-  return new Text(lines.join("\n"), 0, 0);
+  const responsiveMetadata = options.responsiveMetadata?.map(sanitizePresentation).filter(Boolean);
+  const header = `${theme.fg(color, icon)} ${theme.fg("accent", theme.bold(title))} ${theme.fg("muted", summary)}`;
+  const hint = keyHint("app.tools.expand", "view details");
+
+  if (!responsiveMetadata?.length) {
+    const detail = metadata ? `${metadata} · ${hint}` : hint;
+    return new Text([header, theme.fg("dim", detail)].join("\n"), 0, 0);
+  }
+
+  return {
+    invalidate() {},
+    render(width: number): string[] {
+      const details = width < 80
+        ? [...responsiveMetadata.map((item) => theme.fg("dim", item)), theme.fg("dim", hint)]
+        : [theme.fg("dim", `${responsiveMetadata.join(" · ")} · ${hint}`)];
+      return new Text([header, ...details].join("\n"), 0, 0).render(width);
+    },
+  };
 }
 
 export function renderExpandedMarkdown(options: {

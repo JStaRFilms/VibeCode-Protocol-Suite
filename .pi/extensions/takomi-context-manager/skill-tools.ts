@@ -29,10 +29,14 @@ function renderManifest(state: ContextManagerState, names: string[]): string {
 
 const COMPACT_CATEGORY_LIMIT = 3;
 
-function groupSummary(groups: SkillIndexRenderGroup[], maximum = groups.length): string {
+function groupSummaryItems(groups: SkillIndexRenderGroup[], maximum = groups.length): string[] {
   const visible = groups.slice(0, maximum).map((group) => `${group.category} ${group.skills.length}`);
   const overflow = groups.length - visible.length;
-  return [...visible, ...(overflow > 0 ? [`+${overflow} more categories`] : [])].join(" · ");
+  return [...visible, ...(overflow > 0 ? [`+${overflow} more categories`] : [])];
+}
+
+function groupSummary(groups: SkillIndexRenderGroup[], maximum = groups.length): string {
+  return groupSummaryItems(groups, maximum).join(" · ");
 }
 
 function renderGroupedSkillIndex(groups: SkillIndexRenderGroup[]): string {
@@ -90,7 +94,7 @@ export function registerSkillTools(pi: ExtensionAPI, state: ContextManagerState)
           status: count ? "success" : "pending",
           title: "Skill index",
           summary: count ? `${count} skills across ${groups.length} categories` : "no skills discovered",
-          metadata: groups.length ? groupSummary(groups, COMPACT_CATEGORY_LIMIT) : undefined,
+          responsiveMetadata: groups.length ? groupSummaryItems(groups, COMPACT_CATEGORY_LIMIT) : undefined,
         }, theme);
       }
       return renderExpandedMarkdown({

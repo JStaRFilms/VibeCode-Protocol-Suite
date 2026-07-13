@@ -33,6 +33,20 @@ function assertSafePresentation(component, label) {
   }
 }
 
+async function snapshotTree(root, relative = "") {
+  const entries = await fs.readdir(path.join(root, relative), { withFileTypes: true });
+  const snapshot = [];
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const entryRelative = path.join(relative, entry.name);
+    const entryPath = path.join(root, entryRelative);
+    const stats = await fs.stat(entryPath);
+    snapshot.push(`${entry.isDirectory() ? "dir" : "file"}:${entryRelative}:${stats.size}:${stats.mtimeMs}`);
+    if (entry.isDirectory()) snapshot.push(...await snapshotTree(root, entryRelative));
+    else snapshot.push((await fs.readFile(entryPath)).toString("base64"));
+  }
+  return snapshot;
+}
+
 try {
   await fs.writeFile(tsconfigPath, JSON.stringify({
     compilerOptions: {
@@ -62,8 +76,18 @@ try {
   }, null, 2));
   execFileSync(process.execPath, [path.join(repoRoot, "node_modules/typescript/bin/tsc"), "-p", tsconfigPath], { cwd: repoRoot, stdio: "inherit" });
   await addJsExtensions(outDir);
+  await fs.mkdir(path.join(outDir, "src"), { recursive: true });
+  await Promise.all([
+    fs.copyFile(path.join(repoRoot, "src", "skills-catalog.js"), path.join(outDir, "src", "skills-catalog.js")),
+    fs.copyFile(path.join(repoRoot, "src", "utils.js"), path.join(outDir, "src", "utils.js")),
+    fs.copyFile(
+      path.join(repoRoot, ".pi/extensions/takomi-context-manager/skill-categories.js"),
+      path.join(outDir, ".pi/extensions/takomi-context-manager/skill-categories.js"),
+    ),
+  ]);
 
   const moduleAt = (relativePath) => import(pathToFileURL(path.join(outDir, relativePath)).href);
+  const catalog = await moduleAt("src/skills-catalog.js");
   const registry = await moduleAt(".pi/extensions/takomi-context-manager/skill-registry.js");
   const renderers = await moduleAt(".pi/extensions/takomi-context-manager/tool-renderers.js");
   const { createState } = await moduleAt(".pi/extensions/takomi-context-manager/state.js");
@@ -81,6 +105,142 @@ try {
   }));
 
   const plainTheme = { fg: (_color, text) => text, bold: (text) => text };
+
+  // Exercise the normal Pi path with Pi's real Skill fields and an upgrade-era
+  // manifest whose owned entries predate persisted categories.
+  const legacyHome = path.join(tempRoot, "legacy-home");
+  const legacyRoot = path.join(legacyHome, ".agents", "skills");
+  const legacyTakomiHome = path.join(legacyHome, ".takomi");
+  const categorizedNames = [...new Set(catalog.SKILL_CATEGORIES.flatMap((category) => category.skills))];
+  assert.ok(categorizedNames.length >= 88, "tracked installer taxonomy must cover the realistic 88-skill fixture");
+  const legacyNames = categorizedNames.slice(0, 88);
+  const legacyOwned = {};
+  const piSkills = [];
+  for (const [index, name] of legacyNames.entries()) {
+    const directory = path.join(legacyRoot, name);
+    const filePath = path.join(directory, "SKILL.md");
+    await fs.mkdir(directory, { recursive: true });
+    await fs.writeFile(filePath, `---\nname: ${name}\ndescription: Real Pi fixture ${index + 1}\n---\n`);
+    legacyOwned[name] = index === 0 ? `legacy-hash-${index}` : {
+      name,
+      hash: `legacy-hash-${index}`,
+      targetPath: directory,
+      installedAt: "2026-06-10T00:00:00.000Z",
+      takomiVersion: "2.1.43",
+    };
+    piSkills.push({
+      name,
+      description: `Real Pi fixture ${index + 1}`,
+      filePath,
+      baseDir: directory,
+      sourceInfo: { path: filePath, source: "local", scope: "user", origin: "top-level", baseDir: directory },
+      disableModelInvocation: false,
+      ...(index === 0 ? { category: "explicit-upgrade-category" } : {}),
+      ...(index === 1 ? { installerCategory: "explicit-source-category" } : {}),
+    });
+  }
+  const staleName = categorizedNames[88];
+  legacyOwned[staleName] = {
+    name: staleName,
+    hash: "stale-hash",
+    targetPath: path.join(legacyRoot, "stale-manifest-target"),
+    installedAt: "2026-06-10T00:00:00.000Z",
+    takomiVersion: "2.1.43",
+  };
+  await fs.mkdir(legacyTakomiHome, { recursive: true });
+  const legacyManifestPath = path.join(legacyTakomiHome, "skills-manifest.json");
+  await fs.writeFile(legacyManifestPath, JSON.stringify({
+    schemaVersion: 2,
+    takomiVersion: "2.1.43",
+    targetRoot: legacyRoot,
+    mode: "all",
+    selectedSkills: legacyNames,
+    owned: legacyOwned,
+  }, null, 2));
+
+  const legacyTreeBeforeRuntime = await snapshotTree(legacyHome);
+  const collectedPiSkills = registry.collectSkillsFromOptions({ skills: piSkills });
+  assert.equal(collectedPiSkills.length, 88, "real Pi Skill[] options must expose all 88 flat global skills");
+  assert.equal(collectedPiSkills[0].location, piSkills[0].filePath, "real Pi filePath must become the canonical registry location");
+  const enrichedPiSkills = await registry.enrichSkillsWithInstallerTaxonomy(collectedPiSkills, { home: legacyHome, takomiHome: legacyTakomiHome });
+  assert.equal(enrichedPiSkills.filter((skill) => skill.sourceCategory).length, 88, "legacy owned entries without categories must receive tracked catalog taxonomy at runtime");
+  assert.equal(enrichedPiSkills[2].sourceCategory, catalog.getSkillCategory(enrichedPiSkills[2].name), "legacy fallback must come from canonical tracked SKILL_CATEGORIES");
+  assert.equal(registry.skillCategory(enrichedPiSkills[0]), "explicit-upgrade-category", "explicit category metadata must outrank legacy catalog enrichment");
+  assert.equal(registry.skillCategory(enrichedPiSkills[1]), "explicit-source-category", "Pi-supplied source taxonomy must not be overwritten by manifest fallback");
+  assert.equal(registry.groupedSkills(enrichedPiSkills).some((group) => group.category === "uncategorized"), false, "88 legacy-owned flat skills must not collapse into uncategorized");
+
+  const staleRecord = registry.collectSkillsFromOptions({ skills: [{
+    name: staleName,
+    description: "Stale ownership path",
+    filePath: path.join(legacyRoot, staleName, "SKILL.md"),
+    baseDir: path.join(legacyRoot, staleName),
+    sourceInfo: { path: path.join(legacyRoot, staleName, "SKILL.md"), source: "local", scope: "user", origin: "top-level" },
+    disableModelInvocation: false,
+  }] });
+  const descendantRecord = [{ ...staleRecord[0], location: path.join(legacyRoot, "stale-manifest-target", "nested", "SKILL.md") }];
+  const mismatchedRecord = [{ ...staleRecord[0], location: piSkills[2].filePath }];
+  assert.equal((await registry.enrichSkillsWithInstallerTaxonomy(staleRecord, { home: legacyHome, takomiHome: legacyTakomiHome }))[0].sourceCategory, undefined, "stale manifest targetPath must not enrich a different current path");
+  assert.equal((await registry.enrichSkillsWithInstallerTaxonomy(descendantRecord, { home: legacyHome, takomiHome: legacyTakomiHome }))[0].sourceCategory, undefined, "manifest ownership must not extend to descendant or similarly prefixed paths");
+  assert.equal((await registry.enrichSkillsWithInstallerTaxonomy(mismatchedRecord, { home: legacyHome, takomiHome: legacyTakomiHome }))[0].sourceCategory, undefined, "matching another owned skill path must not transfer taxonomy between names");
+  assert.deepEqual(await snapshotTree(legacyHome), legacyTreeBeforeRuntime, "runtime taxonomy enrichment must not write the manifest, installed skills, or any new files");
+
+  // Mirror a real `takomi setup skills` layout: flat global SKILL.md folders
+  // plus the installer-owned registry under ~/.takomi.
+  const installedHome = path.join(tempRoot, "installed-home");
+  const installedRoot = path.join(installedHome, ".agents", "skills");
+  const installedFixtures = [
+    { name: "frontend-design", description: "Installed frontend skill", category: "frontend" },
+    { name: "security-audit", description: "Installed security skill", category: "security" },
+    { name: "takomi", description: "Explicit metadata wins", category: "core", explicitCategory: "frontmatter-override" },
+  ];
+  for (const fixture of installedFixtures) {
+    const directory = path.join(installedRoot, fixture.name);
+    await fs.mkdir(directory, { recursive: true });
+    await fs.writeFile(path.join(directory, "SKILL.md"), [
+      "---",
+      `name: ${fixture.name}`,
+      `description: ${fixture.description}`,
+      ...(fixture.explicitCategory ? [`category: ${fixture.explicitCategory}`] : []),
+      "---",
+      "",
+      `# ${fixture.name}`,
+    ].join("\n"));
+  }
+  const manualDirectory = path.join(installedRoot, "manual-flat-skill");
+  await fs.mkdir(manualDirectory, { recursive: true });
+  await fs.writeFile(path.join(manualDirectory, "SKILL.md"), "---\nname: manual-flat-skill\ndescription: Unmanaged flat skill\n---\n");
+  const installerOwned = Object.fromEntries(installedFixtures.map((fixture) => [fixture.name, {
+    name: fixture.name,
+    hash: `fixture-${fixture.name}`,
+    targetPath: path.join(installedRoot, fixture.name),
+    installedAt: "2026-07-13T00:00:00.000Z",
+    takomiVersion: "2.1.44",
+    category: fixture.category,
+  }]));
+  const takomiHome = path.join(installedHome, ".takomi");
+  await fs.mkdir(takomiHome, { recursive: true });
+  await fs.writeFile(path.join(takomiHome, "skills-manifest.json"), JSON.stringify({
+    schemaVersion: 2,
+    takomiVersion: "2.1.44",
+    targetRoot: installedRoot,
+    mode: "custom",
+    selectedSkills: installedFixtures.map((fixture) => fixture.name),
+    owned: installerOwned,
+  }));
+  const discoveredFixtureSkills = await registry.discoverSkillsFromFilesystem(path.join(tempRoot, "fixture-project"), { home: installedHome, takomiHome });
+  const installedSkills = discoveredFixtureSkills.filter((skill) => skill.location?.startsWith(installedRoot));
+  const installedGroups = registry.groupedSkills(installedSkills);
+  assert.deepEqual(
+    installedGroups.map((group) => [group.category, group.skills.map((skill) => skill.name)]),
+    [
+      ["frontend", ["frontend-design"]],
+      ["frontmatter-override", ["takomi"]],
+      ["security", ["security-audit"]],
+      ["uncategorized", ["manual-flat-skill"]],
+    ],
+    "flat global skills must use path-bound installer taxonomy while explicit and unmanaged skills preserve precedence",
+  );
+
   const loadDirectory = path.join(tempRoot, "loadable");
   const loadPath = path.join(loadDirectory, "SKILL.md");
   await fs.mkdir(loadDirectory);
@@ -95,7 +255,9 @@ try {
     { name: "Delta", description: "Delta description", source: "xml" },
     { name: "Loader", description: "Loadable description", category: "Loader", location: loadPath, source: "filesystem" },
   ];
-  assert.deepEqual(skills.slice(0, 6).map(registry.skillCategory), ["explicit-metadata", "path-taxonomy", "path-taxonomy", "source-slug", "acme-kit", "uncategorized"], "category precedence must be explicit metadata, path taxonomy, package/source slug, then uncategorized");
+  assert.deepEqual(skills.slice(0, 6).map(registry.skillCategory), ["explicit-metadata", "path-taxonomy", "path-taxonomy", "source-slug", "acme-kit", "uncategorized"], "category fallback must remain explicit metadata, path taxonomy, package/source slug, then uncategorized");
+  assert.equal(registry.skillCategory({ name: "Source metadata", sourceCategory: "Installer Taxonomy", location: "/work/skills/path-taxonomy/source/SKILL.md", packageName: "package-fallback", source: "filesystem" }), "installer-taxonomy", "installer/source taxonomy must precede path and package metadata");
+  assert.equal(registry.skillCategory({ name: "Explicit metadata", category: "Explicit", sourceCategory: "Installer", location: "/work/skills/path/source/SKILL.md", source: "filesystem" }), "explicit", "explicit metadata must precede installer/source taxonomy");
 
   const groups = registry.groupedSkills([...skills].reverse());
   assert.deepEqual(groups.map((group) => group.category), ["acme-kit", "explicit-metadata", "loader", "path-taxonomy", "source-slug", "uncategorized"], "categories must be alphabetized independently of discovery order");
@@ -147,6 +309,16 @@ try {
   const indexCompact = render(skillIndex.renderResult(indexResult, { expanded: false }, plainTheme));
   assert.match(indexCompact, /7 skills across 6 categories/, "skill_index compact renderer shows total and category counts");
   assert.match(indexCompact, /\+3 more categories/, "skill_index compact metadata is bounded with an explicit overflow count");
+  for (const width of [40, 60, 120]) {
+    const responsiveIndex = render(skillIndex.renderResult(indexResult, { expanded: false }, plainTheme), width);
+    assert.ok(responsiveIndex.split("\n").every((line) => line.length <= width), `skill_index compact output must fit ${width} columns`);
+    if (width < 80) {
+      assert.doesNotMatch(responsiveIndex, /acme-kit 1 · explicit-metadata 1/, `skill_index category metadata must stack below the threshold at ${width} columns`);
+      assert.match(responsiveIndex, /^acme-kit 1\s*$/m, `skill_index keeps the first category legible at ${width} columns`);
+    } else {
+      assert.match(responsiveIndex, /acme-kit 1 · explicit-metadata 1/, "skill_index category metadata stays compact on wide terminals");
+    }
+  }
   const indexExpanded = render(skillIndex.renderResult(indexResult, { expanded: true }, plainTheme));
   assert.match(indexExpanded, /uncategorized 1/, "skill_index expanded metadata remains complete");
   for (const skill of skills) assert.match(indexExpanded, new RegExp(`- ${skill.name}`), "skill_index expanded renderer retains every skill");
@@ -182,13 +354,25 @@ try {
   assert.match(render(contextReport.renderResult(healthyProblems, { expanded: false }, plainTheme)), /✓ Context health Healthy/, "healthy problems output renders success instead of parsing as informational");
   const healthyExpanded = render(contextReport.renderResult(healthyProblems, { expanded: true }, plainTheme));
   assert.match(healthyExpanded, /Requested mode: problems/, "context_report expanded renderer retains the requested model-facing mode");
-  assert.match(healthyExpanded, /Context-manager tool usage/, "context_report expanded renderer provides complete diagnostics");
+  assert.match(healthyExpanded, /Takomi Context Problems/, "expanded problems mode renders the problems report");
+  assert.doesNotMatch(healthyExpanded, /Context-manager tool usage|Prompt rewrite|File ledger/, "expanded problems mode does not promote the request to verbose content");
 
   state.report.modelRoutingCorrections.push({ toolName: "takomi_subagent", from: "bad-model", to: "approved-model", timestamp: new Date().toISOString() });
   const correctedReport = await contextReport.execute("corrected-report", { mode: "summary" }, undefined, undefined, toolContext);
   assert.equal(correctedReport.details.presentation.attentionCount, 1, "structured context_report attention count includes model-routing corrections");
   assert.equal(correctedReport.details.presentation.status, "warning", "structured context_report status includes model-routing corrections");
   assert.match(render(contextReport.renderResult(correctedReport, { expanded: false }, plainTheme)), /1 attention items/, "context_report compact metadata uses structured attention counts");
+  const summaryExpanded = render(contextReport.renderResult(correctedReport, { expanded: true }, plainTheme));
+  assert.match(summaryExpanded, /Requested mode: summary/, "expanded summary identifies the requested mode");
+  assert.match(summaryExpanded, /Overview/, "expanded summary retains summary-appropriate overview content");
+  assert.doesNotMatch(summaryExpanded, /Context-manager tool usage|Context-manager file ledger/, "expanded summary does not include verbose-only sections");
+  assert.equal(correctedReport.content[0].text.includes("Context-manager tool usage"), false, "summary model-facing content remains summary-only");
+
+  const verboseReport = await contextReport.execute("verbose-report", { mode: "verbose" }, undefined, undefined, toolContext);
+  const verboseExpanded = render(contextReport.renderResult(verboseReport, { expanded: true }, plainTheme));
+  assert.match(verboseExpanded, /Requested mode: verbose/, "expanded verbose identifies the requested mode");
+  assert.match(verboseExpanded, /Context-manager tool usage/, "expanded verbose retains the full report");
+  assert.match(verboseReport.content[0].text, /Context-manager tool usage/, "verbose model-facing content remains the full requested report");
 
   const terminalPayload = "\x1B[31mred\x1B[0m\x1B]8;;https://example.invalid\x07link\x1B]8;;\x07\x00\x08";
   const markdownPayload = `## Markdown heading\n\n**bold markdown** ${terminalPayload}`;

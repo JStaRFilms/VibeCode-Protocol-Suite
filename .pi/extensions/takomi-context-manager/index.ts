@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadConfig, DEFAULT_CONFIG } from "./config";
 import { createState } from "./state";
-import { collectSkillsFromOptions, collectSkillsFromXml, discoverSkillsFromFilesystem, mergeSkills } from "./skill-registry";
+import { collectSkillsFromOptions, collectSkillsFromXml, discoverSkillsFromFilesystem, enrichSkillsWithInstallerTaxonomy, mergeSkills } from "./skill-registry";
 import { discoverPolicies } from "./policy-registry";
 import { findCandidates } from "./context-router";
 import { rewritePrompt } from "./prompt-rewriter";
@@ -48,10 +48,11 @@ export default function takomiContextManager(pi: ExtensionAPI) {
     const optionSkills = collectSkillsFromOptions(event.systemPromptOptions);
     const xmlSkills = collectSkillsFromXml(event.systemPrompt);
     const suppliedSkills = [...optionSkills, ...xmlSkills];
+    const enrichedSuppliedSkills = await enrichSkillsWithInstallerTaxonomy(suppliedSkills);
     const filesystemSkills = suppliedSkills.length === 0
       ? await discoverSkillsFromFilesystem(ctx.cwd)
       : [];
-    state.skills = mergeSkills([...filesystemSkills, ...suppliedSkills]);
+    state.skills = mergeSkills([...filesystemSkills, ...enrichedSuppliedSkills]);
 
     const candidates = findCandidates(event.prompt, state.skills, config);
     const rewrite = rewritePrompt(event.systemPrompt, state.skills, candidates, config);

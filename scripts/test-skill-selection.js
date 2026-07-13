@@ -51,6 +51,10 @@ try {
   ]);
   assert.equal(core.includes('context7'), false, 'context7 must not be core');
   assert.equal(core.includes('spawn-task'), false, 'spawn-task must not be core');
+  assert.equal(catalog.getSkillCategory('frontend-design'), 'frontend', 'catalog taxonomy must expose the installer category');
+  assert.equal(catalog.getSkillCategory('shared-resend-portfolio'), 'developer', 'transactional email integration must use the developer category');
+  assert.equal(catalog.getSkillCategory('code-review'), 'core', 'multi-category skills must deterministically use their first catalog category');
+  assert.equal(catalog.getSkillCategory('not-a-bundled-skill'), undefined, 'unknown skill names must not receive guessed categories');
 
   const allSkills = await catalog.listBundledSkillNames();
 
@@ -98,6 +102,11 @@ try {
   result = await installer.installBundledSkills('test', { mode: 'all', selectedSkills: allSkills });
   assert.equal(result.selectedCount, allSkills.length, 'all mode should select every bundled skill');
   assert.equal(await fs.pathExists(skillPath('ai-avatar-video')), true);
+  manifest = await installer.readSkillsInstallManifest();
+  assert.equal(manifest.owned['frontend-design'].category, 'frontend', 'installer manifest must persist real catalog taxonomy for flat skills');
+  assert.equal(manifest.owned['shared-resend-portfolio'].category, 'developer', 'future explicit installs must persist transactional email taxonomy');
+  assert.equal(manifest.owned['code-review'].category, 'core', 'installer manifest taxonomy must use deterministic catalog precedence');
+  assert.equal(manifest.owned.hyperframes.category, 'creative-video', 'overlapping optional categories must retain their stable primary taxonomy');
 
   await fs.ensureDir(skillPath('my-manual-skill'));
   await fs.writeFile(path.join(skillPath('my-manual-skill'), 'SKILL.md'), 'manual skill');
@@ -115,6 +124,7 @@ try {
   assert.equal(manifest.selectedSkills.includes('spawn-task'), false);
   assert.equal(manifest.selectedSkills.includes('ai-sdk'), true);
   assert.equal(manifest.selectedSkills.includes('git-commit-generation'), true);
+  assert.equal(manifest.owned['ai-sdk'].category, 'core', 'refreshed core manifest entries retain installer category metadata');
 
   await store.initGlobalStore();
   await store.populateSkills('all');

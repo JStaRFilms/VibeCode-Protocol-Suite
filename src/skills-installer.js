@@ -4,7 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import pc from 'picocolors';
 import { PATHS } from './utils.js';
-import { getValidCoreSkills, listBundledSkillNames } from './skills-catalog.js';
+import { getSkillCategory, getValidCoreSkills, listBundledSkillNames } from './skills-catalog.js';
 
 const HOME = os.homedir();
 const TAKOMI_HOME = process.env.TAKOMI_HOME_DIR || path.join(HOME, '.takomi');
@@ -45,6 +45,7 @@ function normalizeOwnedEntry(name, entry) {
       targetPath: path.join(SKILLS_ROOT, name),
       installedAt: undefined,
       takomiVersion: undefined,
+      category: getSkillCategory(name),
     };
   }
   return {
@@ -53,6 +54,7 @@ function normalizeOwnedEntry(name, entry) {
     targetPath: entry.targetPath || path.join(SKILLS_ROOT, name),
     installedAt: entry.installedAt,
     takomiVersion: entry.takomiVersion,
+    category: entry.category || getSkillCategory(name),
   };
 }
 
@@ -163,6 +165,7 @@ export async function installBundledSkills(version = 'unknown', options = {}) {
       targetPath: dest,
       installedAt: new Date().toISOString(),
       takomiVersion: version,
+      category: getSkillCategory(name),
     };
     installed.push(name);
   }

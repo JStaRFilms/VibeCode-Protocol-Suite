@@ -31,11 +31,11 @@ export function registerDiagnostics(pi: ExtensionAPI, state: ContextManagerState
       persistReportSnapshot(pi, state, "context_report");
       const mode = (params.verbose ? "verbose" : params.mode ?? "summary") as ContextReportMode;
       const text = renderReport(state, mode);
-      // The compact model result remains exactly the requested report mode. The
-      // TUI's expanded view receives a complete diagnostic snapshot instead.
-      const expandedReport = renderReport(state, "verbose");
+      // Keep model-facing content exactly as requested. Expanded presentation
+      // renders that same mode-specific report rather than silently promoting
+      // summary/problems requests to verbose diagnostics.
       const presentation = contextReportPresentation(state);
-      return { content: [{ type: "text", text }], details: { ...state.report, mode, expandedReport, presentation } };
+      return { content: [{ type: "text", text }], details: { ...state.report, mode, presentation } };
     },
     renderCall(args, theme) {
       return renderToolCall("context_report", args.verbose ? "verbose" : args.mode ?? "summary", theme);
@@ -46,7 +46,6 @@ export function registerDiagnostics(pi: ExtensionAPI, state: ContextManagerState
         skillCount?: number;
         loadedByTool?: string[];
         loadedPolicies?: string[];
-        expandedReport?: string;
         presentation?: {
           status?: "success" | "warning" | "error" | "pending";
           summary?: string;
@@ -67,7 +66,7 @@ export function registerDiagnostics(pi: ExtensionAPI, state: ContextManagerState
         title: "Context report",
         summary,
         metadata: [metadata, `Requested mode: ${details?.mode ?? "summary"}`],
-        markdown: details?.expandedReport ?? text,
+        markdown: text,
       }, theme);
     },
   });
