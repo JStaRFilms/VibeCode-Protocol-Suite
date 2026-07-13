@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { createAccountFromUpstream } from "./oauth-flow.ts";
+import { createRouterReportLines, createRouterReportWidget, ROUTER_REPORT_WIDGET_KEY, ROUTER_REPORT_WIDGET_OPTIONS } from "./report-ui.ts";
 import type { RouterStatusRow, RouterUsageSummary, RouterUsageWindowSummary, RoutingPolicyName, StoredRouterAccount } from "./types.ts";
 import { RouterRuntime } from "./provider.ts";
 
@@ -273,10 +274,19 @@ export function formatUsageRawReport(runtime: RouterRuntime, accountId?: string)
   return ["# oauth-router usage raw", "", ...rows].join("\n");
 }
 
-function emitReport(ctx: ExtensionCommandContext, text: string) {
-  const lines = text.split(/\r?\n/);
-  ctx.ui.setWidget("oauth-router-report", lines, { placement: "belowEditor" });
-  ctx.ui.notify(lines[0] || "oauth-router report updated", "info");
+export function emitRouterReport(ctx: ExtensionCommandContext, text: string) {
+  // A single key gives every report predictable replacement semantics. RPC
+  // accepts string-array widgets only; ctx.hasUI is true there, so ctx.mode is
+  // the capability signal that prevents its visible report from being ignored.
+  if (ctx.mode === "tui") {
+    ctx.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, createRouterReportWidget(text), ROUTER_REPORT_WIDGET_OPTIONS);
+    return;
+  }
+  ctx.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, createRouterReportLines(text), ROUTER_REPORT_WIDGET_OPTIONS);
+}
+
+export function clearRouterReport(ctx: ExtensionCommandContext) {
+  ctx.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, undefined);
 }
 
 async function pickUpstream(runtime: RouterRuntime, ctx: ExtensionCommandContext, requestedId?: string) {
@@ -386,8 +396,7 @@ function setFooterStatus(ctx: ExtensionCommandContext, runtime: RouterRuntime) {
 }
 
 function showCommandHint(ctx: ExtensionCommandContext, title: string, lines: string[]) {
-  emitReport(ctx, [`# ${title}`, "", ...lines].join("\n"));
-  ctx.ui.notify(title, "info");
+  emitRouterReport(ctx, [`# ${title}`, "", ...lines].join("\n"));
 }
 
 async function handleRouterLogin(runtime: RouterRuntime, args: string, ctx: ExtensionCommandContext) {
@@ -415,18 +424,17 @@ async function handleRouterLogin(runtime: RouterRuntime, args: string, ctx: Exte
         runtime.clearAccountHealth(duplicate.id);
         const usageMessage = await refreshUsageAfterCredentialChange(runtime, duplicate.id);
         setFooterStatus(ctx, runtime);
-        emitReport(ctx, `Updated existing account ${duplicate.id} (${duplicate.label}) with fresh credentials instead of adding a duplicate.${usageMessage}`);
+        emitRouterReport(ctx, `Updated existing account ${duplicate.id} (${duplicate.label}) with fresh credentials instead of adding a duplicate.${usageMessage}`);
         return;
       }
       runtime.addAccount(account);
       const usageMessage = await refreshUsageAfterCredentialChange(runtime, account.id);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Added account ${account.id} (${account.label}) for upstream ${upstream.id}.${usageMessage}`);
-      ctx.ui.notify(`Added ${account.id}`, "info");
+      emitRouterReport(ctx, `Added account ${account.id} (${account.label}) for upstream ${upstream.id}.${usageMessage}`);
       return;
     }
     case "list": {
-      emitReport(ctx, formatAccountsReport(runtime));
+      emitRouterReport(ctx, formatAccountsReport(runtime));
       setFooterStatus(ctx, runtime);
       return;
     }
@@ -439,7 +447,7 @@ async function handleRouterLogin(runtime: RouterRuntime, args: string, ctx: Exte
       }
       runtime.removeAccount(account.id);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Removed account ${account.id}.`);
+      emitRouterReport(ctx, `Removed account ${account.id}.`);
       return;
     }
     case "rename": {
@@ -447,7 +455,7 @@ async function handleRouterLogin(runtime: RouterRuntime, args: string, ctx: Exte
       const label = await getRequiredLabel(ctx, account.label, rest.join(" "));
       runtime.renameAccount(account.id, label);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Renamed account ${account.id} to ${label}.`);
+      emitRouterReport(ctx, `Renamed account ${account.id} to ${label}.`);
       return;
     }
     case "relogin": {
@@ -472,7 +480,7 @@ async function handleRouterLogin(runtime: RouterRuntime, args: string, ctx: Exte
       runtime.clearAccountHealth(existing.id);
       const usageMessage = await refreshUsageAfterCredentialChange(runtime, existing.id);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Re-logged account ${existing.id} (${existing.label}) and cleared auth state.${usageMessage}`);
+      emitRouterReport(ctx, `Re-logged account ${existing.id} (${existing.label}) and cleared auth state.${usageMessage}`);
       return;
     }
     case "refresh": {
@@ -480,12 +488,12 @@ async function handleRouterLogin(runtime: RouterRuntime, args: string, ctx: Exte
       const refreshed = await runtime.refreshAccount(account.id);
       const usageMessage = await refreshUsageAfterCredentialChange(runtime, refreshed.id);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Refreshed account ${refreshed.id} (${refreshed.label}).${usageMessage}`);
+      emitRouterReport(ctx, `Refreshed account ${refreshed.id} (${refreshed.label}).${usageMessage}`);
       return;
     }
     case "help":
     default: {
-      emitReport(
+      emitRouterReport(
         ctx,
         [
           "# oauth-router commands",
@@ -506,6 +514,7 @@ async function handleRouterLogin(runtime: RouterRuntime, args: string, ctx: Exte
           "- /router-disable <id>",
           "- /router-policy <round-robin|weighted-round-robin>",
           "- /router-weight <id> <n>",
+          "- /router-clear (dismiss the current report)",
         ].join("\n"),
       );
       return;
@@ -519,10 +528,18 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
     handler: async (args, ctx) => handleRouterLogin(runtime, args || "", ctx),
   });
 
+  pi.registerCommand("router-clear", {
+    description: "Dismiss the current oauth-router report widget",
+    handler: async (_args, ctx) => {
+      clearRouterReport(ctx);
+      setFooterStatus(ctx, runtime);
+    },
+  });
+
   pi.registerCommand("router-status", {
     description: "Show oauth-router health and routing state",
     handler: async (_args, ctx) => {
-      emitReport(ctx, formatStatusReport(runtime));
+      emitRouterReport(ctx, formatStatusReport(runtime));
       setFooterStatus(ctx, runtime);
     },
   });
@@ -530,7 +547,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
   pi.registerCommand("router-accounts", {
     description: "Show compact oauth-router account list",
     handler: async (_args, ctx) => {
-      emitReport(ctx, formatAccountsReport(runtime));
+      emitRouterReport(ctx, formatAccountsReport(runtime));
       setFooterStatus(ctx, runtime);
     },
   });
@@ -539,7 +556,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
     description: "Show oauth-router visual provider quota and local usage",
     handler: async (args, ctx) => {
       const [id] = parseArgs(args || "");
-      emitReport(ctx, formatUsageReport(runtime, id));
+      emitRouterReport(ctx, formatUsageReport(runtime, id));
       setFooterStatus(ctx, runtime);
     },
   });
@@ -548,7 +565,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
     description: "Show raw oauth-router usage/provider quota details",
     handler: async (args, ctx) => {
       const [id] = parseArgs(args || "");
-      emitReport(ctx, formatUsageRawReport(runtime, id));
+      emitRouterReport(ctx, formatUsageRawReport(runtime, id));
       setFooterStatus(ctx, runtime);
     },
   });
@@ -557,7 +574,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
     description: "Alias for visual oauth-router usage/quota",
     handler: async (args, ctx) => {
       const [id] = parseArgs(args || "");
-      emitReport(ctx, formatUsageReport(runtime, id));
+      emitRouterReport(ctx, formatUsageReport(runtime, id));
       setFooterStatus(ctx, runtime);
     },
   });
@@ -580,7 +597,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
       }
 
       const report = formatUsageReport(runtime, target === "all" ? undefined : target);
-      emitReport(ctx, failures.length ? [report, "", "## Refresh failures", ...failures].join("\n") : report);
+      emitRouterReport(ctx, failures.length ? [report, "", "## Refresh failures", ...failures].join("\n") : report);
       if (failures.length) ctx.ui.notify(`oauth-router usage refreshed with ${failures.length} failure(s)`, "error");
       setFooterStatus(ctx, runtime);
     },
@@ -594,7 +611,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
       const label = await getRequiredLabel(ctx, account.label, labelParts.join(" "));
       runtime.renameAccount(account.id, label);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Renamed account ${account.id} to ${label}.`);
+      emitRouterReport(ctx, `Renamed account ${account.id} to ${label}.`);
     },
   });
 
@@ -609,7 +626,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
       }
       runtime.removeAccount(account.id);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Deleted account ${account.id}.`);
+      emitRouterReport(ctx, `Deleted account ${account.id}.`);
     },
   });
 
@@ -625,7 +642,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
       const account = await pickAccount(runtime, ctx, id, "Choose account to enable");
       runtime.setEnabled(account.id, true);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Enabled account ${account.id}.`);
+      emitRouterReport(ctx, `Enabled account ${account.id}.`);
     },
   });
 
@@ -636,7 +653,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
       const account = await pickAccount(runtime, ctx, id, "Choose account to disable");
       runtime.setEnabled(account.id, false);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Disabled account ${account.id}.`);
+      emitRouterReport(ctx, `Disabled account ${account.id}.`);
     },
   });
 
@@ -665,7 +682,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
       }
       runtime.setPolicy(policy);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Routing policy set to ${policy}.`);
+      emitRouterReport(ctx, `Routing policy set to ${policy}.`);
     },
   });
 
@@ -685,7 +702,7 @@ export function registerRouterCommands(pi: ExtensionAPI, runtime: RouterRuntime)
       }
       runtime.setWeight(account.id, weight);
       setFooterStatus(ctx, runtime);
-      emitReport(ctx, `Updated weight for ${account.id} to ${Math.max(1, Math.floor(weight))}.`);
+      emitRouterReport(ctx, `Updated weight for ${account.id} to ${Math.max(1, Math.floor(weight))}.`);
     },
   });
 }

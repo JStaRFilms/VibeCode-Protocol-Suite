@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { registerRouterCommands, formatStatusReport } from "./commands.ts";
+import { emitRouterReport, formatStatusReport, registerRouterCommands } from "./commands.ts";
+import { ROUTER_REPORT_WIDGET_KEY } from "./report-ui.ts";
 import { registerRouterProvider, RouterRuntime } from "./provider.ts";
 import type { RouterUiEvent } from "./types.ts";
 
@@ -105,7 +106,15 @@ function installRouterUiBridge(pi: ExtensionAPI, runtime: RouterRuntime, notifyO
   });
 
   pi.on("session_shutdown", async () => {
-    activeCtx = undefined;
+    // The old context owns the RPC transport. Clear its report before releasing
+    // it so clients do not retain a widget across a session replacement.
+    try {
+      activeCtx?.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, undefined);
+    } catch {
+      // Teardown UI is best-effort; shutdown must always complete.
+    } finally {
+      activeCtx = undefined;
+    }
   });
 }
 
@@ -119,9 +128,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("router-debug-report", {
     description: "Show a detailed oauth-router report in the UI only",
     handler: async (_args, ctx) => {
-      const report = formatStatusReport(runtime);
-      ctx.ui.setWidget("oauth-router-report", report.split(/\r?\n/), { placement: "belowEditor" });
-      ctx.ui.notify("oauth-router debug report updated", "info");
+      emitRouterReport(ctx, formatStatusReport(runtime));
     },
   });
 }
