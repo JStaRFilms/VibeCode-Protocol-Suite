@@ -57,6 +57,16 @@ import {
   loadTakomiProfile,
 } from "./profile";
 import { installTakomiRoutingPolicy, previewTakomiRoutingPolicy, renderRoutingPolicyPreview, resolveTakomiRoutingPolicy } from "./routing-policy";
+import {
+  renderTakomiBoardCall,
+  renderTakomiBoardResult,
+  renderTakomiModeCall,
+  renderTakomiModeResult,
+  renderTakomiRoutingCall,
+  renderTakomiRoutingResult,
+  renderTakomiWorkflowCall,
+  renderTakomiWorkflowResult,
+} from "./tool-renderers";
 
 type TakomiModeSource = "idle" | "manual" | "model" | "board";
 
@@ -400,6 +410,24 @@ function getIncompleteChecklistItems(checklist?: OrchestratorTask["checklist"]):
     .map((item) => item.text);
 }
 
+type BoardErrorSeverity = "warning" | "error";
+
+function createBoardErrorResult(
+  text: string,
+  code: string,
+  severity: BoardErrorSeverity,
+  details: Record<string, unknown> = {},
+) {
+  return {
+    content: [{ type: "text" as const, text }],
+    // Keep this semantic error independent of Pi's transport-level isError.
+    // Renderers use it to retain warning/error meaning even when Pi does not
+    // pass top-level result flags back into renderResult.
+    details: { ...details, error: { code, message: text, severity } },
+    isError: true,
+  };
+}
+
 function getCompletionGateError(task: Pick<OrchestratorTask, "id" | "title" | "checklist">): string | undefined {
   if (!task.checklist?.length) {
     return `Task ${task.id} cannot be marked completed until it has a checklist.`;
@@ -689,6 +717,10 @@ function installTakomiFooter(ctx: ExtensionContext, stateRef: { current: TakomiS
   ctx.ui.setFooter((tui, theme, footerData) => new TakomiFooterComponent(tui, theme, footerData, ctx, () => stateRef.current));
 }
 
+function hasVisibleRuntimeWidget(state: TakomiState): boolean {
+  return state.enabled && (state.modeSource ?? "idle") !== "idle";
+}
+
 async function refreshUi(
   ctx: ExtensionContext,
   state: TakomiState,
@@ -871,7 +903,7 @@ export default function takomiRuntime(pi: ExtensionAPI) {
         activeSubagentAgent = undefined;
         activeSubagentTask = undefined;
         activeSubagentStatus = undefined;
-      }, "Takomi runtime state reset");
+      }, () => hasVisibleRuntimeWidget(state) ? "" : "Takomi runtime state reset");
       subagentController.reset(ctx);
       contextPanel.resetSession();
       contextPanel.show(ctx);
@@ -929,7 +961,9 @@ export default function takomiRuntime(pi: ExtensionAPI) {
     syncContextPanelState();
     await refreshUi(ctx, state, footerStateRef);
     const label = state.modeSource === "idle" ? "idle" : `${state.modeSource}:${state.stage ?? state.role}`;
-    return `Takomi mode set to ${label}${state.modeReason ? ` (${state.modeReason})` : ""}.`;
+    const text = `Takomi mode set to ${label}${state.modeReason ? ` (${state.modeReason})` : ""}.`;
+    if (!hasVisibleRuntimeWidget(state)) ctx.ui.notify(text, "info");
+    return text;
   }
 
   pi.registerTool({
@@ -948,12 +982,13 @@ export default function takomiRuntime(pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const text = await applyTakomiMode(ctx, params.mode, "model", params.reason);
-      ctx.ui.notify(text, "info");
       return {
         content: [{ type: "text", text }],
         details: { mode: params.mode, source: state.modeSource, reason: state.modeReason, role: state.role, stage: state.stage, workflow: state.workflow },
       };
     },
+    renderCall: renderTakomiModeCall,
+    renderResult: (result, options, theme) => renderTakomiModeResult(result, options, theme),
   });
 
   pi.registerTool({
@@ -1003,6 +1038,8 @@ export default function takomiRuntime(pi: ExtensionAPI) {
         details: { result, preview, reviewNotes: params.reviewNotes },
       };
     },
+    renderCall: renderTakomiRoutingCall,
+    renderResult: (result, options, theme) => renderTakomiRoutingResult(result, options, theme),
   });
 
   pi.registerTool({
@@ -1028,6 +1065,8 @@ export default function takomiRuntime(pi: ExtensionAPI) {
         details: undefined,
       };
     },
+    renderCall: renderTakomiWorkflowCall,
+    renderResult: (result, options, theme) => renderTakomiWorkflowResult(result, options, theme),
   });
 
   pi.registerTool({
@@ -1106,7 +1145,7 @@ export default function takomiRuntime(pi: ExtensionAPI) {
 
       if (params.action === "show_session") {
         if (!params.sessionId) {
-          return { content: [{ type: "text", text: "sessionId is required for show_session" }], details: {}, isError: true };
+          return createBoardErrorResult("sessionId is required for show_session", "missing-session-id", "warning");
         }
         assertSafeSessionId(params.sessionId);
         const paths = getSessionPaths(ctx.cwd, params.sessionId);
@@ -1125,13 +1164,18 @@ ${stateJson}`
 
       if (params.action === "update_task") {
         if (!params.sessionId || !params.taskId) {
-          return { content: [{ type: "text", text: "sessionId and taskId are required for update_task" }], details: {}, isError: true };
+          return createBoardErrorResult("sessionId and taskId are required for update_task", "missing-task-context", "warning");
         }
         assertSafeTaskId(params.taskId);
         const { state: sessionState } = await loadSessionState(ctx.cwd, params.sessionId);
         const idx = sessionState.tasks.findIndex((task) => task.id === params.taskId);
         if (idx === -1) {
-          return { content: [{ type: "text", text: `Task ${params.taskId} not found in session ${params.sessionId}` }], details: {}, isError: true };
+          return createBoardErrorResult(
+            `Task ${params.taskId} not found in session ${params.sessionId}`,
+            "task-not-found",
+            "error",
+            { sessionId: params.sessionId, taskId: params.taskId },
+          );
         }
         const current = sessionState.tasks[idx];
         const checklist = resolveChecklistState(current.checklist, params.checklist, params.checklistUpdates);
@@ -1144,16 +1188,12 @@ ${stateJson}`
         if (params.status === "completed") {
           const completionGateError = getCompletionGateError(nextTask);
           if (completionGateError) {
-            return {
-              content: [{ type: "text", text: completionGateError }],
-              details: {
-                sessionId: params.sessionId,
-                taskId: current.id,
-                incompleteChecklistItems: getIncompleteChecklistItems(nextTask.checklist),
-                checklist: nextTask.checklist,
-              },
-              isError: true,
-            };
+            return createBoardErrorResult(completionGateError, "completion-gate", "warning", {
+              sessionId: params.sessionId,
+              taskId: current.id,
+              incompleteChecklistItems: getIncompleteChecklistItems(nextTask.checklist),
+              checklist: nextTask.checklist,
+            });
           }
         }
         sessionState.tasks[idx] = nextTask;
@@ -1191,7 +1231,11 @@ ${stateJson}`
 
       if (params.action === "expand_stage") {
         if (!params.sessionId || !params.stage || !params.tasks?.length) {
-          return { content: [{ type: "text", text: "sessionId, stage, and at least one task are required for expand_stage" }], details: {}, isError: true };
+          return createBoardErrorResult(
+            "sessionId, stage, and at least one task are required for expand_stage",
+            "invalid-expansion",
+            "warning",
+          );
         }
 
         const { state: sessionState } = await loadSessionState(ctx.cwd, params.sessionId);
@@ -1274,6 +1318,8 @@ ${stateJson}`
         details: { sessionId: nextState.sessionId, paths, tasks: nextState.tasks, lifecycle: nextState.lifecycle, mode: nextState.mode },
       };
     },
+    renderCall: renderTakomiBoardCall,
+    renderResult: (result, options, theme, context) => renderTakomiBoardResult(result, options, theme, context?.args),
   });
 
   pi.on("input", async (event) => {

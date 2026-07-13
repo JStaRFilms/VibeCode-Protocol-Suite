@@ -23,7 +23,7 @@ const commandTextStub = dataModule(`
   export const commandHelp = () => "help";
   export const completions = () => [];
   export const statusText = () => "status";
-  export const workflowPrompt = () => "workflow";
+  export const workflowPrompt = (stage, prompt) => "workflow:" + stage + (prompt ? ":" + prompt : "");
 `);
 const routingStub = dataModule(`
   export const previewTakomiRoutingPolicy = () => ({});
@@ -52,37 +52,61 @@ const state = {
   subagentsEnabled: true,
 };
 const provenance = [];
+const notifications = [];
+const stageCalls = [];
 const context = {
   cwd: repoRoot,
-  ui: { notify() {} },
+  ui: { notify(message, level) { notifications.push({ message, level }); } },
 };
 
 registerTakomiCommands(pi, {
   getState: () => state,
-  async updateState(_ctx, mutator) { mutator(); },
+  async updateState(ctx, mutator, message) {
+    mutator();
+    const text = typeof message === "function" ? message() : message;
+    if (text) ctx.ui.notify(text, "info");
+  },
   recordUserGateAutoProvenance(authorized) { provenance.push(authorized); },
   async resetRuntime() {},
-  setStageAndWorkflow() {},
+  setStageAndWorkflow(stage) { stageCalls.push(stage); },
   async createPlanSession() { return ""; },
   async hasGenesisArtifacts() { return false; },
   subagentController: { hasRuns: () => false, getStatusSummary: () => "" },
 });
 
 const handler = commands.get("takomi").handler;
+await handler("build preserve this optional request", context);
+assert.deepEqual(stageCalls, ["build"], "stage command sets the requested lifecycle stage");
+assert.deepEqual(notifications.at(-1), { message: "workflow:build:preserve this optional request", level: "info" }, "stage command restores workflowPrompt(stage, prompt), including optional request text");
+notifications.length = 0;
+
+await handler("mode direct", context);
+assert.deepEqual(notifications, [{ message: "Takomi mode set to direct", level: "info" }], "direct mode remains visibly acknowledged when the runtime widget is absent");
+
 await handler("gate auto", context);
 assert.deepEqual(provenance, [true], "/takomi gate auto records explicit user authorization");
 assert.equal(state.launchMode, "auto");
+assert.deepEqual(notifications.at(-1), { message: "Takomi execution gate set to auto", level: "info" }, "gate success remains visible in direct mode");
 
-await handler("gate review", context);
-assert.deepEqual(provenance, [true, false], "/takomi gate review revokes authorization");
+await handler("subagents off", context);
+assert.equal(state.subagentsEnabled, false);
+assert.deepEqual(notifications.at(-1), { message: "Takomi subagents off", level: "info" }, "subagent changes remain visible in direct mode");
+
+const directNotificationCount = notifications.length;
+await handler("mode review", context);
+assert.deepEqual(provenance, [true, false], "review mode cannot retain auto authorization");
 assert.equal(state.launchMode, "manual");
+assert.equal(notifications.length, directNotificationCount, "mode success is deduplicated only when the live runtime widget represents review state");
 
 await handler("gate manual", context);
-assert.deepEqual(provenance, [true, false, false], "/takomi gate manual also revokes authorization");
-assert.equal(state.launchMode, "manual");
+assert.deepEqual(provenance, [true, false, false], "/takomi gate manual revokes authorization");
+assert.equal(notifications.length, directNotificationCount, "gate success is deduplicated while the live runtime widget represents state");
+await handler("subagents on", context);
+assert.equal(notifications.length, directNotificationCount, "subagent success is deduplicated while the live runtime widget represents state");
 
-await handler("mode review", context);
-assert.deepEqual(provenance, [true, false, false, false], "review mode cannot retain auto authorization");
-assert.equal(state.launchMode, "manual");
+await handler("gate invalid", context);
+assert.deepEqual(notifications.at(-1), { message: "Usage: /takomi gate <auto|review|manual>", level: "warning" }, "invalid gate input remains visibly notified");
+await handler("help", context);
+assert.deepEqual(notifications.at(-1), { message: "help", level: "info" }, "explicit help remains visibly notified");
 
-console.log("✓ /takomi gate auto writes provenance; review/manual paths revoke it");
+console.log("✓ stage prompts, direct feedback, and represented-state notification deduplication are preserved");

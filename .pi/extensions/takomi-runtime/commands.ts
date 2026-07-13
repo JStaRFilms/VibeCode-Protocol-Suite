@@ -37,6 +37,13 @@ type RegisterTakomiCommandOptions = {
 };
 
 export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomiCommandOptions): void {
+  // The custom runtime widget is intentionally absent in idle/direct mode, so
+  // suppress routine notifications only while the changed state remains visible.
+  function hasVisibleRuntimeWidget(): boolean {
+    const state = options.getState();
+    return state.enabled && (state.modeSource ?? "idle") !== "idle";
+  }
+
   async function handleStage(ctx: ExtensionCommandContext, stage: VibeLifecycleStage, prompt?: string): Promise<void> {
     await options.updateState(ctx, () => {
       options.getState().enabled = true;
@@ -83,7 +90,7 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
         state.modeSource = "manual";
         state.modeReason = "/takomi mode review";
       }
-    }, () => `Takomi mode set to ${mode}`);
+    }, () => hasVisibleRuntimeWidget() ? "" : `Takomi mode set to ${mode}`);
   }
 
   async function handleGate(ctx: ExtensionCommandContext, gate?: string): Promise<void> {
@@ -99,7 +106,7 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
       state.autoOrch = auto;
       // This dedicated entry is the only user-gate authorization signal.
       options.recordUserGateAutoProvenance(auto);
-    }, () => `Takomi execution gate set to ${auto ? "auto" : "review"}`);
+    }, () => hasVisibleRuntimeWidget() ? "" : `Takomi execution gate set to ${auto ? "auto" : "review"}`);
   }
 
   async function handleRouting(ctx: ExtensionCommandContext, body?: string): Promise<void> {
@@ -243,7 +250,7 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
     if (action === "on" || action === "off") {
       await options.updateState(ctx, () => {
         options.getState().subagentsEnabled = action === "on";
-      }, `Takomi subagents ${action}`);
+      }, () => hasVisibleRuntimeWidget() ? "" : `Takomi subagents ${action}`);
       return;
     }
     if (action === "status" || !action) {
