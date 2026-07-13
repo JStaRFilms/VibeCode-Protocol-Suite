@@ -67,6 +67,11 @@ const uxStub = dataModule(`
   export function createTakomiUxTasks() { return []; }
   export function withTakomiUxDetails(details) { return details ?? {}; }
 `);
+const detachedStub = dataModule(`
+  export async function rememberDetachedLaunch() {}
+  export async function resolveDetachedStatusResult(_pi, _params, result) { return result; }
+`);
+const internalsStub = dataModule(`export async function loadPiSubagentsInternals() { return { ASYNC_DIR: "/tmp/async", RESULTS_DIR: "/tmp/results", TEMP_ARTIFACTS_DIR: "/tmp/artifacts" }; }`);
 
 const toolRunnerUrl = await transpile("tool-runner.ts", {
   "../takomi-runtime/profile": profileStub,
@@ -75,6 +80,8 @@ const toolRunnerUrl = await transpile("tool-runner.ts", {
   "./agent-aliases": aliasesStub,
   "./agents": agentsStub,
   "./delegation-plan": delegationStub,
+  "./detached-results": detachedStub,
+  "./pi-subagents-internal": internalsStub,
   "./pi-subagents-engine": engineStub,
   "./subagent-ux": uxStub,
 });

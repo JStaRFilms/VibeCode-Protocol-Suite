@@ -8,6 +8,7 @@ import { applyTakomiRoutingDefaults, loadTakomiModelRoutingSnapshot } from "../t
 import { resolveAgentName } from "./agent-aliases";
 import { discoverTakomiAgents, type TakomiAgentConfig, type TakomiAgentScope } from "./agents";
 import { createTakomiDelegationPlan, renderTakomiDelegationPlan } from "./delegation-plan";
+import { rememberDetachedLaunch, resolveDetachedStatusResult } from "./detached-results";
 import { createTakomiPiSubagentsEngine } from "./pi-subagents-engine";
 import { createTakomiUxTasks, withTakomiUxDetails } from "./subagent-ux";
 
@@ -359,10 +360,13 @@ export async function executeTakomiSubagentTool(
         onUpdate as any,
         ctx,
       );
+      const resolvedResult = params.action === "status"
+        ? await resolveDetachedStatusResult(pi, params, nativeResult)
+        : nativeResult;
       return {
-        ...nativeResult,
+        ...resolvedResult,
         details: {
-          ...(nativeResult?.details ?? {}),
+          ...(resolvedResult?.details ?? {}),
           takomi: {
             action: params.action,
             agentScope,
@@ -481,6 +485,17 @@ export async function executeTakomiSubagentTool(
       nativeOnUpdate as any,
       ctx,
     );
+
+    if (params.async === true) {
+      await rememberDetachedLaunch(
+        pi,
+        nativeResult,
+        uxTasks,
+        ctx,
+        rootCwd,
+        mode === "single" ? tasks[0]?.cwd ?? rootCwd : rootCwd,
+      );
+    }
 
     const takomi = {
       plan,

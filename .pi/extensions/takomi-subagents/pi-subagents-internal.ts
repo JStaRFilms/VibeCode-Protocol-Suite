@@ -25,6 +25,8 @@ export async function loadPiSubagentsInternals() {
     createSubagentExecutor: executorModule.createSubagentExecutor,
     discoverPiAgents: agentsModule.discoverAgents,
     DEFAULT_ARTIFACT_CONFIG: sharedTypesModule.DEFAULT_ARTIFACT_CONFIG,
+    ASYNC_DIR: sharedTypesModule.ASYNC_DIR,
+    RESULTS_DIR: sharedTypesModule.RESULTS_DIR,
     TEMP_ARTIFACTS_DIR: sharedTypesModule.TEMP_ARTIFACTS_DIR,
     renderSubagentResult: renderModule.renderSubagentResult,
   };

@@ -1,0 +1,137 @@
+{
+  "package": "pi-subagents@0.31.0",
+  "sourceSchemas": [
+    "src/runs/background/async-execution.ts",
+    "src/runs/background/run-status.ts",
+    "src/runs/background/subagent-runner.ts",
+    "src/runs/background/result-watcher.ts"
+  ],
+  "launch": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Async: reviewer [async-review-007]\n\nThe async run is detached. Do not run sleep timers or polling loops just to wait for it.\nIf you have independent work, continue that work. If you have nothing else to do until the async result arrives, end your turn now; Pi will deliver the completion when the run finishes.\nUse subagent({ action: \"status\", id: \"...\" }) when you need the current status/result, or to inspect a blocked/stale run. Do not poll just to wait."
+      }
+    ],
+    "details": {
+      "mode": "single",
+      "runId": "async-review-007",
+      "results": [],
+      "asyncId": "async-review-007",
+      "asyncDir": "C:/tmp/pi-subagents/async-subagent-runs/async-review-007"
+    }
+  },
+  "runningStatus": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Run: async-review-007\nState: running\nMode: single\nProgress: step 1/1\nDir: C:/tmp/pi-subagents/async-subagent-runs/async-review-007\nOutput: C:/tmp/pi-subagents/async-subagent-runs/async-review-007/output-0.log\nStep 1: reviewer running"
+      }
+    ],
+    "details": {
+      "mode": "single",
+      "results": []
+    }
+  },
+  "completedStatus": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Run: async-review-007\nState: failed\nMode: single\nProgress: step 1/1\nDir: C:/tmp/pi-subagents/async-subagent-runs/async-review-007\nOutput: C:/tmp/pi-subagents/async-subagent-runs/async-review-007/output-0.log\nResult: C:/tmp/pi-subagents/async-subagent-results/async-review-007.json\nStep 1: reviewer failed, acceptance: rejected\n  Output: C:/tmp/pi-subagents/async-subagent-runs/async-review-007/output-0.log\nResume: unavailable; no child session file was persisted."
+      }
+    ],
+    "details": {
+      "mode": "single",
+      "results": []
+    }
+  },
+  "completion": {
+    "id": "async-review-007",
+    "runId": "async-review-007",
+    "agent": "reviewer",
+    "mode": "single",
+    "success": false,
+    "state": "failed",
+    "summary": "Review completed. The final answer remains useful even though attestation was rejected.\n- [x] Trace schema\n- [ ] Add tests",
+    "results": [
+      {
+        "agent": "reviewer",
+        "output": "Review completed. The final answer remains useful even though attestation was rejected.\nResidual risk: acceptance evidence needs correction.\n- [x] Trace schema\n- [ ] Add tests",
+        "error": "Acceptance rejected: required evidence missing.",
+        "success": false,
+        "sessionFile": "C:/tmp/pi-subagents/sessions/reviewer.jsonl",
+        "model": "provider/reviewer-model",
+        "attemptedModels": [
+          "provider/reviewer-model"
+        ],
+        "artifactPaths": {
+          "inputPath": "C:/tmp/pi-subagents/artifacts/async-review-007_reviewer_input.md",
+          "outputPath": "C:/tmp/pi-subagents/artifacts/async-review-007_reviewer_output.md",
+          "jsonlPath": "C:/tmp/pi-subagents/artifacts/async-review-007_reviewer.jsonl",
+          "metadataPath": "C:/tmp/pi-subagents/artifacts/async-review-007_reviewer_meta.json"
+        },
+        "acceptance": {
+          "status": "rejected",
+          "explicit": true,
+          "effectiveAcceptance": {
+            "level": "attested",
+            "explicit": true,
+            "inferredReason": [],
+            "criteria": [],
+            "evidence": [
+              "manual-notes"
+            ],
+            "verify": [],
+            "stopRules": []
+          },
+          "inferredReason": [],
+          "criteria": [],
+          "childReportParseError": "Structured acceptance report not found.",
+          "runtimeChecks": [
+            {
+              "id": "attestation",
+              "status": "failed",
+              "message": "Structured acceptance report not found."
+            }
+          ],
+          "verifyRuns": []
+        }
+      }
+    ],
+    "exitCode": 1,
+    "durationMs": 1250,
+    "asyncDir": "C:/tmp/pi-subagents/async-subagent-runs/async-review-007",
+    "artifactsDir": "C:/tmp/pi-subagents/artifacts",
+    "cwd": "C:/tmp/pi-subagents/workspace",
+    "sessionId": "C:/tmp/pi-subagents/sessions/parent.jsonl",
+    "sessionFile": "C:/tmp/pi-subagents/sessions/reviewer.jsonl"
+  },
+  "missingArtifactCompletion": {
+    "id": "async-missing-artifact",
+    "mode": "single",
+    "success": true,
+    "state": "complete",
+    "summary": "Completed from the result summary even though the output artifact is unavailable.\n- [x] Trace schema",
+    "results": [
+      {
+        "agent": "reviewer",
+        "output": "",
+        "success": true,
+        "artifactPaths": {
+          "inputPath": "C:/missing/input.md",
+          "outputPath": "C:/missing/output.md",
+          "jsonlPath": "C:/missing/output.jsonl",
+          "metadataPath": "C:/missing/meta.json"
+        },
+        "acceptance": {
+          "status": "attested"
+        }
+      }
+    ],
+    "durationMs": 900,
+    "asyncDir": "C:/tmp/pi-subagents/async-subagent-runs/async-missing-artifact",
+    "artifactsDir": "C:/tmp/pi-subagents/artifacts",
+    "cwd": "C:/tmp/pi-subagents/workspace",
+    "sessionId": "C:/tmp/pi-subagents/sessions/parent.jsonl"
+  }
+}

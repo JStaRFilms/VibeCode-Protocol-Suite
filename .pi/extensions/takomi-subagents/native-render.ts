@@ -120,8 +120,13 @@ function compactNarratives(rows: any[], isPartial: boolean): string[] {
   const narratives: string[] = [];
   for (const row of rows) {
     const source = isPartial ? explicitAssistantTexts(row).at(-1) ?? "" : finalAnswer(row);
-    const lines = source.split(/\r?\n/).map(normalizedLine).filter(Boolean);
-    if (!isPartial && rows.length === 1 && lines.length && normalizedLine(nativePreview(row)) === lines[0]) lines.shift();
+    const lines = source.split(/\r?\n/)
+      .filter((line) => !/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line))
+      .map(normalizedLine)
+      .filter(Boolean);
+    // Native compact only previews successful single results. Acceptance rejection
+    // changes exitCode to non-zero, so keep the first final line in that case.
+    if (!isPartial && rows.length === 1 && row?.exitCode === 0 && lines.length && normalizedLine(nativePreview(row)) === lines[0]) lines.shift();
     for (const line of lines) {
       if (narratives.some((existing) => normalizedLine(existing) === line)) continue;
       narratives.push(line);
@@ -143,13 +148,25 @@ function checklistSummary(rows: any[], tasks: TakomiUxTask[]): { summary: string
   return { summary, expanded: `Checklist: ${labels.join(" · ")}` };
 }
 
+function fallbackSummary(rows: any[]): string | undefined {
+  const states = rows.map((row) => row?.takomiDetachedOutput)
+    .filter((value) => value && value.fallbackState !== "not-needed");
+  if (!states.length) return undefined;
+  const first = states[0];
+  return `output ${first.source} fallback: ${first.fallbackState}`;
+}
+
 function compactAddition(details: any, isPartial: boolean, theme: Theme): Component | undefined {
   const rows = Array.isArray(details?.results) ? details.results : [];
   if (!rows.length) return undefined;
   const tasks = uxTasks(details);
   const narratives = compactNarratives(rows, isPartial);
   const checklist = checklistSummary(rows, tasks);
-  if (!narratives.length && !checklist) return undefined;
+  const checklistProvenance = details?.takomiDetached?.checklistProvenance === "unavailable-after-restart"
+    ? "checklist provenance unavailable after restart"
+    : checklist?.summary;
+  const provenance = [checklistProvenance, fallbackSummary(rows)].filter((value): value is string => Boolean(value));
+  if (!narratives.length && !provenance.length) return undefined;
 
   return new WidthAwareLines((width) => {
     const lines: string[] = [];
@@ -158,8 +175,9 @@ function compactAddition(details: any, isPartial: boolean, theme: Theme): Compon
       const bounded = boundNarrative(narrative, { maxLines: 1, maxColumns: narrativeWidth, from: "start" });
       if (bounded.lines[0]) lines.push(theme.fg("dim", `${NARRATIVE_PREFIX}${bounded.lines[0]}`));
     }
-    if (checklist && lines.length < COMPACT_CUSTOM_LINE_BUDGET) {
-      const bounded = boundNarrative(checklist.summary, { maxLines: 1, maxColumns: Math.max(1, width - 2), from: "start" });
+    for (const item of provenance) {
+      if (lines.length >= COMPACT_CUSTOM_LINE_BUDGET) break;
+      const bounded = boundNarrative(item, { maxLines: 1, maxColumns: Math.max(1, width - 2), from: "start" });
       if (bounded.lines[0]) lines.push(theme.fg("muted", `  ${bounded.lines[0]}`));
     }
     return lines.slice(0, COMPACT_CUSTOM_LINE_BUDGET);
@@ -170,9 +188,15 @@ function expandedAddition(details: any, theme: Theme): Component | undefined {
   const rows = Array.isArray(details?.results) ? details.results : [];
   if (!rows.length) return undefined;
   const checklist = checklistSummary(rows, uxTasks(details));
-  if (!checklist) return undefined;
+  const checklistProvenance = details?.takomiDetached?.checklistProvenance === "unavailable-after-restart"
+    ? "Checklist provenance unavailable after restart"
+    : checklist ? checklist.summary.replace(/^checklist/, "Checklist provenance:") : undefined;
+  const provenance = [checklistProvenance, fallbackSummary(rows)]
+    .filter(Boolean)
+    .join("\n");
+  if (!provenance) return undefined;
 
-  return new WidthAwareLines((width) => boundNarrative(checklist.expanded, {
+  return new WidthAwareLines((width) => boundNarrative(provenance, {
     maxLines: EXPANDED_CUSTOM_LINE_BUDGET,
     maxColumns: width,
     from: "start",

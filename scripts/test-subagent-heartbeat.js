@@ -114,8 +114,18 @@ try {
   `);
   const internalsStubUrl = dataModule(`export async function loadPiSubagentsInternals() { return {}; }`);
   const toolRunnerStubUrl = dataModule(`export async function executeTakomiSubagentTool() { return {}; }`);
+  const detachedStubUrl = dataModule(`
+    export async function initializeDetachedSession() { globalThis.__detachedRestores = (globalThis.__detachedRestores ?? 0) + 1; }
+    export function clearDetachedResults() { globalThis.__detachedClears = (globalThis.__detachedClears ?? 0) + 1; }
+    export function registerDetachedCompletionNotifications(pi) {
+      globalThis.__detachedRegistrations = (globalThis.__detachedRegistrations ?? 0) + 1;
+      const unsubscribe = pi.events.on("subagent:async-complete", () => {});
+      return () => { globalThis.__detachedUnregisters = (globalThis.__detachedUnregisters ?? 0) + 1; unsubscribe(); };
+    }
+  `);
   const indexUrl = await transpile("index.ts", {
     typebox: typeboxStubUrl,
+    "./detached-results": detachedStubUrl,
     "./native-render": entryNativeStubUrl,
     "./pi-subagents-internal": internalsStubUrl,
     "./result-heartbeat": heartbeatUrl,
@@ -123,10 +133,20 @@ try {
   });
   const extension = await import(indexUrl);
   const lifecycleHandlers = new Map();
+  const eventHandlers = new Map();
+  let completionUnsubscribed = false;
   await extension.default({
     registerTool() {},
+    events: {
+      on(event, handler) {
+        eventHandlers.set(event, handler);
+        return () => { completionUnsubscribed = true; eventHandlers.delete(event); };
+      },
+    },
     on(event, handler) { lifecycleHandlers.set(event, handler); },
   });
+  assert.equal(eventHandlers.has("subagent:async-complete"), true, "extension installs event-driven completion notification without polling");
+  assert.equal(globalThis.__detachedRegistrations, 1, "completion notification lifecycle is registered once");
   assert.deepEqual(
     [...lifecycleHandlers.keys()].sort(),
     ["agent_end", "session_shutdown", "session_start"],
@@ -147,13 +167,17 @@ try {
 
   const sessionStartContext = { state: {}, invalidate() {} };
   heartbeat.ensureTakomiSubagentResultHeartbeat(sessionStartContext);
-  lifecycleHandlers.get("session_start")();
+  await lifecycleHandlers.get("session_start")({}, {});
   assert.equal(callbacks.size, 0, "session_start retains replacement-session cleanup");
+  assert.equal(globalThis.__detachedRestores, 1, "session_start restores authenticated detached provenance");
 
   const sessionShutdownContext = { state: {}, invalidate() {} };
   heartbeat.ensureTakomiSubagentResultHeartbeat(sessionShutdownContext);
   lifecycleHandlers.get("session_shutdown")();
   assert.equal(callbacks.size, 0, "session_shutdown retains shutdown cleanup");
+  assert.equal(globalThis.__detachedClears, 1, "session_shutdown clears detached provenance storage");
+  assert.equal(globalThis.__detachedUnregisters, 1, "session shutdown releases the completion notification lifecycle");
+  assert.equal(completionUnsubscribed, true, "session shutdown releases the completion event listener");
 
   const staleContext = { state: {}, invalidate: () => { throw new Error("Extension context no longer active"); } };
   heartbeat.ensureTakomiSubagentResultHeartbeat(staleContext);
