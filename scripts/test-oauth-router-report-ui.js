@@ -187,12 +187,25 @@ try {
   commandsModule.registerRouterCommands({ registerCommand: (name, command) => commands.set(name, command) }, runtime);
   const events = { widgets: [], statuses: [], notifications: [] };
   const rpcCtx = createContext(events, "rpc");
+  const reportCommands = [["router-status", ""], ["router-accounts", ""], ["router-usage", "acct_healthy"], ["router-quota", "acct_healthy"], ["router-usage-raw", "acct_healthy"], ["router-login", "help"], ["router-enable", "acct_invalid"]];
+  const reportTypes = ["status", "accounts", "usage", "quota", "raw", "help", "action"];
+  const routingPolicyBeforeReports = runtime.getPolicy();
+  const accountIdsBeforeReports = runtime.listAccounts().map((account) => account.id);
+  const sourceStatusReport = commandsModule.formatStatusReport(runtime);
+  assert.doesNotMatch(sourceStatusReport, /Dismiss: \/router-clear/, "formatter source text is not mutated with UI-only dismissal guidance");
 
-  for (const [name, args] of [["router-status", ""], ["router-accounts", ""], ["router-usage", "acct_healthy"], ["router-quota", "acct_healthy"], ["router-usage-raw", "acct_healthy"], ["router-login", "help"], ["router-enable", "acct_invalid"]]) {
+  for (const [name, args] of reportCommands) {
     await commands.get(name).handler(args, rpcCtx);
   }
   assert.equal(events.widgets.length, 7, "status, accounts, quota, raw, help, and action reports replace one widget");
-  assert.ok(events.widgets.every(([key, content, options]) => key === reportUi.ROUTER_REPORT_WIDGET_KEY && Array.isArray(content) && options.placement === "belowEditor"), "RPC context receives a real sanitized string-array widget fallback");
+  assert.ok(events.widgets.every(([key, content, ...options]) => key === reportUi.ROUTER_REPORT_WIDGET_KEY && Array.isArray(content) && options.length === 0), "RPC context receives a real sanitized string-array widget fallback using Pi's default above-editor placement");
+  for (const [index, type] of reportTypes.entries()) {
+    const lines = events.widgets[index][1];
+    assert.equal(lines[0], reportUi.ROUTER_REPORT_DISMISS_HINT, `${type} report starts with the dismissal hint`);
+    assert.equal(lines.filter((line) => line === reportUi.ROUTER_REPORT_DISMISS_HINT).length, 1, `${type} report has exactly one dismissal hint`);
+  }
+  assert.equal(runtime.getPolicy(), routingPolicyBeforeReports, "report presentation does not change routing policy");
+  assert.deepEqual(runtime.listAccounts().map((account) => account.id), accountIdsBeforeReports, "report presentation does not add or remove accounts");
   assert.ok(events.statuses.length >= 6, "report commands keep live footer health status");
   assert.equal(events.notifications.length, 0, "visible RPC widget confirmations suppress routine duplicate notifications");
 
@@ -208,14 +221,26 @@ try {
   assert.match(usageLines, /\[[█░]{18}\]/, "RPC fallback retains full provider quota bars");
   const detailedRawLines = events.widgets[4][1].join("\n");
   assert.doesNotMatch(detailedRawLines, /super-secret|opaque-refresh|not-for-display|\x1b/, "raw report redacts provider secrets and controls");
-  assert.match(events.widgets.at(-2)[1].join("\n"), /router-clear/, "help documents report dismissal");
+  assert.match(events.widgets[5][1].join("\n"), /router-clear/, "help documents report dismissal");
 
   const tuiEvents = { widgets: [], statuses: [], notifications: [] };
-  await commands.get("router-status").handler("", createContext(tuiEvents, "tui"));
-  assert.equal(typeof tuiEvents.widgets[0][1], "function", "interactive TUI receives the themed component factory");
-  for (const width of [40, 60, 120]) {
-    const { theme } = createTheme();
-    assert.ok(tuiEvents.widgets[0][1](undefined, theme).render(width).every((line) => stripAnsi(line).length <= width), `interactive report fits ${width} columns`);
+  const tuiCtx = createContext(tuiEvents, "tui");
+  for (const [name, args] of reportCommands) {
+    await commands.get(name).handler(args, tuiCtx);
+  }
+  assert.equal(tuiEvents.widgets.length, reportTypes.length, "interactive reports retain the shared replacement widget");
+  for (const [index, type] of reportTypes.entries()) {
+    const [key, content, ...options] = tuiEvents.widgets[index];
+    assert.equal(key, reportUi.ROUTER_REPORT_WIDGET_KEY, `${type} report retains the stable widget key`);
+    assert.equal(typeof content, "function", `${type} interactive report receives the themed component factory`);
+    assert.equal(options.length, 0, `${type} interactive report uses Pi's default above-editor placement`);
+    for (const width of [40, 60, 120]) {
+      const { theme } = createTheme();
+      const lines = content(undefined, theme).render(width);
+      assert.equal(stripAnsi(lines[0]), reportUi.ROUTER_REPORT_DISMISS_HINT, `${type} TUI report keeps the hint at the top at ${width} columns`);
+      assert.equal(lines.filter((line) => stripAnsi(line) === reportUi.ROUTER_REPORT_DISMISS_HINT).length, 1, `${type} TUI report has one dismissal hint at ${width} columns`);
+      assert.ok(lines.every((line) => stripAnsi(line).length <= width), `${type} interactive report fits ${width} columns`);
+    }
   }
   const interactiveUsage = reportUi.createRouterReportWidget(events.widgets[2][1].join("\n"));
   assert.match(interactiveUsage(undefined, createTheme().theme).render(40).join("\n"), /\[[█░]{8}\]/, "quota bars compact at narrow widths");
@@ -244,6 +269,12 @@ try {
   await lifecycleHandlers.get("session_start")({}, originalCtx);
   await lifecycleCommands.get("router-debug-report").handler("", originalCtx);
   assert.equal(originalEvents.widgets.at(-1)[0], reportUi.ROUTER_REPORT_WIDGET_KEY, "RPC lifecycle test shows the report before shutdown");
+  assert.equal(originalEvents.widgets.at(-1).length, 2, "debug report uses Pi's default above-editor placement");
+  assert.equal(originalEvents.widgets.at(-1)[1][0], reportUi.ROUTER_REPORT_DISMISS_HINT, "debug report starts with the dismissal hint");
+  assert.equal(originalEvents.widgets.at(-1)[1].filter((line) => line === reportUi.ROUTER_REPORT_DISMISS_HINT).length, 1, "debug report has exactly one dismissal hint");
+  const reportCountWhileReading = originalEvents.widgets.length;
+  await lifecycleHandlers.get("turn_start")({}, originalCtx);
+  assert.equal(originalEvents.widgets.length, reportCountWhileReading, "reading lifecycle events do not auto-clear the report");
   await lifecycleHandlers.get("session_shutdown")({});
   assert.deepEqual(originalEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "session shutdown clears the old RPC report widget when hasUI is false");
 
@@ -257,6 +288,7 @@ try {
   await lifecycleHandlers.get("session_start")({}, replacementCtx);
   assert.deepEqual(lifecycleOrder, ["old-report", "old-clear"], "old RPC widget clears before session replacement");
   await lifecycleCommands.get("router-debug-report").handler("", replacementCtx);
+  assert.equal(replacementEvents.widgets.at(-1)[1].filter((line) => line === reportUi.ROUTER_REPORT_DISMISS_HINT).length, 1, "replacement report does not duplicate the dismissal hint");
   await lifecycleHandlers.get("session_shutdown")({});
   assert.deepEqual(replacementEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "replacement session shutdown clears its RPC report widget when hasUI is false");
 

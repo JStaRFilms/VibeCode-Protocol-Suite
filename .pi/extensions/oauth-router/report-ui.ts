@@ -1,7 +1,7 @@
 import { truncateToWidth, wrapTextWithAnsi, type Component } from "@earendil-works/pi-tui";
 
 export const ROUTER_REPORT_WIDGET_KEY = "oauth-router-report";
-export const ROUTER_REPORT_WIDGET_OPTIONS = { placement: "belowEditor" } as const;
+export const ROUTER_REPORT_DISMISS_HINT = "Dismiss: /router-clear";
 
 type RouterTheme = {
   fg(color: "accent" | "success" | "warning" | "error" | "muted" | "dim", text: string): string;
@@ -150,6 +150,7 @@ function fitQuotaBar(line: string, width: number): string {
 }
 
 function styleLine(theme: RouterTheme, line: string): string {
+  if (line === ROUTER_REPORT_DISMISS_HINT) return theme.fg("accent", theme.bold(line));
   if (line.startsWith("# ")) return theme.fg("accent", theme.bold(line.slice(2)));
   if (line.startsWith("## ")) return theme.fg("accent", theme.bold(line.slice(3)));
 

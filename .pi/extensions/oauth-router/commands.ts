@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { createAccountFromUpstream } from "./oauth-flow.ts";
-import { createRouterReportLines, createRouterReportWidget, ROUTER_REPORT_WIDGET_KEY, ROUTER_REPORT_WIDGET_OPTIONS } from "./report-ui.ts";
+import { createRouterReportLines, createRouterReportWidget, ROUTER_REPORT_DISMISS_HINT, ROUTER_REPORT_WIDGET_KEY } from "./report-ui.ts";
 import type { RouterStatusRow, RouterUsageSummary, RouterUsageWindowSummary, RoutingPolicyName, StoredRouterAccount } from "./types.ts";
 import { RouterRuntime } from "./provider.ts";
 
@@ -275,14 +275,18 @@ export function formatUsageRawReport(runtime: RouterRuntime, accountId?: string)
 }
 
 export function emitRouterReport(ctx: ExtensionCommandContext, text: string) {
-  // A single key gives every report predictable replacement semantics. RPC
-  // accepts string-array widgets only; ctx.hasUI is true there, so ctx.mode is
-  // the capability signal that prevents its visible report from being ignored.
+  // A single key gives every report predictable replacement semantics. Add the
+  // dismiss affordance at this presentation boundary, not to formatter output,
+  // so model/source report text remains unchanged. Omitting options uses Pi's
+  // default above-editor placement for both TUI and RPC widgets.
+  const reportText = `${ROUTER_REPORT_DISMISS_HINT}\n\n${text}`;
   if (ctx.mode === "tui") {
-    ctx.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, createRouterReportWidget(text), ROUTER_REPORT_WIDGET_OPTIONS);
+    ctx.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, createRouterReportWidget(reportText));
     return;
   }
-  ctx.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, createRouterReportLines(text), ROUTER_REPORT_WIDGET_OPTIONS);
+  // RPC accepts string-array widgets only; ctx.hasUI is true there, so ctx.mode
+  // is the capability signal that prevents its visible report from being ignored.
+  ctx.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, createRouterReportLines(reportText));
 }
 
 export function clearRouterReport(ctx: ExtensionCommandContext) {
