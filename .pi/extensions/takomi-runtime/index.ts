@@ -13,7 +13,6 @@ import {
   getSessionPaths,
   getNextTaskId,
   getWorkflowDefinition,
-  listWorkflowDefinitions,
   markStageExpanded,
   normalizeSessionState,
   renderMasterPlan,
@@ -57,6 +56,10 @@ import {
   loadTakomiProfile,
 } from "./profile";
 import { installTakomiRoutingPolicy, previewTakomiRoutingPolicy, renderRoutingPolicyPreview, resolveTakomiRoutingPolicy } from "./routing-policy";
+import {
+  discoverWorkflowPlaybooks,
+  showWorkflowCatalogForBoard,
+} from "./workflow-catalog";
 import {
   renderTakomiBoardCall,
   renderTakomiBoardResult,
@@ -1051,19 +1054,7 @@ export default function takomiRuntime(pi: ExtensionAPI) {
       workflow: Type.Optional(StringEnum(["vibe-genesis", "vibe-design", "vibe-build"] as const)),
     }),
     async execute(_toolCallId, params) {
-      if (params.workflow) {
-        const workflow = getWorkflowDefinition(params.workflow);
-        return {
-          content: [{ type: "text", text: `${workflow.title}\n\n${workflow.playbook}` }],
-          details: workflow,
-        };
-      }
-
-      const workflows = listWorkflowDefinitions();
-      return {
-        content: [{ type: "text", text: workflows.map((workflow) => `${workflow.id}: ${workflow.purpose}`).join("\n") }],
-        details: undefined,
-      };
+      return discoverWorkflowPlaybooks(params.workflow);
     },
     renderCall: renderTakomiWorkflowCall,
     renderResult: (result, options, theme) => renderTakomiWorkflowResult(result, options, theme),
@@ -1136,11 +1127,7 @@ export default function takomiRuntime(pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       if (params.action === "show_workflows") {
-        const workflows = listWorkflowDefinitions();
-        return {
-          content: [{ type: "text", text: workflows.map((workflow) => `${workflow.id}: ${workflow.playbook}`).join("\n\n") }],
-          details: { workflows },
-        };
+        return showWorkflowCatalogForBoard();
       }
 
       if (params.action === "show_session") {

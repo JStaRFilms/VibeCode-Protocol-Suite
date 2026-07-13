@@ -39,7 +39,7 @@
     "postinstall": "node src/postinstall.js",
     "test": "npm run test:typecheck && npm run test:regressions && npm run test:context-manager && npm run test:skills",
     "test:typecheck": "tsc --noEmit",
-    "test:regressions": "node scripts/test-regressions.js && node scripts/test-subagent-renderers.js && node scripts/test-subagent-heartbeat.js && node scripts/test-takomi-runtime-renderers.js && node scripts/test-oauth-router-report-ui.js && node --experimental-specifier-resolution=node scripts/test-takomi-board-errors.js && node scripts/test-takomi-gate-provenance.js && node scripts/test-subagent-project-trust.js",
+    "test:regressions": "node scripts/test-regressions.js && node scripts/test-subagent-renderers.js && node scripts/test-subagent-heartbeat.js && node scripts/test-takomi-runtime-renderers.js && node scripts/test-workflow-catalog.js && node scripts/test-oauth-router-report-ui.js && node --experimental-specifier-resolution=node scripts/test-takomi-board-errors.js && node scripts/test-takomi-gate-provenance.js && node scripts/test-subagent-project-trust.js",
     "test:context-manager": "node --experimental-specifier-resolution=node scripts/test-context-manager-renderers.js",
     "test:skills": "node scripts/test-skill-selection.js",
     "takomi-flow:doctor": "node plugins/takomi-flow/scripts/takomi-flow.mjs doctor",

@@ -96,6 +96,16 @@ export type TakomiSubagentRunGroup = {
   sessionId?: string;
 };
 
+export type WorkflowAvailability = "embedded";
+
+export type WorkflowCatalogEntry = {
+  id: TakomiWorkflowId;
+  stage: VibeLifecycleStage;
+  name: string;
+  description: string;
+  availability: WorkflowAvailability;
+};
+
 export type WorkflowDefinition = {
   id: TakomiWorkflowId;
   stage: VibeLifecycleStage;
