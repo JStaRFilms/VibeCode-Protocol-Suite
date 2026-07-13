@@ -210,4 +210,3 @@ export const SKILL_CATEGORIES = [
 export function getSkillCategory(skillName) {
   return SKILL_CATEGORIES.find((category) => category.skills.includes(skillName))?.id;
 }
-
