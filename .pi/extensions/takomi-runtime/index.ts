@@ -50,6 +50,7 @@ import {
 } from "./shared";
 import { TakomiContextPanel, wireContextPanel } from "./context-panel";
 import { registerTakomiCommands } from "./commands";
+import { USER_GATE_AUTO_PROVENANCE_ENTRY } from "./gate-provenance";
 import {
   DEFAULT_TAKOMI_PROFILE,
   getProfileDefaults,
@@ -742,6 +743,12 @@ export default function takomiRuntime(pi: ExtensionAPI) {
     pi.appendEntry(STATE_ENTRY, state);
   }
 
+  // This is intentionally separate from generic runtime-state persistence.
+  // Only user slash-command handlers receive the recorder below.
+  function recordUserGateAutoProvenance(authorized: boolean): void {
+    pi.appendEntry(USER_GATE_AUTO_PROVENANCE_ENTRY, { authorized });
+  }
+
   function syncContextPanelState() {
     contextPanel.setRuntimeState({
       role: state.role,
@@ -829,6 +836,7 @@ export default function takomiRuntime(pi: ExtensionAPI) {
   registerTakomiCommands(pi, {
     getState: () => state,
     updateState,
+    recordUserGateAutoProvenance,
     setStageAndWorkflow: (stage, options) => setStageAndWorkflow(state, stage, options),
     hasGenesisArtifacts,
     subagentController,
@@ -857,6 +865,7 @@ export default function takomiRuntime(pi: ExtensionAPI) {
     },
     resetRuntime: async (ctx) => {
       await updateState(ctx, () => {
+        recordUserGateAutoProvenance(false);
         state = cloneState(DEFAULT_STATE);
         activeSubagentLabel = undefined;
         activeSubagentAgent = undefined;

@@ -34,8 +34,8 @@ Inside Pi, use:
 - `/takomi build [prompt]` to implement while cross-checking against approved UI/design artifacts
 - `/takomi plan [title]` to create a Genesis-first orchestration session that can expand through Design and Build
 - `/takomi mode direct`, `/takomi mode orchestrate`, or `/takomi mode review` to choose the session operating mode
-- `/takomi gate auto` to continue approved plans automatically
-- `/takomi gate review` to return to the user after each task with results and verification guidance
+- `/takomi gate auto` to continue approved plans automatically and explicitly authorize project-local agents for this session
+- `/takomi gate review` (or `/takomi gate manual`) to return to the user after each task with results and verification guidance and revoke that authorization
 - `/takomi subagents on` or `/takomi subagents off` to allow or disable delegated subagents
 - `/takomi subagents list` to list available Takomi agents without exposing the raw `subagent` tool
 - `/takomi subagents status` to inspect active subagent state
@@ -109,7 +109,8 @@ So when working on packaging, agents should distinguish between:
 - Direct `takomi_subagent` calls build a `TakomiDelegationPlan` before launch. In auto mode the plan launches immediately; in manual mode the plan is returned for review until `confirmLaunch=true` is supplied.
 - The subagent tool supports `conversationId`, so reviewed work can be sent back to the same agent for continuation instead of restarting from scratch.
 - The subagent tool supports Pi-style single, parallel `tasks`, sequential `chain`, explicit `context=fork|fresh`, `async=true`, and native read/control actions such as `action=list`, `action=status`, `action=doctor`, `action=interrupt`, and `action=resume`.
-- The subagent tool supports `agentScope` values of `user`, `project`, and `both`; project-local agents require confirmation by default.
+- The subagent tool supports `agentScope` values of `user`, `project`, and `both`; project-local agents require confirmation by default. The only session authorization bypasses are `TAKOMI_TRUST_PROJECT_AGENTS` and the explicit user `/takomi gate auto` provenance marker; model mode changes plus profile, default, or generic runtime `auto` state do not authorize project agents.
+- The explicit user gate-auto marker is stored in session history so it survives resuming that same session. `/takomi gate review`, `/takomi gate manual`, review mode, and `/takomi-reset` append a revocation; it is not a cross-session or profile setting.
 - The subagent tool also supports per-run `workflow`, `skills`, `model`, `fallbackModels`, `thinking`, `checklist`, `concurrency`, and `worktree` overrides.
 - `takomi_board` records session/state/markdown artifacts only; it does not run subagents.
 - Pi's default `subagent` tool remains owned by the user-level/default subagent extension to avoid tool-name conflicts; Takomi uses `takomi_subagent` as the preferred lifecycle-aware execution interface and renders it with the native Pi-style result surface.

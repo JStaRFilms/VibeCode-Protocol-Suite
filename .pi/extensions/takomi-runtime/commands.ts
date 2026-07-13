@@ -28,6 +28,7 @@ export type TakomiRuntimeCommandState = {
 type RegisterTakomiCommandOptions = {
   getState(): TakomiRuntimeCommandState;
   updateState(ctx: ExtensionContext, mutator: () => void, message?: string | (() => string)): Promise<void>;
+  recordUserGateAutoProvenance(authorized: boolean): void;
   resetRuntime(ctx: ExtensionCommandContext): Promise<void>;
   setStageAndWorkflow(stage: VibeLifecycleStage, options?: { preserveRole?: boolean }): void;
   createPlanSession(ctx: ExtensionCommandContext, title?: string): Promise<string>;
@@ -75,6 +76,7 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
         state.autoOrch = false;
         state.planMode = true;
         state.launchMode = "manual";
+        options.recordUserGateAutoProvenance(false);
         state.role = "review";
         state.stage = undefined;
         state.workflow = undefined;
@@ -85,16 +87,19 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
   }
 
   async function handleGate(ctx: ExtensionCommandContext, gate?: string): Promise<void> {
-    if (gate !== "auto" && gate !== "review") {
-      ctx.ui.notify("Usage: /takomi gate <auto|review>", "warning");
+    if (gate !== "auto" && gate !== "review" && gate !== "manual") {
+      ctx.ui.notify("Usage: /takomi gate <auto|review|manual>", "warning");
       return;
     }
+    const auto = gate === "auto";
     await options.updateState(ctx, () => {
       const state = options.getState();
       state.enabled = true;
-      state.launchMode = gate === "review" ? "manual" : "auto";
-      state.autoOrch = gate === "auto";
-    }, () => `Takomi execution gate set to ${gate}`);
+      state.launchMode = auto ? "auto" : "manual";
+      state.autoOrch = auto;
+      // This dedicated entry is the only user-gate authorization signal.
+      options.recordUserGateAutoProvenance(auto);
+    }, () => `Takomi execution gate set to ${auto ? "auto" : "review"}`);
   }
 
   async function handleRouting(ctx: ExtensionCommandContext, body?: string): Promise<void> {

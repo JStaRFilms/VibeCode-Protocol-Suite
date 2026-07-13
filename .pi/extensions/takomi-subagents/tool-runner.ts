@@ -3,6 +3,7 @@ import path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { TakomiLaunchMode, TakomiThinkingLevel } from "../../../src/pi-takomi-core";
 import { loadTakomiProfile } from "../takomi-runtime/profile";
+import { hasUserGateAutoProvenance } from "../takomi-runtime/gate-provenance";
 import { applyTakomiRoutingDefaults, loadTakomiModelRoutingSnapshot } from "../takomi-runtime/model-routing-defaults";
 import { resolveAgentName } from "./agent-aliases";
 import { discoverTakomiAgents, type TakomiAgentConfig, type TakomiAgentScope } from "./agents";
@@ -77,6 +78,10 @@ function hasProjectAgents(tasks: Array<{ agent: string }>, agents: Map<string, T
 
 function hostTrustsProjectAgents(): boolean {
   return /^(1|true|yes)$/i.test(process.env.TAKOMI_TRUST_PROJECT_AGENTS || "");
+}
+
+function isProjectAgentApprovalHardStop(record: HardStopRecord | undefined): boolean {
+  return record?.reason === "project-agent-approval-required" || record?.reason === "project-agent-denied";
 }
 
 function hardStopStore(pi: ExtensionAPI): Map<string, HardStopRecord> {
@@ -256,6 +261,9 @@ export async function executeTakomiSubagentTool(
   }
   const profile = await loadTakomiProfile(rootCwd);
   const runtimeLaunchMode = readRuntimeLaunchMode(ctx);
+  // Auto launch mode may come from a model, profile, default, or restored
+  // runtime state. None of those are project-agent authorization.
+  const userGateAutoAuthorized = hasUserGateAutoProvenance(ctx.sessionManager.getEntries());
   const agentScope = params.agentScope ?? "both";
 
   if (params.action) {
@@ -312,16 +320,18 @@ export async function executeTakomiSubagentTool(
   }
 
   const fingerprint = createRunFingerprint(rootCwd, mode, tasks);
+  const projectAgentsAuthorized = userGateAutoAuthorized || hostTrustsProjectAgents();
   const recentHardStop = consumeExpiredHardStop(pi, fingerprint);
-  if (recentHardStop) {
+  const authorizationOverridesHardStop = projectAgentsAuthorized && isProjectAgentApprovalHardStop(recentHardStop);
+  if (recentHardStop && !authorizationOverridesHardStop) {
     return hardStopResult(
       `Subagent launch blocked: the same request was already stopped (${recentHardStop.reason}).\n${recentHardStop.message}`,
       { results: [], availableAgents: agents.map((agent) => agent.name), agentScope, mode, blockedAt: recentHardStop.at, reason: recentHardStop.reason },
     );
   }
+  if (authorizationOverridesHardStop) hardStopStore(pi).delete(fingerprint);
 
-  const projectAgentsTrusted = hostTrustsProjectAgents();
-  if (!projectAgentsTrusted && hasProjectAgents(tasks, byName)) {
+  if (!projectAgentsAuthorized && hasProjectAgents(tasks, byName)) {
     const names = tasks.map((task) => byName.get(task.agent)).filter((agent): agent is TakomiAgentConfig => agent?.source === "project").map((agent) => agent.name);
     const uniqueNames = [...new Set(names)].join(", ");
     if (!ctx.hasUI) {
