@@ -12,6 +12,7 @@ export type TakomiAgentConfig = {
   model?: string;
   fallbackModels?: string[];
   thinking?: TakomiThinkingLevel;
+  defaultContext?: "fresh" | "fork";
   systemPrompt: string;
   filePath: string;
   source: "user" | "project";
@@ -59,6 +60,9 @@ function loadAgentsFromDirectory(agentsDir: string, source: "user" | "project"):
       model: frontmatter.model,
       fallbackModels: splitList(frontmatter.fallbackModels ?? frontmatter.fallback_models),
       thinking: normalizeThinking(frontmatter.thinking),
+      defaultContext: frontmatter.defaultContext === "fork" || frontmatter.defaultContext === "fresh"
+        ? frontmatter.defaultContext
+        : undefined,
       systemPrompt: body,
       filePath,
       source,

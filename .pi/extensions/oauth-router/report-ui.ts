@@ -8,8 +8,106 @@ type RouterTheme = {
   bold(text: string): string;
 };
 
-const SENSITIVE_VALUE_KEY = "(?:access[_-]?token|refresh[_-]?token|id[_-]?token|auth[_-]?token|api[_-]?key|authorization|password|secret)";
-const SENSITIVE_QUERY_KEY = `(?:${SENSITIVE_VALUE_KEY}|token|key)`;
+const SENSITIVE_VALUE_KEYS = new Set([
+  "access_token", "access-token", "accesstoken",
+  "refresh_token", "refresh-token", "refreshtoken",
+  "id_token", "id-token", "idtoken",
+  "auth_token", "auth-token", "authtoken",
+  "api_key", "api-key", "apikey",
+  "authorization",
+  "client_secret", "client-secret", "clientsecret",
+  "password", "secret", "code",
+]);
+const SENSITIVE_QUERY_KEYS = [...SENSITIVE_VALUE_KEYS, "token", "key"];
+const SENSITIVE_QUERY_VALUE = new RegExp(`([?&#](?:${SENSITIVE_QUERY_KEYS.join("|")})=)[^&#\\s"']*`, "gi");
+
+function isKeyCharacter(value: string | undefined): boolean {
+  return Boolean(value && /[A-Za-z0-9_-]/.test(value));
+}
+
+function skipWhitespace(text: string, start: number): number {
+  let index = start;
+  while (/\s/.test(text[index] ?? "")) index += 1;
+  return index;
+}
+
+function quotedEnd(text: string, start: number): number | undefined {
+  const quote = text[start];
+  for (let index = start + 1; index < text.length; index += 1) {
+    if (text[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (text[index] === quote) return index + 1;
+  }
+  return undefined;
+}
+
+type SensitiveAssignment = { key: string; valueStart: number };
+
+/**
+ * Locate a complete assignment key rather than using a word-boundary regex.
+ * Underscores and hyphens are key characters, so `zipcode`, `account_code`,
+ * and `authorization_status` cannot be mistaken for sensitive keys.
+ */
+function sensitiveAssignmentAt(text: string, start: number): SensitiveAssignment | undefined {
+  if (isKeyCharacter(text[start - 1])) return undefined;
+
+  let key: string;
+  let afterKey: number;
+  if (text[start] === '"' || text[start] === "'") {
+    const end = quotedEnd(text, start);
+    if (!end) return undefined;
+    key = text.slice(start + 1, end - 1);
+    afterKey = end;
+  } else {
+    if (!isKeyCharacter(text[start])) return undefined;
+    afterKey = start;
+    while (isKeyCharacter(text[afterKey])) afterKey += 1;
+    key = text.slice(start, afterKey);
+  }
+
+  if (!SENSITIVE_VALUE_KEYS.has(key.toLowerCase())) return undefined;
+  const delimiter = skipWhitespace(text, afterKey);
+  if (text[delimiter] !== ":" && text[delimiter] !== "=") return undefined;
+  return { key: key.toLowerCase(), valueStart: skipWhitespace(text, delimiter + 1) };
+}
+
+function redactSensitiveAssignments(text: string): string {
+  let output = "";
+  let cursor = 0;
+
+  for (let start = 0; start < text.length; start += 1) {
+    const assignment = sensitiveAssignmentAt(text, start);
+    if (!assignment || assignment.valueStart >= text.length) continue;
+
+    const valueStart = assignment.valueStart;
+    const quote = text[valueStart];
+    if (quote === '"' || quote === "'") {
+      const valueEnd = quotedEnd(text, valueStart);
+      if (!valueEnd) continue;
+      output += `${text.slice(cursor, valueStart + 1)}[redacted]${quote}`;
+      cursor = valueEnd;
+      start = valueEnd - 1;
+      continue;
+    }
+
+    let valueEnd = valueStart;
+    if (assignment.key === "authorization") {
+      while (valueEnd < text.length && text[valueEnd] !== "|" && text[valueEnd] !== "\r" && text[valueEnd] !== "\n") valueEnd += 1;
+      while (valueEnd > valueStart && /\s/.test(text[valueEnd - 1])) valueEnd -= 1;
+    } else {
+      while (valueEnd < text.length && !/[\s|,;"'&#]/.test(text[valueEnd])) valueEnd += 1;
+    }
+    if (valueEnd === valueStart) continue;
+
+    output += `${text.slice(cursor, valueStart)}[redacted]`;
+    cursor = valueEnd;
+    start = valueEnd - 1;
+  }
+
+  return output + text.slice(cursor);
+}
 
 /**
  * Remove terminal controls and credentials from presentation only. Router data
@@ -23,17 +121,13 @@ export function sanitizeReportText(value: unknown): string {
     .replace(/\s+/g, " ")
     .trim();
 
-  // Handle Bearer credentials first because an authorization value may contain
-  // whitespace. The credential itself, rather than account-like identifiers,
-  // is the redaction target.
+  // Bearer credentials can occur outside a key/value field. Assignment
+  // parsing below handles every quoted/bare sensitive-key combination and
+  // keeps Authorization's multi-word field value intact while redacting it.
   text = text
     .replace(/\b(Bearer\s+)(?:"[^"]*"|'[^']*'|[^\s,;|"']+)/gi, "$1[redacted]")
-    .replace(new RegExp(`([?&#]${SENSITIVE_QUERY_KEY}=)[^&#\\s"']*`, "gi"), "$1[redacted]")
-    .replace(
-      new RegExp(`((?:["'])?${SENSITIVE_VALUE_KEY}(?:["'])?\\s*[:=]\\s*)(["'])(?:\\\\.|(?!\\2)[^\\\\])*\\2`, "gi"),
-      "$1$2[redacted]$2",
-    )
-    .replace(new RegExp(`(\\b${SENSITIVE_VALUE_KEY}\\b\\s*[:=]\\s*)([^\\s|,;"'&#]+)`, "gi"), "$1[redacted]")
+    .replace(SENSITIVE_QUERY_VALUE, "$1[redacted]");
+  text = redactSensitiveAssignments(text)
     .replace(/\b(sk-[A-Za-z0-9_-]{8,}|(?:eyJ[A-Za-z0-9_-]+\.){2}[A-Za-z0-9_-]+)\b/gi, "[redacted]");
 
   return text;

@@ -99,24 +99,66 @@ try {
   const reportUi = await import(pathToFileURL(path.join(outDir, ".pi", "extensions", "oauth-router", "report-ui.js")).href);
   const commandsModule = await import(pathToFileURL(path.join(outDir, ".pi", "extensions", "oauth-router", "commands.js")).href);
   const routerExtension = await import(pathToFileURL(path.join(outDir, ".pi", "extensions", "oauth-router", "index.js")).href);
+  const exactKeyFixtures = [
+    { input: "access_token:opaque-bare-access", output: "access_token:[redacted]" },
+    { input: 'access_token:"opaque-bare-key-quoted-value"', output: 'access_token:"[redacted]"' },
+    { input: '"access_token":opaque-quoted-key-bare-value', output: '"access_token":[redacted]' },
+    { input: '"access_token":"opaque-quoted-access"', output: '"access_token":"[redacted]"' },
+    { input: "ACCESS_TOKEN = opaque-case-access", output: "ACCESS_TOKEN = [redacted]" },
+    { input: '"AcCeSs_ToKeN" : \'opaque-case-quoted-access\'', output: '"AcCeSs_ToKeN" : \'[redacted]\'' },
+    { input: 'Authorization:"Basic opaque-basic-quoted"', output: 'Authorization:"[redacted]"' },
+  ];
+  for (const fixture of exactKeyFixtures) {
+    assert.equal(reportUi.sanitizeReportText(fixture.input), fixture.output, `direct sanitizer redacts ${fixture.input}`);
+  }
+
   const secretForms = [
-    '"access_token": "opaque-access-token-value"',
-    '"REFRESH_TOKEN": "opaque-refresh-token-value"',
-    '"authorization": "Bearer opaque-authorization-value"',
-    '"API_KEY": "opaque-api-key-value"',
+    ...exactKeyFixtures.map(({ input }) => input),
+    "Authorization: Basic basic-secret | account_id=acct_normal | status=200",
+    'authorization=Digest username="digest-user", realm="digest-realm", nonce="digest-nonce" | status=healthy',
+    "Authorization: Negotiate negotiate-secret | user_id=user_normal | status=connected",
+    "Authorization: Bearer bearer-secret | account_id=acct_bearer | status=active",
+    "authorization: Custom custom multi word secret\x1b[31m | account_id=acct_custom | status=active",
+    '"authorization": "Bearer json-bearer-secret", "account_id": "acct_json", "status": "ok"',
+    '"authorization": "Basic json-basic-secret"',
+    '{"authorization": "Digest username=\\"json-digest-user\\", realm=\\"json-digest-realm\\""}',
+    '"authorization": "Negotiate json-negotiate-secret"',
+    '"authorization": "Custom json custom multi word secret"',
+    '"ACCESS_TOKEN": "json-access-secret", "refresh_token": "json-refresh-secret", "id_token": "json-id-secret", "client_secret": "json-client-secret", "code": "json-code-secret", "api-key": "json-api-secret"',
+    '"zipcode": "90210", "account_code": "visible-account-code", "decode": "visible-decode", "monocode": "visible-monocode", "authorization_status": "approved"',
     'Bearer "opaque-bearer-value"',
     "bearer 'opaque-bearer-value-two'",
-    "https://example.test/callback?ACCESS_TOKEN=opaque-query-value&account_id=acct_normal#refresh_token=opaque-fragment-value",
-    "authorization=Bearer opaque-header-value api_key=opaque-key-value",
+    "https://example.test/callback?access_token=opaque-query-access&refresh-token=opaque-query-refresh&id_token=opaque-query-id&client_secret=opaque-query-client&code=opaque-query-code&api_key=opaque-query-api&api-key=opaque-query-api-hyphen&apikey=opaque-query-apikey&account_id=acct_url&status=ok#access-token=opaque-fragment-access&refresh_token=opaque-fragment-refresh&id-token=opaque-fragment-id&client-secret=opaque-fragment-client&code=opaque-fragment-code&api_key=opaque-fragment-api",
+    "authorization=Bearer opaque-header-value | api_key=opaque-key-value | account_id=acct_header | status=ok",
+    "account_id=acct_12345 user_id=user_12345 authorization_status=approved status=healthy",
   ];
-  const secretReport = reportUi.createRouterReportWidget(["# oauth-router", ...secretForms, "account_id=acct_normal user=acct_12345", "\x1b[31mhealthy"].join("\n"));
+  const secretText = ["# oauth-router", ...secretForms].join("\n");
+  const secretPattern = /(?:basic-secret|bearer-secret|digest-(?:user|realm|nonce)|negotiate-secret|custom multi word secret|json-(?:access|bearer|basic|digest-(?:user|realm)|negotiate|refresh|id|client|code|api)-secret|json custom multi word secret|opaque-[\w-]+|\x1b)/i;
+  const suffixCollisionFixture = '"zipcode": "90210", "account_code": "visible-account-code", "decode": "visible-decode", "monocode": "visible-monocode", "authorization_status": "approved"';
+  const sanitizedSecretText = reportUi.createRouterReportLines(secretText).join("\n");
+  assert.doesNotMatch(sanitizedSecretText, secretPattern, "all authorization, OAuth URL/JSON values, and controls are redacted");
+  assert.match(sanitizedSecretText, /Authorization: \[redacted\] \| account_id=acct_normal \| status=200/, "plain Basic authorization redacts its entire field value");
+  assert.match(sanitizedSecretText, /"authorization": "\[redacted\]"/, "quoted JSON authorization retains JSON presentation while redacting its full value");
+  assert.match(sanitizedSecretText, /"ACCESS_TOKEN": "\[redacted\]", "refresh_token": "\[redacted\]", "id_token": "\[redacted\]", "client_secret": "\[redacted\]"/, "exact case-insensitive JSON sensitive keys redact");
+  assert.match(sanitizedSecretText, new RegExp(suffixCollisionFixture.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "JSON suffix-collision keys remain visible");
+  assert.match(sanitizedSecretText, /account_id=acct_12345 user_id=user_12345 authorization_status=approved status=healthy/, "normal identifiers and status text remain visible");
+  assert.match(sanitizedSecretText, /account_id=acct_url&status=ok/, "normal URL account IDs and status values remain visible");
+
+  const rpcRedactionEvents = { widgets: [], statuses: [], notifications: [] };
+  commandsModule.emitRouterReport(createContext(rpcRedactionEvents, "rpc"), secretText);
+  assert.doesNotMatch(rpcRedactionEvents.widgets[0][1].join("\n"), secretPattern, "RPC report fallback redacts multi-word authorization and URL credentials");
+  assert.match(rpcRedactionEvents.widgets[0][1].join("\n"), new RegExp(suffixCollisionFixture.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "RPC suffix-collision fixture preserves ordinary JSON keys");
+
+  const tuiRedactionEvents = { widgets: [], statuses: [], notifications: [] };
+  commandsModule.emitRouterReport(createContext(tuiRedactionEvents, "tui"), secretText);
+  assert.equal(typeof tuiRedactionEvents.widgets[0][1], "function", "TUI redaction fixture receives a component");
   for (const width of [40, 60, 120]) {
     const { theme } = createTheme();
-    const lines = secretReport(undefined, theme).render(width);
-    assert.ok(lines.every((line) => stripAnsi(line).length <= width), `report fits ${width} columns`);
-    assert.doesNotMatch(stripAnsi(lines.join("\n")), /opaque-(?:access|refresh|authorization|api|bearer|query|fragment|header|key)|\x1b/, "all credential forms and controls are redacted");
+    const lines = tuiRedactionEvents.widgets[0][1](undefined, theme).render(width);
+    assert.ok(lines.every((line) => stripAnsi(line).length <= width), `redacted TUI report fits ${width} columns`);
+    assert.doesNotMatch(stripAnsi(lines.join("\n")), secretPattern, "TUI report redacts multi-word authorization and URL credentials");
+    if (width === 120) assert.match(stripAnsi(lines.join("\n")), /"zipcode": "90210"/, "TUI suffix-collision fixture preserves ordinary JSON keys");
   }
-  assert.match(reportUi.createRouterReportLines(secretForms.join("\n")).join("\n"), /account_id=acct_normal/, "normal account IDs remain visible in token URLs");
 
   const semanticLines = [
     "enabled=false state=healthy",

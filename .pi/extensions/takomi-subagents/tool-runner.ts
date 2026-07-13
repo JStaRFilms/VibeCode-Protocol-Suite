@@ -52,10 +52,18 @@ const MAX_PARALLEL_TASKS = 8;
 const HARD_STOP_TTL_MS = 10 * 60 * 1000;
 const ENGINES = new WeakMap<ExtensionAPI, ReturnType<typeof createTakomiPiSubagentsEngine>>();
 
+type UserTurnMarker = {
+  sessionId?: string;
+  count: number;
+  lastEntryId?: string;
+  entryIds: string[];
+};
+
 type HardStopRecord = {
   at: number;
   reason: string;
   message: string;
+  userTurnMarker?: UserTurnMarker;
 };
 
 const RECENT_HARD_STOPS = new WeakMap<ExtensionAPI, Map<string, HardStopRecord>>();
@@ -92,22 +100,77 @@ function hardStopStore(pi: ExtensionAPI): Map<string, HardStopRecord> {
   return next;
 }
 
+type TakomiRunMode = "single" | "parallel" | "chain";
+
+function compactChecklistForFingerprint(checklist: ChecklistItem[] | undefined): Array<{ text: string; done: boolean }> | undefined {
+  if (!checklist?.length) return undefined;
+  return checklist.map((item) => typeof item === "string" ? { text: item, done: false } : { text: item.text, done: item.done ?? false });
+}
+
 function compactTaskForFingerprint(task: TakomiSubagentToolTask): Record<string, unknown> {
   return {
     agent: task.agent,
     task: task.task,
-    workflow: task.workflow,
-    skills: task.skills,
-    model: task.model,
-    fallbackModels: task.fallbackModels,
+    workflow: task.workflow || undefined,
+    skills: task.skills?.length ? task.skills : undefined,
+    model: task.model || undefined,
+    fallbackModels: task.fallbackModels?.length ? task.fallbackModels : undefined,
     thinking: task.thinking,
-    conversationId: task.conversationId,
+    conversationId: task.conversationId || undefined,
     cwd: task.cwd,
+    checklist: compactChecklistForFingerprint(task.checklist),
   };
 }
 
-function createRunFingerprint(rootCwd: string, mode: "single" | "parallel" | "chain" | undefined, tasks: TakomiSubagentToolTask[]): string {
-  return JSON.stringify({ rootCwd, mode, tasks: tasks.map(compactTaskForFingerprint) });
+const IMPLICIT_CONTEXT = "implicit" as const;
+type CanonicalContext = typeof IMPLICIT_CONTEXT | "fresh" | "fork";
+
+function canonicalContextForFingerprint(context: TakomiSubagentToolParams["context"]): CanonicalContext {
+  // Omission delegates context selection to native pi-subagents, whose built-in
+  // and settings defaults are authoritative. Never approximate that resolution
+  // with Takomi-only discovery: implicit input is its own approval semantic.
+  return context ?? IMPLICIT_CONTEXT;
+}
+
+function canonicalContextsForFingerprint(
+  params: TakomiSubagentToolParams,
+  tasks: TakomiSubagentToolTask[],
+): CanonicalContext[] {
+  const context = canonicalContextForFingerprint(params.context);
+  // `context` is a global override. When omitted, each native task resolves its
+  // own default, but all retain the distinct implicit-input sentinel here.
+  return tasks.map(() => context);
+}
+
+function effectiveConcurrencyForFingerprint(mode: TakomiRunMode, concurrency: number | undefined): number | undefined {
+  if (mode !== "parallel") return undefined;
+  return typeof concurrency === "number" && Number.isInteger(concurrency) && concurrency >= 1 ? concurrency : 4;
+}
+
+function createRunFingerprint(
+  rootCwd: string,
+  mode: TakomiRunMode,
+  tasks: TakomiSubagentToolTask[],
+  params: TakomiSubagentToolParams,
+  agentScope: TakomiAgentScope,
+): string {
+  const context = canonicalContextForFingerprint(params.context);
+  return JSON.stringify({
+    rootCwd,
+    mode,
+    tasks: tasks.map(compactTaskForFingerprint),
+    launch: {
+      context: {
+        global: context,
+        perTask: canonicalContextsForFingerprint(params, tasks),
+      },
+      async: params.async === true,
+      concurrency: effectiveConcurrencyForFingerprint(mode, params.concurrency),
+      worktree: mode === "parallel" && params.worktree === true,
+      clarify: params.clarify === true,
+      agentScope,
+    },
+  });
 }
 
 function hardStopResult(message: string, details: Record<string, unknown>) {
@@ -118,8 +181,34 @@ function hardStopResult(message: string, details: Record<string, unknown>) {
   ].join("\n"), { ...details, takomiHardStop: true }, true);
 }
 
-function rememberHardStop(pi: ExtensionAPI, fingerprint: string, reason: string, message: string): void {
-  hardStopStore(pi).set(fingerprint, { at: Date.now(), reason, message });
+function rememberHardStop(
+  pi: ExtensionAPI,
+  fingerprint: string,
+  reason: string,
+  message: string,
+  userTurnMarker?: UserTurnMarker,
+): void {
+  hardStopStore(pi).set(fingerprint, { at: Date.now(), reason, message, userTurnMarker });
+}
+
+function readUserTurnMarker(ctx: ExtensionContext): UserTurnMarker {
+  const userEntries = ctx.sessionManager.getEntries().filter((entry) => entry.type === "message" && entry.message.role === "user");
+  const entryIds = userEntries.map((entry) => entry.id);
+  return {
+    sessionId: ctx.sessionManager.getSessionId(),
+    count: userEntries.length,
+    lastEntryId: entryIds.at(-1),
+    entryIds,
+  };
+}
+
+function hasStrictlyNewerUserTurn(record: HardStopRecord, current: UserTurnMarker): boolean {
+  const recorded = record.userTurnMarker;
+  if (!recorded || recorded.sessionId !== current.sessionId || current.count <= recorded.count) return false;
+  if (!recorded.lastEntryId) return true;
+
+  const recordedTurnIndex = current.entryIds.indexOf(recorded.lastEntryId);
+  return recordedTurnIndex >= 0 && recordedTurnIndex < current.entryIds.length - 1;
 }
 
 function consumeExpiredHardStop(pi: ExtensionAPI, fingerprint: string): HardStopRecord | undefined {
@@ -150,12 +239,6 @@ async function resolveRelativeCwd(root: string, value: string | undefined, label
   if (!stat.isDirectory()) throw new Error(`${label} must be a directory inside the current workspace.`);
   if (!isPathInside(realRoot, realCandidate)) throw new Error(`${label} escapes the current workspace.`);
   return realCandidate;
-}
-
-async function validateTaskCwds(root: string, tasks: TakomiSubagentToolTask[]): Promise<void> {
-  for (const [index, task] of tasks.entries()) {
-    await resolveRelativeCwd(root, task.cwd, `tasks[${index}].cwd`);
-  }
 }
 
 function getTextContent(result: any): string {
@@ -261,6 +344,7 @@ export async function executeTakomiSubagentTool(
   }
   const profile = await loadTakomiProfile(rootCwd);
   const runtimeLaunchMode = readRuntimeLaunchMode(ctx);
+  const userTurnMarker = readUserTurnMarker(ctx);
   // Auto launch mode may come from a model, profile, default, or restored
   // runtime state. None of those are project-agent authorization.
   const userGateAutoAuthorized = hasUserGateAutoProvenance(ctx.sessionManager.getEntries());
@@ -298,11 +382,11 @@ export async function executeTakomiSubagentTool(
   let tasks: TakomiSubagentToolTask[];
   try {
     const rawTasks = resolveTasks(params);
-    await validateTaskCwds(rootCwd, rawTasks);
-    tasks = rawTasks.map((task) => applyTakomiRoutingDefaults({
+    tasks = await Promise.all(rawTasks.map(async (task, index) => applyTakomiRoutingDefaults({
       ...task,
       agent: resolveAgentName(task.agent, byName),
-    }, routingSnapshot));
+      cwd: await resolveRelativeCwd(rootCwd, task.cwd, `tasks[${index}].cwd`),
+    }, routingSnapshot)));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return textResult(message, { results: [], availableAgents: agents.map((agent) => agent.name), agentScope }, true);
@@ -319,17 +403,21 @@ export async function executeTakomiSubagentTool(
     return textResult(`Too many parallel tasks (${tasks.length}). Max is ${MAX_PARALLEL_TASKS}.`, { results: [], agentScope }, true);
   }
 
-  const fingerprint = createRunFingerprint(rootCwd, mode, tasks);
+  const fingerprint = createRunFingerprint(rootCwd, mode, tasks, params, agentScope);
   const projectAgentsAuthorized = userGateAutoAuthorized || hostTrustsProjectAgents();
   const recentHardStop = consumeExpiredHardStop(pi, fingerprint);
   const authorizationOverridesHardStop = projectAgentsAuthorized && isProjectAgentApprovalHardStop(recentHardStop);
-  if (recentHardStop && !authorizationOverridesHardStop) {
+  const consumesReviewGate = recentHardStop?.reason === "review-gate"
+    && params.confirmLaunch === true
+    && params.previewOnly !== true
+    && hasStrictlyNewerUserTurn(recentHardStop, userTurnMarker);
+  if (recentHardStop && !authorizationOverridesHardStop && !consumesReviewGate) {
     return hardStopResult(
       `Subagent launch blocked: the same request was already stopped (${recentHardStop.reason}).\n${recentHardStop.message}`,
       { results: [], availableAgents: agents.map((agent) => agent.name), agentScope, mode, blockedAt: recentHardStop.at, reason: recentHardStop.reason },
     );
   }
-  if (authorizationOverridesHardStop) hardStopStore(pi).delete(fingerprint);
+  if (authorizationOverridesHardStop || consumesReviewGate) hardStopStore(pi).delete(fingerprint);
 
   if (!projectAgentsAuthorized && hasProjectAgents(tasks, byName)) {
     const names = tasks.map((task) => byName.get(task.agent)).filter((agent): agent is TakomiAgentConfig => agent?.source === "project").map((agent) => agent.name);
@@ -367,9 +455,9 @@ export async function executeTakomiSubagentTool(
   if (params.previewOnly) {
     return textResult(renderTakomiDelegationPlan(plan), { plan, availableAgents: agents.map((agent) => agent.name), agentScope, mode });
   }
-  if (plan.launchMode === "manual" && !params.confirmLaunch) {
+  if (plan.launchMode === "manual" && !consumesReviewGate) {
     const message = `${renderTakomiDelegationPlan(plan)}\n\nReview gate is awaiting explicit user approval.`;
-    rememberHardStop(pi, fingerprint, "review-gate", "Review gate displayed a delegation plan and paused before launch.");
+    rememberHardStop(pi, fingerprint, "review-gate", "Review gate displayed a delegation plan and paused before launch.", userTurnMarker);
     return hardStopResult(message, { plan, availableAgents: agents.map((agent) => agent.name), agentScope, mode });
   }
   try {

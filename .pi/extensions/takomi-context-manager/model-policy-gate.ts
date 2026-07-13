@@ -7,6 +7,7 @@ import { recordBlocked } from "./state";
 import { resolveTakomiRoutingPolicy } from "../takomi-runtime/routing-policy";
 import { approvedModelEquivalent, isTakomiModelApproved } from "../takomi-runtime/model-routing-defaults";
 import { persistReportSnapshot } from "./session-state";
+import { sanitizePresentation } from "./tool-renderers";
 
 type Settings = {
   takomi?: { modelRoutingPolicyFile?: string };
@@ -162,18 +163,40 @@ type RecoveryChoice =
   | { action: "retry"; model: string }
   | { action: "stop" };
 
+type RecoveryOptions = {
+  options: string[];
+  retryModels: Map<string, string>;
+};
+
+/**
+ * Keep policy model IDs raw for selection and mutation, while passing only
+ * presentation-safe labels to the terminal UI. Disambiguate labels that become
+ * identical after sanitization so a selected label still maps to one raw ID.
+ */
+function recoveryOptions(approved: string[]): RecoveryOptions {
+  const retryModels = new Map<string, string>();
+  const options: string[] = [];
+  for (const model of approved) {
+    const baseLabel = `Retry with ${sanitizePresentation(model)}`;
+    let label = baseLabel;
+    let duplicate = 2;
+    while (retryModels.has(label)) label = `${baseLabel} (${duplicate++})`;
+    retryModels.set(label, model);
+    options.push(label);
+  }
+  options.push("Stop and let me send a new prompt");
+  return { options, retryModels };
+}
+
 async function askForInvalidModelRecovery(ctx: { ui: { select(title: string, options: string[]): Promise<string | undefined>; notify(message: string, level?: string): void }; abort?: () => void }, requested: string, approved: string[]): Promise<RecoveryChoice> {
   if (approved.length === 0) return { action: "stop" };
-  const options = [
-    ...approved.map((model) => `Retry with ${model}`),
-    "Stop and let me send a new prompt",
-  ];
+  const recovery = recoveryOptions(approved);
   const choice = await ctx.ui.select(
-    `takomi_subagent requested a model outside your routing policy: ${requested}`,
-    options,
+    sanitizePresentation(`takomi_subagent requested a model outside your routing policy: ${requested}`),
+    recovery.options,
   );
-  if (choice?.startsWith("Retry with ")) return { action: "retry", model: choice.replace("Retry with ", "") };
-  return { action: "stop" };
+  const model = choice ? recovery.retryModels.get(choice) : undefined;
+  return model ? { action: "retry", model } : { action: "stop" };
 }
 
 export function installModelPolicyGate(pi: ExtensionAPI, state: ContextManagerState): void {
@@ -221,7 +244,8 @@ export function installModelPolicyGate(pi: ExtensionAPI, state: ContextManagerSt
         timestamp,
       })));
       persistReportSnapshot(pi, state, "model-policy-correction");
-      ctx.ui.notify(`Takomi context manager corrected subagent model routing:\n- ${corrections.map((correction) => `${correction.from} -> ${correction.to}${correction.recovery ? ` (${correction.recovery})` : ""}`).join("\n- ")}\n\nBe careful to follow /takomi routing policy next time.`, "warning");
+      const notification = `Takomi context manager corrected subagent model routing:\n- ${corrections.map((correction) => `${sanitizePresentation(correction.from)} -> ${sanitizePresentation(correction.to)}${correction.recovery ? ` (${sanitizePresentation(correction.recovery)})` : ""}`).join("\n- ")}\n\nBe careful to follow /takomi routing policy next time.`;
+      ctx.ui.notify(notification, "warning");
     }
   });
 
@@ -231,12 +255,9 @@ export function installModelPolicyGate(pi: ExtensionAPI, state: ContextManagerSt
     if (!isModelFailure(content)) return;
 
     const snapshot = await loadSnapshot(ctx.cwd);
-    const options = [
-      ...snapshot.approvedModels.map((model) => `Retry with ${model}`),
-      "Stop and let me send a new prompt",
-    ];
-    const choice = await ctx.ui.select("Takomi subagent model/provider failure. How do you want to continue?", options);
-    const retryModel = choice?.startsWith("Retry with ") ? choice.replace("Retry with ", "") : undefined;
+    const recovery = recoveryOptions(snapshot.approvedModels);
+    const choice = await ctx.ui.select("Takomi subagent model/provider failure. How do you want to continue?", recovery.options);
+    const retryModel = choice ? recovery.retryModels.get(choice) : undefined;
     const stopped = !retryModel;
     const guidance = [
       "Takomi subagent failed with a model/provider-related error.",

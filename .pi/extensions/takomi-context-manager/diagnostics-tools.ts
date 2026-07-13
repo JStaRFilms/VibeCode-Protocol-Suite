@@ -5,7 +5,7 @@ import type { ContextManagerState } from "./state";
 import { contextReportPresentation, renderReport, type ContextReportMode } from "./diagnostics";
 import { discoverSkillsFromFilesystem, mergeSkills } from "./skill-registry";
 import { persistReportSnapshot, restoreReportFromSession } from "./session-state";
-import { renderCompactCard, renderExpandedMarkdown, renderToolCall, resultText } from "./tool-renderers";
+import { renderCompactCard, renderExpandedMarkdown, renderToolCall, resultText, sanitizePresentation } from "./tool-renderers";
 
 export function registerDiagnostics(pi: ExtensionAPI, state: ContextManagerState): void {
   pi.registerTool({
@@ -94,7 +94,7 @@ export function registerDiagnostics(pi: ExtensionAPI, state: ContextManagerState
       persistReportSnapshot(pi, state, "context-report-command");
       const requested = args.trim();
       const mode: ContextReportMode = requested === "verbose" || requested === "problems" || requested === "summary" ? requested : "summary";
-      ctx.ui.notify(renderReport(state, mode), "info");
+      ctx.ui.notify(sanitizePresentation(renderReport(state, mode)), "info");
     },
   });
 }

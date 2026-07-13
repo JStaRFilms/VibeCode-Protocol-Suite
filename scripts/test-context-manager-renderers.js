@@ -26,6 +26,13 @@ function render(component, width = 120) {
   return component.render(width).join("\n").replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, "");
 }
 
+function assertSafePresentation(component, label) {
+  for (const width of [40, 60]) {
+    const output = render(component, width);
+    assert.doesNotMatch(output, /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]|\x1B/, `${label} must remove terminal controls at ${width} columns`);
+  }
+}
+
 try {
   await fs.writeFile(tsconfigPath, JSON.stringify({
     compilerOptions: {
@@ -50,6 +57,7 @@ try {
       path.join(repoRoot, ".pi/extensions/takomi-context-manager/extension-conflicts.ts"),
       path.join(repoRoot, ".pi/extensions/takomi-context-manager/diagnostics.ts"),
       path.join(repoRoot, ".pi/extensions/takomi-context-manager/diagnostics-tools.ts"),
+      path.join(repoRoot, ".pi/extensions/takomi-context-manager/model-policy-gate.ts"),
     ],
   }, null, 2));
   execFileSync(process.execPath, [path.join(repoRoot, "node_modules/typescript/bin/tsc"), "-p", tsconfigPath], { cwd: repoRoot, stdio: "inherit" });
@@ -62,6 +70,7 @@ try {
   const { registerSkillTools } = await moduleAt(".pi/extensions/takomi-context-manager/skill-tools.js");
   const { registerPolicyTools } = await moduleAt(".pi/extensions/takomi-context-manager/policy-tools.js");
   const { registerDiagnostics } = await moduleAt(".pi/extensions/takomi-context-manager/diagnostics-tools.js");
+  const { installModelPolicyGate } = await moduleAt(".pi/extensions/takomi-context-manager/model-policy-gate.js");
   const codingAgent = await import("@earendil-works/pi-coding-agent");
   const tui = await import("@earendil-works/pi-tui");
 
@@ -117,9 +126,10 @@ try {
     ["beta-policy", { name: "beta-policy", description: "Beta policy", content: "# Beta policy\n\ncomplete beta policy", path: "/private/policies/beta.md" }],
   ]);
   const tools = new Map();
+  const commands = new Map();
   const api = {
     registerTool: (tool) => tools.set(tool.name, tool),
-    registerCommand: () => undefined,
+    registerCommand: (name, command) => commands.set(name, command),
     appendEntry: () => undefined,
   };
   registerSkillTools(api, state);
@@ -179,6 +189,149 @@ try {
   assert.equal(correctedReport.details.presentation.attentionCount, 1, "structured context_report attention count includes model-routing corrections");
   assert.equal(correctedReport.details.presentation.status, "warning", "structured context_report status includes model-routing corrections");
   assert.match(render(contextReport.renderResult(correctedReport, { expanded: false }, plainTheme)), /1 attention items/, "context_report compact metadata uses structured attention counts");
+
+  const terminalPayload = "\x1B[31mred\x1B[0m\x1B]8;;https://example.invalid\x07link\x1B]8;;\x07\x00\x08";
+  const markdownPayload = `## Markdown heading\n\n**bold markdown** ${terminalPayload}`;
+  assert.equal(
+    renderers.sanitizePresentation(markdownPayload),
+    "## Markdown heading\n\n**bold markdown** redlink",
+    "the shared presentation sanitizer must remove ANSI, OSC, and unsafe C0 controls while retaining Markdown syntax",
+  );
+
+  const unsafeSkillName = `Unsafe skill ${terminalPayload}`;
+  const unsafeMissingSkill = `Missing skill ${terminalPayload}`;
+  state.skills.set(registry.normalizeName(unsafeSkillName), {
+    name: unsafeSkillName,
+    description: `Unsafe description ${terminalPayload}`,
+    location: `/unsafe/${terminalPayload}/SKILL.md`,
+    source: "filesystem",
+  });
+  const unsafeSkillIndex = await skillIndex.execute("unsafe-index", {}, undefined, undefined, toolContext);
+  assert.ok(unsafeSkillIndex.content[0].text.includes(terminalPayload), "skill_index model-facing content must retain raw names");
+  const unsafeSkillManifest = await skillManifest.execute("unsafe-manifest", { skills: [unsafeSkillName, unsafeMissingSkill] }, undefined, undefined, toolContext);
+  assert.ok(unsafeSkillManifest.content[0].text.includes(terminalPayload), "skill_manifest model-facing names, descriptions, locations, and missing metadata must remain unchanged");
+  const unsafeSkillLoadResult = {
+    content: [{ type: "text", text: `Skill: ${unsafeSkillName}\nLocation: /unsafe/${terminalPayload}/SKILL.md\n\n${markdownPayload}` }],
+    details: {
+      found: true,
+      skill: unsafeSkillName,
+      description: `Unsafe description ${terminalPayload}`,
+      location: `/unsafe/${terminalPayload}/SKILL.md`,
+      lineCount: 4,
+    },
+  };
+
+  const unsafePolicyName = `Unsafe policy ${terminalPayload}`;
+  const unsafeMissingPolicy = `Missing policy ${terminalPayload}`;
+  state.policies.set(registry.normalizeName(unsafePolicyName), {
+    name: unsafePolicyName,
+    description: `Unsafe policy description ${terminalPayload}`,
+    content: markdownPayload,
+    path: `/unsafe/${terminalPayload}.md`,
+  });
+  const unsafePolicyManifest = await policyManifest.execute("unsafe-policy-manifest", { policies: [unsafePolicyName, unsafeMissingPolicy] }, undefined, undefined, toolContext);
+  const unsafePolicyLoad = await policyLoad.execute("unsafe-policy-load", { policies: [unsafePolicyName, unsafeMissingPolicy] }, undefined, undefined, toolContext);
+  assert.ok(unsafePolicyManifest.content[0].text.includes(terminalPayload), "policy_manifest model-facing metadata must remain unchanged");
+  assert.ok(unsafePolicyLoad.content[0].text.includes(terminalPayload), "policy_load model-facing content must remain unchanged");
+
+  state.report.promptRewrite.warnings.push(`Unsafe diagnostic ${terminalPayload}`);
+  state.report.blockedActions.push({
+    toolName: `unsafe-tool ${terminalPayload}`,
+    reason: `Unsafe diagnostic reason ${terminalPayload}`,
+    timestamp: new Date().toISOString(),
+  });
+  const unsafeContextReport = await contextReport.execute("unsafe-context-report", { mode: "verbose" }, undefined, undefined, toolContext);
+  assert.ok(unsafeContextReport.content[0].text.includes(terminalPayload), "context_report model-facing diagnostics must remain unchanged");
+
+  const commandNotifications = [];
+  await commands.get("context-report").handler("verbose", {
+    ...toolContext,
+    ui: { notify: (message, level) => commandNotifications.push({ message, level }) },
+  });
+  assert.equal(commandNotifications.length, 1, "the registered /context-report command must notify once");
+  assert.equal(commandNotifications[0].level, "info", "the registered /context-report command retains its information level");
+  assert.doesNotMatch(commandNotifications[0].message, /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]|\x1B/, "the registered /context-report command notification must remove terminal controls");
+  assert.match(commandNotifications[0].message, /Unsafe diagnostic redlink/, "the registered /context-report command notification retains printable diagnostic text");
+
+  const callCases = [
+    ["skill_index call", skillIndex.renderCall({}, plainTheme)],
+    ["skill_manifest call", skillManifest.renderCall({ skills: [unsafeSkillName] }, plainTheme)],
+    ["skill_load call", skillLoad.renderCall({ skill: unsafeSkillName }, plainTheme)],
+    ["policy_manifest call", policyManifest.renderCall({ policies: [unsafePolicyName] }, plainTheme)],
+    ["policy_load call", policyLoad.renderCall({ policies: [unsafePolicyName] }, plainTheme)],
+    ["context_report call", contextReport.renderCall({ mode: terminalPayload }, plainTheme)],
+  ];
+  for (const [label, component] of callCases) assertSafePresentation(component, label);
+
+  const resultCases = [
+    ["skill_index compact", skillIndex.renderResult(unsafeSkillIndex, { expanded: false }, plainTheme)],
+    ["skill_index expanded", skillIndex.renderResult(unsafeSkillIndex, { expanded: true }, plainTheme)],
+    ["skill_manifest compact", skillManifest.renderResult(unsafeSkillManifest, { expanded: false }, plainTheme)],
+    ["skill_manifest expanded", skillManifest.renderResult(unsafeSkillManifest, { expanded: true }, plainTheme)],
+    ["skill_load compact", skillLoad.renderResult(unsafeSkillLoadResult, { expanded: false }, plainTheme)],
+    ["skill_load expanded", skillLoad.renderResult(unsafeSkillLoadResult, { expanded: true }, plainTheme)],
+    ["policy_manifest compact", policyManifest.renderResult(unsafePolicyManifest, { expanded: false }, plainTheme)],
+    ["policy_manifest expanded", policyManifest.renderResult(unsafePolicyManifest, { expanded: true }, plainTheme)],
+    ["policy_load compact", policyLoad.renderResult(unsafePolicyLoad, { expanded: false }, plainTheme)],
+    ["policy_load expanded", policyLoad.renderResult(unsafePolicyLoad, { expanded: true }, plainTheme)],
+    ["context_report compact", contextReport.renderResult(unsafeContextReport, { expanded: false }, plainTheme)],
+    ["context_report expanded", contextReport.renderResult(unsafeContextReport, { expanded: true }, plainTheme)],
+  ];
+  for (const [label, component] of resultCases) assertSafePresentation(component, label);
+  for (const width of [40, 60]) {
+    const expandedLoad = render(skillLoad.renderResult(unsafeSkillLoadResult, { expanded: true }, plainTheme), width);
+    assert.match(expandedLoad, /Markdown heading/, `skill_load Markdown heading must remain functional at ${width} columns`);
+    assert.match(expandedLoad, /bold markdown/, `skill_load Markdown emphasis content must remain functional at ${width} columns`);
+  }
+
+  const maliciousPolicyModel = `oauth-router/gpt-5.5${terminalPayload}`;
+  const maliciousRequestedModel = `openai-codex/gpt-5.5${terminalPayload}`;
+  const maliciousUnapprovedModel = `unapproved-provider/not-real${terminalPayload}-unapproved`;
+  const gateProject = path.join(tempRoot, "model-policy-gate");
+  await fs.mkdir(path.join(gateProject, ".pi"), { recursive: true });
+  await fs.writeFile(path.join(gateProject, ".pi", "settings.json"), JSON.stringify({
+    subagents: { agentOverrides: { worker: { model: maliciousPolicyModel } } },
+  }));
+  const gateHandlers = new Map();
+  const gateState = createState();
+  installModelPolicyGate({
+    on: (event, handler) => gateHandlers.set(event, handler),
+    appendEntry: () => undefined,
+  }, gateState);
+  const gateNotifications = [];
+  const gateSelections = [];
+  const gateContext = {
+    cwd: gateProject,
+    ui: {
+      select: async (title, options) => {
+        gateSelections.push({ title, options });
+        return options.find((option) => option.includes("oauth-router/gpt-5.5redlink"));
+      },
+      notify: (message, level) => gateNotifications.push({ message, level }),
+    },
+  };
+  const toolCall = gateHandlers.get("tool_call");
+  const autoCorrectedInput = { model: maliciousRequestedModel };
+  await toolCall({ toolName: "takomi_subagent", input: autoCorrectedInput }, gateContext);
+  assert.equal(autoCorrectedInput.model, maliciousPolicyModel, "equivalent provider correction must retain the exact raw approved model ID");
+  assert.equal(gateSelections.length, 0, "equivalent raw model correction must not invoke recovery selection");
+  assert.equal(gateState.report.modelRoutingCorrections.at(-1).from, maliciousRequestedModel, "correction reporting retains the exact raw requested model ID");
+  assert.equal(gateState.report.modelRoutingCorrections.at(-1).to, maliciousPolicyModel, "correction reporting retains the exact raw approved model ID");
+  assert.doesNotMatch(gateNotifications.at(-1).message, /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]|\x1B/, "model correction notification must remove ANSI, OSC, and C0 controls");
+  assert.match(gateNotifications.at(-1).message, /openai-codex\/gpt-5.5redlink -> oauth-router\/gpt-5.5redlink/, "model correction notification retains printable model labels");
+
+  const recoveredInput = { model: maliciousUnapprovedModel };
+  await toolCall({ toolName: "takomi_subagent", input: recoveredInput }, gateContext);
+  assert.equal(recoveredInput.model, maliciousPolicyModel, "recovery selection must map its sanitized label back to the raw approved model ID");
+  assert.doesNotMatch(gateSelections.at(-1).title, /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]|\x1B/, "recovery title must remove ANSI, OSC, and C0 controls");
+  assert.ok(gateSelections.at(-1).options.every((option) => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]|\x1B/.test(option)), "recovery options must remove ANSI, OSC, and C0 controls");
+  assert.equal(gateState.report.modelRoutingCorrections.at(-1).from, maliciousUnapprovedModel, "recovery report retains the exact raw requested model ID");
+  assert.equal(gateState.report.modelRoutingCorrections.at(-1).to, maliciousPolicyModel, "recovery report retains the exact raw approved model ID");
+
+  const toolResult = gateHandlers.get("tool_result");
+  const failureRecovery = await toolResult({ toolName: "takomi_subagent", isError: true, content: "unknown provider" }, gateContext);
+  assert.ok(gateSelections.at(-1).options.every((option) => !/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]|\x1B/.test(option)), "failure recovery options must remove ANSI, OSC, and C0 controls");
+  assert.match(failureRecovery.content[0].text, new RegExp(maliciousPolicyModel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "failure recovery guidance keeps the raw selected model ID for routing");
 
   console.log("✓ context-manager renderer checks passed");
 } finally {

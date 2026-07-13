@@ -7,7 +7,7 @@ import { Type } from "typebox";
 import type { ContextManagerState } from "./state";
 import { discoverSkillsFromFilesystem, findSkill, mergeSkills, normalizeName, skillIndexRenderGroups, sortedSkills, type SkillIndexRenderGroup } from "./skill-registry";
 import { persistReportSnapshot, restoreReportFromSession } from "./session-state";
-import { renderCompactCard, renderExpandedMarkdown, renderToolCall, resultText } from "./tool-renderers";
+import { renderCompactCard, renderExpandedMarkdown, renderToolCall, resultText, sanitizePresentation } from "./tool-renderers";
 
 function renderSkillIndex(state: ContextManagerState): string {
   const skills = sortedSkills(state.skills);
@@ -185,17 +185,19 @@ export function registerSkillTools(pi: ExtensionAPI, state: ContextManagerState)
         return renderExpandedMarkdown({ status: "error", title: "Skill load", summary, markdown: text }, theme);
       }
 
-      const name = details?.skill ?? "skill";
-      const summary = details?.description ?? "skill instructions loaded";
+      const name = sanitizePresentation(details?.skill ?? "skill");
+      const description = details?.description ? sanitizePresentation(details.description) : undefined;
+      const summary = description ?? "skill instructions loaded";
       const metadata = `${details?.lineCount ?? text.split(/\r?\n/).length} lines`;
       if (!expanded) return renderCompactCard({ status: "success", title: name, summary, metadata }, theme);
 
+      const location = details?.location ? sanitizePresentation(details.location) : undefined;
       const container = new Container();
       container.addChild(new Text(`${theme.fg("success", "✓")} ${theme.fg("accent", theme.bold(name))} ${theme.fg("muted", "skill instructions")}`, 0, 0));
-      if (details?.description) container.addChild(new Text(theme.fg("muted", details.description), 0, 0));
-      if (details?.location) container.addChild(new Text(theme.fg("dim", details.location), 0, 0));
+      if (description) container.addChild(new Text(theme.fg("muted", description), 0, 0));
+      if (location) container.addChild(new Text(theme.fg("dim", location), 0, 0));
       container.addChild(new Text(theme.fg("dim", keyHint("app.tools.expand", "collapse")), 0, 0));
-      container.addChild(new Markdown(skillMarkdown(text), 0, 1, getMarkdownTheme()));
+      container.addChild(new Markdown(sanitizePresentation(skillMarkdown(text)), 0, 1, getMarkdownTheme()));
       return container;
     },
   });
