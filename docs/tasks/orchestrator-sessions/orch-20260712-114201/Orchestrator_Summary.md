@@ -5,7 +5,7 @@
 - Machine state: C:\CreativeOS\01_Projects\Code\Personal_Stuff\2025-12-02_VibeCode-Protocol-Suite\.pi\takomi\orchestrator\orch-20260712-114201.json
 - Runtime mode: hybrid
 - Session intent: full-project
-- Validation: PASS (0 errors, 19 warnings)
+- Validation: PASS (0 errors, 20 warnings)
 
 ## Validation
 
@@ -29,3 +29,4 @@ Takomi session validation: WARNINGS
 - [WARNING] json-prose-field (BLD-011): Task JSON contains substantial prose in notes; prefer authored markdown for long-form content.
 - [WARNING] json-prose-field (BLD-012): Task JSON contains substantial prose in notes; prefer authored markdown for long-form content.
 - [WARNING] json-prose-field (REV-005): Task JSON contains substantial prose in notes; prefer authored markdown for long-form content.
+- [WARNING] json-prose-field (BLD-013): Task JSON contains substantial prose in notes; prefer authored markdown for long-form content.
