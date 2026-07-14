@@ -258,39 +258,80 @@ try {
     registerCommand: (name, command) => lifecycleCommands.set(name, command),
     on: (event, handler) => lifecycleHandlers.set(event, handler),
   });
-  const lifecycleOrder = [];
-  const originalEvents = { widgets: [], statuses: [], notifications: [] };
-  const originalCtx = createContext(originalEvents, "rpc", false);
-  const originalSetWidget = originalCtx.ui.setWidget;
-  originalCtx.ui.setWidget = (...args) => {
-    lifecycleOrder.push(args[1] === undefined ? "old-clear" : "old-report");
-    originalSetWidget(...args);
-  };
-  await lifecycleHandlers.get("session_start")({}, originalCtx);
-  await lifecycleCommands.get("router-debug-report").handler("", originalCtx);
-  assert.equal(originalEvents.widgets.at(-1)[0], reportUi.ROUTER_REPORT_WIDGET_KEY, "RPC lifecycle test shows the report before shutdown");
-  assert.equal(originalEvents.widgets.at(-1).length, 2, "debug report uses Pi's default above-editor placement");
-  assert.equal(originalEvents.widgets.at(-1)[1][0], reportUi.ROUTER_REPORT_DISMISS_HINT, "debug report starts with the dismissal hint");
-  assert.equal(originalEvents.widgets.at(-1)[1].filter((line) => line === reportUi.ROUTER_REPORT_DISMISS_HINT).length, 1, "debug report has exactly one dismissal hint");
-  const reportCountWhileReading = originalEvents.widgets.length;
-  await lifecycleHandlers.get("turn_start")({}, originalCtx);
-  assert.equal(originalEvents.widgets.length, reportCountWhileReading, "reading lifecycle events do not auto-clear the report");
-  await lifecycleHandlers.get("session_shutdown")({});
-  assert.deepEqual(originalEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "session shutdown clears the old RPC report widget when hasUI is false");
+  for (const event of ["session_start", "session_shutdown", "input", "agent_start", "tool_execution_start"]) {
+    assert.equal(typeof lifecycleHandlers.get(event), "function", `${event} installs a production lifecycle listener`);
+  }
 
-  const replacementEvents = { widgets: [], statuses: [], notifications: [] };
-  const replacementCtx = createContext(replacementEvents, "rpc", false);
-  const replacementSetWidget = replacementCtx.ui.setWidget;
-  replacementCtx.ui.setWidget = (...args) => {
-    lifecycleOrder.push(args[1] === undefined ? "replacement-clear" : "replacement-report");
-    replacementSetWidget(...args);
+  // Pi executes registered slash commands before input interception and returns
+  // immediately, so a /router-status report cannot consume its own clear event.
+  const agentSessionSource = await fs.readFile(path.join(repoRoot, "node_modules", "@earendil-works", "pi-coding-agent", "dist", "core", "agent-session.js"), "utf8");
+  assert.ok(
+    agentSessionSource.indexOf("Handle extension commands first") < agentSessionSource.indexOf("Emit input event for extension interception"),
+    "production Pi runs slash commands before input listeners",
+  );
+
+  const rpcEvents = { widgets: [], statuses: [], notifications: [] };
+  const rpcLifecycleCtx = createContext(rpcEvents, "rpc", false);
+  await lifecycleHandlers.get("session_start")({}, rpcLifecycleCtx);
+  await lifecycleCommands.get("router-status").handler("", rpcLifecycleCtx);
+  assert.equal(rpcEvents.widgets.at(-1)[0], reportUi.ROUTER_REPORT_WIDGET_KEY, "RPC status command leaves its report visible");
+  assert.equal(rpcEvents.widgets.at(-1).length, 2, "transient report retains default above-editor placement");
+  assert.equal(rpcEvents.widgets.at(-1)[1][0], reportUi.ROUTER_REPORT_DISMISS_HINT, "transient RPC report retains one dismiss hint");
+  const reportCountWhileReading = rpcEvents.widgets.length;
+  await lifecycleHandlers.get("turn_start")({}, rpcLifecycleCtx);
+  assert.equal(rpcEvents.widgets.length, reportCountWhileReading, "reading lifecycle events do not clear the report");
+  await lifecycleHandlers.get("input")({ text: "ordinary next input", source: "rpc" }, rpcLifecycleCtx);
+  assert.deepEqual(rpcEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "ordinary next RPC input clears the old report");
+
+  await lifecycleCommands.get("router-status").handler("", rpcLifecycleCtx);
+  const statusReport = rpcEvents.widgets.at(-1);
+  await lifecycleCommands.get("router-accounts").handler("", rpcLifecycleCtx);
+  assert.notEqual(rpcEvents.widgets.at(-1), statusReport, "another report command replaces the previous report");
+  assert.match(rpcEvents.widgets.at(-1)[1].join("\n"), /Compact account list/, "replacement report remains visible after its command");
+  await lifecycleHandlers.get("agent_start")({}, rpcLifecycleCtx);
+  assert.deepEqual(rpcEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "agent activity clears an existing report");
+
+  await lifecycleCommands.get("router-status").handler("", rpcLifecycleCtx);
+  await lifecycleHandlers.get("tool_execution_start")({ toolCallId: "tool-1", toolName: "read", args: {} }, rpcLifecycleCtx);
+  assert.deepEqual(rpcEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "tool activity clears an existing report");
+  assert.match(rpcEvents.statuses.at(-1)[1], /^oauth-router \d+\/\d+ healthy \| /, "activity keeps the small health footer live");
+
+  await lifecycleCommands.get("router-status").handler("", rpcLifecycleCtx);
+  let reentered = false;
+  const rpcSetWidget = rpcLifecycleCtx.ui.setWidget;
+  rpcLifecycleCtx.ui.setWidget = (...args) => {
+    rpcSetWidget(...args);
+    if (!reentered && args[1] === undefined) {
+      reentered = true;
+      void lifecycleCommands.get("router-accounts").handler("", rpcLifecycleCtx);
+    }
   };
-  await lifecycleHandlers.get("session_start")({}, replacementCtx);
-  assert.deepEqual(lifecycleOrder, ["old-report", "old-clear"], "old RPC widget clears before session replacement");
-  await lifecycleCommands.get("router-debug-report").handler("", replacementCtx);
-  assert.equal(replacementEvents.widgets.at(-1)[1].filter((line) => line === reportUi.ROUTER_REPORT_DISMISS_HINT).length, 1, "replacement report does not duplicate the dismissal hint");
+  await lifecycleHandlers.get("input")({ text: "replace during clear", source: "rpc" }, rpcLifecycleCtx);
+  assert.match(rpcEvents.widgets.at(-1)[1].join("\n"), /Compact account list/, "generation guard does not erase a report emitted during an old clear");
+  rpcLifecycleCtx.ui.setWidget = rpcSetWidget;
+  await lifecycleCommands.get("router-clear").handler("", rpcLifecycleCtx);
+  assert.deepEqual(rpcEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "/router-clear remains available for RPC reports");
+
+  await lifecycleCommands.get("router-debug-report").handler("", rpcLifecycleCtx);
+  const reloadEvents = { widgets: [], statuses: [], notifications: [] };
+  const reloadCtx = createContext(reloadEvents, "rpc", false);
+  await lifecycleHandlers.get("session_start")({}, reloadCtx);
+  assert.deepEqual(rpcEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "session reload clears the old RPC transport widget");
+  await lifecycleCommands.get("router-debug-report").handler("", reloadCtx);
   await lifecycleHandlers.get("session_shutdown")({});
-  assert.deepEqual(replacementEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "replacement session shutdown clears its RPC report widget when hasUI is false");
+  assert.deepEqual(reloadEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "session shutdown clears the replacement RPC widget");
+
+  const tuiLifecycleEvents = { widgets: [], statuses: [], notifications: [] };
+  const tuiLifecycleCtx = createContext(tuiLifecycleEvents, "tui");
+  await lifecycleHandlers.get("session_start")({}, tuiLifecycleCtx);
+  await lifecycleCommands.get("router-status").handler("", tuiLifecycleCtx);
+  assert.equal(typeof tuiLifecycleEvents.widgets.at(-1)[1], "function", "TUI lifecycle reports retain the themed panel");
+  await lifecycleHandlers.get("input")({ text: "next TUI input", source: "interactive" }, tuiLifecycleCtx);
+  assert.deepEqual(tuiLifecycleEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "ordinary TUI input clears the report");
+  await lifecycleCommands.get("router-status").handler("", tuiLifecycleCtx);
+  await lifecycleCommands.get("router-clear").handler("", tuiLifecycleCtx);
+  assert.deepEqual(tuiLifecycleEvents.widgets.at(-1), [reportUi.ROUTER_REPORT_WIDGET_KEY, undefined], "manual TUI clear remains available");
+  await lifecycleHandlers.get("session_shutdown")({});
 
   const oauthFlow = await fs.readFile(path.join(extensionRoot, "oauth-flow.ts"), "utf8");
   assert.match(oauthFlow, /ctx\.ui\.notify\(`\$\{provider\.name\}: \$\{info\.instructions \?\? "Finish login in your browser\."\}`, "info"\)/, "OAuth instruction notification remains exact");
