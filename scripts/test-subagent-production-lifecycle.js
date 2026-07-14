@@ -7,6 +7,9 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
+import { KeybindingsManager } from "../node_modules/@earendil-works/pi-coding-agent/dist/core/keybindings.js";
+import { CustomEditor } from "../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/components/custom-editor.js";
+import { InteractiveMode } from "../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/interactive-mode.js";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const extensionDir = path.join(repoRoot, ".pi", "extensions", "takomi-subagents");
@@ -136,7 +139,7 @@ const internalsUrl = dataModule(`
               id, runId: id, asyncDir, sessionId: ctx.sessionManager.getSessionFile() ?? ctx.sessionManager.getSessionId(),
               mode: "single", agent: params.agent, agents: [params.agent], pid: 4200 + sequence,
             });
-            setImmediate(() => {
+            setTimeout(() => {
               const completion = {
                 id, runId: id, asyncDir, sessionId: ctx.sessionManager.getSessionFile() ?? ctx.sessionManager.getSessionId(),
                 cwd: ctx.cwd, mode: "single", state: "complete", success: true,
@@ -150,7 +153,7 @@ const internalsUrl = dataModule(`
               const temporary = path.join(RESULTS_DIR, id + ".tmp");
               fs.writeFileSync(temporary, JSON.stringify(completion));
               fs.renameSync(temporary, path.join(RESULTS_DIR, id + ".json"));
-            });
+            }, 800);
             return {
               content: [{ type: "text", text: "Background subagent started: " + id }],
               details: { mode: "single", results: [], asyncId: id, runId: id, asyncDir },
@@ -231,6 +234,8 @@ function createHarness(name) {
   const entries = [];
   const widgets = [];
   const messages = [];
+  let toolsExpanded = false;
+  let renderRequests = 0;
   const emissions = [];
   const tools = new Map();
   const waiters = [];
@@ -284,11 +289,11 @@ function createHarness(name) {
     sessionManager,
     ui: {
       theme: identityTheme,
-      setWidget(key, value) { widgets.push({ key, value }); },
-      requestRender() {},
+      setWidget(key, value) { widgets.push({ key, value, toolsExpanded }); },
+      requestRender() { renderRequests += 1; },
       confirm: async () => true,
-      getToolsExpanded: () => false,
-      setToolsExpanded() {},
+      getToolsExpanded: () => toolsExpanded,
+      setToolsExpanded(value) { toolsExpanded = value; renderRequests += 1; },
     },
   };
   function waitForMessages(count, timeoutMs = 3000) {
@@ -303,7 +308,11 @@ function createHarness(name) {
       waiters.push({ count, resolve: wrappedResolve, reject });
     });
   }
-  return { pi, ctx, entries, widgets, messages, emissions, tools, eventHandlers, lifecycleHandlers, waitForMessages };
+  return {
+    pi, ctx, entries, widgets, messages, emissions, tools, eventHandlers, lifecycleHandlers, waitForMessages,
+    get toolsExpanded() { return toolsExpanded; },
+    get renderRequests() { return renderRequests; },
+  };
 }
 
 async function fireLifecycle(harness, event) {
@@ -321,7 +330,9 @@ async function settleRegistration() {
   await Promise.resolve();
 }
 
-async function executeAndAssert(harness, expectedMessageCount, previousSnapshot) {
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function executeAndAssert(harness, expectedMessageCount, previousSnapshot, exerciseKeyDispatch = false) {
   const tool = harness.tools.get("takomi_subagent");
   assert.ok(tool, "default Takomi registration exposes the production tool");
   const bindingsBefore = globalThis.__productionExecutorBindings.length;
@@ -335,6 +346,7 @@ async function executeAndAssert(harness, expectedMessageCount, previousSnapshot)
   assert.ok(snapshot, "Takomi lifecycle state always exists for its executor");
   assert.equal(globalThis.__productionExecutorBindings.at(-1), snapshot.state, "executor state identity equals the active Takomi lifecycle state");
   assert.equal(snapshot.state.poller, null, "Takomi lifecycle introduces no polling loop");
+  assert.equal(snapshot.state.subagentInProgress, false, "detached launch clears the foreground/global single-dispatch guard");
   assert.equal(snapshot.state.asyncJobs.get(result.details.asyncId)?.status, "running", "post-spawn async-started state is running");
   if (previousSnapshot) {
     assert.notEqual(snapshot.state, previousSnapshot.state, "lifecycle replacement exposes a new state identity");
@@ -347,6 +359,38 @@ async function executeAndAssert(harness, expectedMessageCount, previousSnapshot)
   assert.equal(new Set(harness.widgets.filter((entry) => entry.value).map((entry) => entry.key)).size, 1, "native and Takomi rendering share one widget key");
   assert.equal(activeResultWatchers.size, 1, "exactly one native result watcher is active");
 
+  const widgetCountBeforeHeartbeat = harness.widgets.length;
+  const renderRequestsBeforeHeartbeat = harness.renderRequests;
+  if (exerciseKeyDispatch) {
+    let historicalExpanded = false;
+    const historicalResult = { setExpanded(value) { historicalExpanded = value; } };
+    const productionAppState = {
+      toolOutputExpanded: false,
+      customHeader: undefined,
+      builtInHeader: undefined,
+      chatContainer: { children: [historicalResult] },
+      ui: { requestRender() {} },
+      setToolsExpanded: InteractiveMode.prototype.setToolsExpanded,
+    };
+    const editor = new CustomEditor({}, {}, new KeybindingsManager());
+    editor.onAction("app.tools.expand", () => {
+      InteractiveMode.prototype.toggleToolOutputExpansion.call(productionAppState);
+      harness.ctx.ui.setToolsExpanded(productionAppState.toolOutputExpanded);
+    });
+    editor.handleInput("\x0f");
+    assert.equal(harness.toolsExpanded, true, "real Ctrl+O dispatch toggles Pi's app.tools.expand state with the async widget present");
+    assert.equal(historicalExpanded, true, "Pi's production expansion method still expands historical tool results");
+  }
+  await delay(520);
+  const heartbeatWidgets = harness.widgets.slice(widgetCountBeforeHeartbeat).filter((entry) => entry.value);
+  assert.ok(heartbeatWidgets.length >= 2, "bounded heartbeat rebuilds the native widget while the async job exists");
+  assert.ok(harness.renderRequests > renderRequestsBeforeHeartbeat, "each animation heartbeat requests a real Pi render");
+  const heartbeatFrames = heartbeatWidgets.map((entry) => renderWidgetText(entry.value));
+  assert.ok(new Set(heartbeatFrames).size >= 2, "native widget heartbeat advances actual rendered spinner frames");
+  if (exerciseKeyDispatch) {
+    assert.equal(heartbeatWidgets.at(-1).toolsExpanded, true, "heartbeat rebuilds the widget from the current global expansion state");
+  }
+
   await harness.waitForMessages(expectedMessageCount);
   assert.equal(harness.messages.length, expectedMessageCount, "each async execution emits exactly one completion card");
   const completion = harness.messages.at(-1);
@@ -354,6 +398,13 @@ async function executeAndAssert(harness, expectedMessageCount, previousSnapshot)
   assert.match(completion.message.details.resultPreview, /Production lifecycle completed/, "completion card includes the final answer");
   assert.match(completion.message.details.resultPreview, /Checklist provenance: 1\/1/, "completion card includes trusted checklist provenance");
   assert.equal(harness.widgets.at(-1).value, undefined, "completion clears the running widget without a status call");
+  const widgetsAfterCompletion = harness.widgets.length;
+  await delay(180);
+  const postCompletionWidgets = harness.widgets.slice(widgetsAfterCompletion).filter((entry) => entry.value);
+  assert.ok(
+    postCompletionWidgets.every((entry) => !/running/i.test(renderWidgetText(entry.value))),
+    "completion stops running animation frames while allowing native completed-job retention",
+  );
   return snapshot;
 }
 
@@ -375,7 +426,7 @@ async function runTakomiOnlyLifecycle() {
   const harness = createHarness("takomi-only");
   await takomiExtension.default(harness.pi);
   await fireLifecycle(harness, "session_start");
-  const snapshot = await executeAndAssert(harness, 1);
+  const snapshot = await executeAndAssert(harness, 1, undefined, true);
   assert.equal(snapshot.ownership, "takomi", "Takomi owns the sole watcher when standalone is absent");
   await shutdownAndAssert(harness);
 }

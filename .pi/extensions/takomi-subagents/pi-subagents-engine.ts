@@ -57,6 +57,7 @@ function resolveTasks(params: TakomiSubagentToolParams): TakomiSubagentToolTask[
       conversationId: params.conversationId,
       cwd: undefined,
       checklist: params.checklist,
+      acceptance: params.acceptance,
     }];
   }
   return [];
@@ -174,6 +175,10 @@ function mapSingleTask(task: TakomiSubagentToolTask, names: Set<string>, rootCwd
     model: modelWithThinking(task.model, task.thinking),
     fallbackModels: task.fallbackModels,
     skill: task.skills?.length ? task.skills : undefined,
+    // Native omission means auto-inferred enforcement. Takomi's public default
+    // is deliberately ordinary/no-contract; only caller-supplied acceptance is
+    // enforced, and every explicit value is forwarded unchanged.
+    acceptance: task.acceptance ?? { level: "none", reason: "No explicit Takomi acceptance contract." },
   };
 }
 
@@ -218,6 +223,7 @@ function toSubagentParams(params: TakomiSubagentToolParams, rootCwd: string, dis
       model: mapped.model,
       fallbackModels: mapped.fallbackModels,
       skill: mapped.skill,
+      acceptance: mapped.acceptance,
     };
   }
 
@@ -239,6 +245,7 @@ function toSubagentParams(params: TakomiSubagentToolParams, rootCwd: string, dis
         model: mapped.model,
         fallbackModels: mapped.fallbackModels,
         skill: mapped.skill,
+        acceptance: mapped.acceptance,
       };
     }),
   };

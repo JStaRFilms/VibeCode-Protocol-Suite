@@ -9,11 +9,20 @@ import {
 import { renderTakomiSubagentCall, renderTakomiSubagentResult } from "./native-render";
 import { loadPiSubagentsInternals } from "./pi-subagents-internal";
 import { clearAllTakomiSubagentResultHeartbeats } from "./result-heartbeat";
-import { executeTakomiSubagentTool, invalidateTakomiPiSubagentsEngine } from "./tool-runner";
+import { executeTakomiSubagentTool, invalidateTakomiPiSubagentsEngine, type TakomiAcceptanceInput } from "./tool-runner";
 
 const ChecklistItemSchema = Type.Object({
   text: Type.String(),
   done: Type.Optional(Type.Boolean()),
+});
+
+const AcceptanceSchema = Type.Unsafe<TakomiAcceptanceInput>({
+  anyOf: [
+    { type: "string", enum: ["auto", "none", "attested", "checked", "verified", "reviewed"] },
+    { type: "boolean", enum: [false] },
+    { type: "object", additionalProperties: true },
+  ],
+  description: "Optional explicit acceptance policy. Omitted Takomi tasks do not enforce acceptance; explicit contracts are forwarded to pi-subagents.",
 });
 
 const ThinkingSchema = Type.Union([
@@ -36,6 +45,7 @@ const TaskSchema = Type.Object({
   conversationId: Type.Optional(Type.String()),
   cwd: Type.Optional(Type.String()),
   checklist: Type.Optional(Type.Array(Type.Union([Type.String(), ChecklistItemSchema]))),
+  acceptance: Type.Optional(AcceptanceSchema),
 });
 
 const ContextSchema = Type.Union([
@@ -65,6 +75,7 @@ const SubagentParameters = Type.Object({
   conversationId: Type.Optional(Type.String({ description: "Persistent conversation id to resume the same subagent session" })),
   cwd: Type.Optional(Type.String({ description: "Working directory override" })),
   checklist: Type.Optional(Type.Array(Type.Union([Type.String(), ChecklistItemSchema]), { description: "Optional checklist for the subagent" })),
+  acceptance: Type.Optional(AcceptanceSchema),
   tasks: Type.Optional(Type.Array(TaskSchema, { description: "Parallel subagent tasks" })),
   confirmLaunch: Type.Optional(Type.Boolean({ description: "Required to launch immediately in manual Takomi launch mode" })),
   previewOnly: Type.Optional(Type.Boolean({ description: "Return the delegation plan without launching" })),

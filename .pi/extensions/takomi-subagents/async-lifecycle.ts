@@ -9,6 +9,7 @@ const LIFECYCLE_GENERATION_KEY = "__takomiPiSubagentLifecycleGeneration";
 const STARTED_EVENT = "subagent:async-started";
 const COMPLETE_EVENT = "subagent:async-complete";
 const COMPLETION_TTL_MS = 10 * 60 * 1000;
+export const TAKOMI_ASYNC_WIDGET_HEARTBEAT_MS = 125;
 
 type LifecycleOwnership = "takomi" | "native";
 
@@ -21,6 +22,8 @@ export type TakomiAsyncLifecycleSnapshot = {
 type LifecycleRecord = TakomiAsyncLifecycleSnapshot & {
   internals: any;
   nativeCleanupIdentity?: () => void;
+  animationFrame: number;
+  animationTimer: ReturnType<typeof setInterval> | null;
   activate: (ctx: ExtensionContext) => void;
   prime: () => void;
   cleanup: () => void;
@@ -64,15 +67,51 @@ function isStaleExtensionContextError(error: unknown): boolean {
   return error instanceof Error && error.message.includes("Extension context no longer active");
 }
 
-function renderJobs(record: LifecycleRecord): void {
+function renderedJobs(record: LifecycleRecord): any[] {
+  return Array.from(record.state.asyncJobs.values()).map((job: any) => {
+    if (job.status !== "running") return job;
+    // pi-subagents@0.31.0 derives native widget spinner glyphs from status
+    // timestamps and snapshots the widget component at setWidget(). Give the
+    // renderer a frame-adjusted copy so animation never mutates lifecycle data.
+    return { ...job, updatedAt: (job.updatedAt ?? 0) + record.animationFrame };
+  });
+}
+
+function stopAnimationHeartbeat(record: LifecycleRecord): void {
+  if (!record.animationTimer) return;
+  clearInterval(record.animationTimer);
+  record.animationTimer = null;
+}
+
+function renderJobs(record: LifecycleRecord): boolean {
   const ctx = record.state.lastUiContext;
-  if (!ctx) return;
+  if (!ctx) return false;
   try {
-    record.internals.renderWidget(ctx, Array.from(record.state.asyncJobs.values()));
+    record.internals.renderWidget(ctx, renderedJobs(record));
     ctx.ui.requestRender?.();
+    return true;
   } catch (error) {
     if (!isStaleExtensionContextError(error)) throw error;
+    return false;
   }
+}
+
+function syncAnimationHeartbeat(record: LifecycleRecord): void {
+  if (record.state.asyncJobs.size === 0) {
+    stopAnimationHeartbeat(record);
+    record.animationFrame = 0;
+    return;
+  }
+  if (record.animationTimer || !record.state.lastUiContext?.hasUI) return;
+  record.animationTimer = setInterval(() => {
+    if (record.state.asyncJobs.size === 0) {
+      stopAnimationHeartbeat(record);
+      return;
+    }
+    record.animationFrame = (record.animationFrame + 1) % 10;
+    if (!renderJobs(record)) stopAnimationHeartbeat(record);
+  }, TAKOMI_ASYNC_WIDGET_HEARTBEAT_MS);
+  record.animationTimer.unref?.();
 }
 
 function clearWidget(record: LifecycleRecord): void {
@@ -88,6 +127,8 @@ function clearWidget(record: LifecycleRecord): void {
 }
 
 function clearState(record: LifecycleRecord): void {
+  stopAnimationHeartbeat(record);
+  record.animationFrame = 0;
   for (const timer of record.state.cleanupTimers.values()) clearTimeout(timer);
   record.state.cleanupTimers.clear();
   for (const timer of record.state.pendingForegroundControlNotices?.values() ?? []) clearTimeout(timer);
@@ -137,6 +178,8 @@ async function createLifecycleRecord(pi: ExtensionAPI): Promise<LifecycleRecord>
     generation: nextGeneration(globalStore),
     ownership,
     ...(ownership === "native" ? { nativeCleanupIdentity: nativeCleanup as () => void } : {}),
+    animationFrame: 0,
+    animationTimer: null,
     activate(ctx: ExtensionContext) {
       state.baseCwd = ctx.cwd;
       state.currentSessionId = internals.resolveCurrentSessionId(ctx.sessionManager);
@@ -165,6 +208,9 @@ async function createLifecycleRecord(pi: ExtensionAPI): Promise<LifecycleRecord>
       status: index < runningStepCount ? "running" : "pending",
       startedAt: index < runningStepCount ? now : undefined,
     }));
+    // The background process has detached. Do not leave the foreground/global
+    // single-dispatch guard asserted while its independent widget is active.
+    state.subagentInProgress = false;
     state.asyncJobs.set(info.id, {
       asyncId: info.id,
       asyncDir: typeof info.asyncDir === "string" ? info.asyncDir : path.join(internals.ASYNC_DIR, info.id),
@@ -189,12 +235,14 @@ async function createLifecycleRecord(pi: ExtensionAPI): Promise<LifecycleRecord>
       controlEventCursor: 0,
     });
     renderJobs(record);
+    syncAnimationHeartbeat(record);
   };
   const handleComplete = (payload: unknown) => {
     const result = payload as { id?: unknown; runId?: unknown };
     const id = typeof result.id === "string" ? result.id : typeof result.runId === "string" ? result.runId : undefined;
     if (!id) return;
     state.asyncJobs.delete(id);
+    syncAnimationHeartbeat(record);
     renderJobs(record);
   };
   const eventUnsubscribes = [
@@ -286,6 +334,7 @@ export async function resetTakomiAsyncLifecycle(pi: ExtensionAPI, ctx: Extension
   if (!record || record.state !== snapshot.state) return;
   record.state.resultFileCoalescer.clear();
   record.state.asyncJobs.clear();
+  syncAnimationHeartbeat(record);
   clearWidget(record);
   record.prime();
 }

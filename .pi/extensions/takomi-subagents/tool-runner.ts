@@ -13,6 +13,7 @@ import { createTakomiPiSubagentsEngine } from "./pi-subagents-engine";
 import { createTakomiUxTasks, withTakomiUxDetails } from "./subagent-ux";
 
 type ChecklistItem = string | { text: string; done?: boolean };
+export type TakomiAcceptanceInput = false | "auto" | "none" | "attested" | "checked" | "verified" | "reviewed" | Record<string, unknown>;
 
 export type TakomiSubagentToolTask = {
   agent: string;
@@ -25,6 +26,7 @@ export type TakomiSubagentToolTask = {
   conversationId?: string;
   cwd?: string;
   checklist?: ChecklistItem[];
+  acceptance?: TakomiAcceptanceInput;
 };
 
 export type TakomiSubagentToolParams = Partial<TakomiSubagentToolTask> & {
@@ -125,6 +127,7 @@ function compactTaskForFingerprint(task: TakomiSubagentToolTask): Record<string,
     conversationId: task.conversationId || undefined,
     cwd: task.cwd,
     checklist: compactChecklistForFingerprint(task.checklist),
+    acceptance: task.acceptance,
   };
 }
 
@@ -329,6 +332,7 @@ function resolveTasks(params: TakomiSubagentToolParams): TakomiSubagentToolTask[
       conversationId: params.conversationId,
       cwd: undefined,
       checklist: params.checklist,
+      acceptance: params.acceptance,
     }];
   }
   return [];
