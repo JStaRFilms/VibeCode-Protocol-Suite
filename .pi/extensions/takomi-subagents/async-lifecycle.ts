@@ -9,6 +9,7 @@ const LIFECYCLE_GENERATION_KEY = "__takomiPiSubagentLifecycleGeneration";
 const STARTED_EVENT = "subagent:async-started";
 const COMPLETE_EVENT = "subagent:async-complete";
 const COMPLETION_TTL_MS = 10 * 60 * 1000;
+const COMPLETION_RACE_TTL_MS = 30 * 1000;
 export const TAKOMI_ASYNC_WIDGET_HEARTBEAT_MS = 125;
 
 type LifecycleOwnership = "takomi" | "native";
@@ -19,11 +20,17 @@ export type TakomiAsyncLifecycleSnapshot = {
   ownership: LifecycleOwnership;
 };
 
+type RecentCompletion = {
+  asyncDir?: string;
+  at: number;
+};
+
 type LifecycleRecord = TakomiAsyncLifecycleSnapshot & {
   internals: any;
   nativeCleanupIdentity?: () => void;
   animationFrame: number;
   animationTimer: ReturnType<typeof setInterval> | null;
+  recentCompletions: Map<string, RecentCompletion>;
   activate: (ctx: ExtensionContext) => void;
   prime: () => void;
   cleanup: () => void;
@@ -70,11 +77,41 @@ function isStaleExtensionContextError(error: unknown): boolean {
 function renderedJobs(record: LifecycleRecord): any[] {
   return Array.from(record.state.asyncJobs.values()).map((job: any) => {
     if (job.status !== "running") return job;
-    // pi-subagents@0.31.0 derives native widget spinner glyphs from status
-    // timestamps and snapshots the widget component at setWidget(). Give the
-    // renderer a frame-adjusted copy so animation never mutates lifecycle data.
-    return { ...job, updatedAt: (job.updatedAt ?? 0) + record.animationFrame };
+    // pi-subagents@0.31.0 derives the top-level glyph from job timestamps, but
+    // derives each Step N/N glyph from that running step's progress snapshot.
+    // Give both the same immutable frame-adjusted render copy; lifecycle state
+    // stays authoritative and non-running steps retain their static semantics.
+    const steps = job.steps?.map((step: any) => step.status === "running"
+      ? { ...step, durationMs: (step.durationMs ?? 0) + record.animationFrame }
+      : step);
+    return {
+      ...job,
+      updatedAt: (job.updatedAt ?? 0) + record.animationFrame,
+      ...(steps ? { steps } : {}),
+    };
   });
+}
+
+function normalizeAsyncDir(value: unknown): string | undefined {
+  return typeof value === "string" && value
+    ? path.resolve(value)
+    : undefined;
+}
+
+function pruneRecentCompletions(record: LifecycleRecord, now = Date.now()): void {
+  for (const [id, completion] of record.recentCompletions) {
+    if (now - completion.at > COMPLETION_RACE_TTL_MS) record.recentCompletions.delete(id);
+  }
+}
+
+function isLateStartAfterCompletion(record: LifecycleRecord, info: Record<string, any>, now: number): boolean {
+  pruneRecentCompletions(record, now);
+  const completion = record.recentCompletions.get(info.id);
+  if (!completion) return false;
+  const startedAsyncDir = normalizeAsyncDir(info.asyncDir);
+  if (!completion.asyncDir || !startedAsyncDir || completion.asyncDir === startedAsyncDir) return true;
+  record.recentCompletions.delete(info.id);
+  return false;
 }
 
 function stopAnimationHeartbeat(record: LifecycleRecord): void {
@@ -140,6 +177,7 @@ function clearState(record: LifecycleRecord): void {
   record.state.foregroundControls.clear();
   record.state.completionSeen.clear();
   record.state.resultFileCoalescer.clear();
+  record.recentCompletions.clear();
   record.state.lastForegroundControlId = null;
   record.state.currentSessionId = null;
   record.state.baseCwd = "";
@@ -180,6 +218,7 @@ async function createLifecycleRecord(pi: ExtensionAPI): Promise<LifecycleRecord>
     ...(ownership === "native" ? { nativeCleanupIdentity: nativeCleanup as () => void } : {}),
     animationFrame: 0,
     animationTimer: null,
+    recentCompletions: new Map(),
     activate(ctx: ExtensionContext) {
       state.baseCwd = ctx.cwd;
       state.currentSessionId = internals.resolveCurrentSessionId(ctx.sessionManager);
@@ -193,6 +232,12 @@ async function createLifecycleRecord(pi: ExtensionAPI): Promise<LifecycleRecord>
     const info = payload as Record<string, any>;
     if (typeof info.id !== "string" || !info.id) return;
     const now = Date.now();
+    if (isLateStartAfterCompletion(record, info, now)) {
+      state.subagentInProgress = false;
+      syncAnimationHeartbeat(record);
+      renderJobs(record);
+      return;
+    }
     const agents = Array.isArray(info.agents) && info.agents.length
       ? info.agents
       : Array.isArray(info.chain) && info.chain.length ? info.chain : info.agent ? [info.agent] : undefined;
@@ -238,9 +283,14 @@ async function createLifecycleRecord(pi: ExtensionAPI): Promise<LifecycleRecord>
     syncAnimationHeartbeat(record);
   };
   const handleComplete = (payload: unknown) => {
-    const result = payload as { id?: unknown; runId?: unknown };
+    const result = payload as { id?: unknown; runId?: unknown; asyncDir?: unknown };
     const id = typeof result.id === "string" ? result.id : typeof result.runId === "string" ? result.runId : undefined;
     if (!id) return;
+    pruneRecentCompletions(record);
+    record.recentCompletions.set(id, {
+      asyncDir: normalizeAsyncDir(result.asyncDir),
+      at: Date.now(),
+    });
     state.asyncJobs.delete(id);
     syncAnimationHeartbeat(record);
     renderJobs(record);
@@ -333,6 +383,7 @@ export async function resetTakomiAsyncLifecycle(pi: ExtensionAPI, ctx: Extension
   const record = lifecycles.get(pi);
   if (!record || record.state !== snapshot.state) return;
   record.state.resultFileCoalescer.clear();
+  record.recentCompletions.clear();
   record.state.asyncJobs.clear();
   syncAnimationHeartbeat(record);
   clearWidget(record);
