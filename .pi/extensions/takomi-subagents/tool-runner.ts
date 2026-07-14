@@ -77,6 +77,11 @@ function getEngine(pi: ExtensionAPI): ReturnType<typeof createTakomiPiSubagentsE
   return engine;
 }
 
+export function invalidateTakomiPiSubagentsEngine(pi: ExtensionAPI): void {
+  ENGINES.get(pi)?.dispose();
+  ENGINES.delete(pi);
+}
+
 function textResult<TDetails extends Record<string, unknown>>(text: string, details: TDetails, isError?: boolean) {
   return { content: [{ type: "text" as const, text }], details, isError };
 }

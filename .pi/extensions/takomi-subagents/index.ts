@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { initializeTakomiAsyncLifecycle, resetTakomiAsyncLifecycle } from "./async-lifecycle";
 import {
   clearDetachedResults,
   initializeDetachedSession,
@@ -8,7 +9,7 @@ import {
 import { renderTakomiSubagentCall, renderTakomiSubagentResult } from "./native-render";
 import { loadPiSubagentsInternals } from "./pi-subagents-internal";
 import { clearAllTakomiSubagentResultHeartbeats } from "./result-heartbeat";
-import { executeTakomiSubagentTool } from "./tool-runner";
+import { executeTakomiSubagentTool, invalidateTakomiPiSubagentsEngine } from "./tool-runner";
 
 const ChecklistItemSchema = Type.Object({
   text: Type.String(),
@@ -114,6 +115,10 @@ export default async function takomiSubagents(pi: ExtensionAPI) {
   // a completed takomi_subagent result can fall back to Takomi's plain text
   // renderer and lose the native compact/expanded details shown by `subagent`.
   await loadPiSubagentsInternals();
+  // A same-process Takomi reload reuses the ExtensionAPI identity, so explicitly
+  // discard the cached engine before replacing its lifecycle generation.
+  invalidateTakomiPiSubagentsEngine(pi);
+  const cleanupAsyncLifecycle = await initializeTakomiAsyncLifecycle(pi);
   registerSubagentTool(pi);
 
   // Replace native completion notification through pi-subagents' own reload-safe
@@ -128,11 +133,14 @@ export default async function takomiSubagents(pi: ExtensionAPI) {
   pi.on("agent_end", () => clearAllTakomiSubagentResultHeartbeats());
   pi.on("session_start", async (_event, ctx) => {
     clearAllTakomiSubagentResultHeartbeats();
+    await resetTakomiAsyncLifecycle(pi, ctx);
     await initializeDetachedSession(pi, ctx);
   });
   pi.on("session_shutdown", () => {
     clearAllTakomiSubagentResultHeartbeats();
     clearDetachedResults(pi);
+    invalidateTakomiPiSubagentsEngine(pi);
+    cleanupAsyncLifecycle();
     unregisterCompletionNotifications();
   });
 }

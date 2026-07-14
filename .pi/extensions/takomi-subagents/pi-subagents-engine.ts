@@ -14,6 +14,7 @@ import {
 import { resolveAgentName } from "./agent-aliases";
 import { applyTakomiRoutingDefaults, loadTakomiModelRoutingSnapshotSync } from "../takomi-runtime/model-routing-defaults";
 import type { TakomiSubagentToolParams, TakomiSubagentToolTask } from "./tool-runner";
+import { ensureTakomiAsyncLifecycle, getTakomiAsyncLifecycleSnapshot } from "./async-lifecycle";
 
 type ToolUpdate = (partial: AgentToolResult<Details>) => void;
 
@@ -30,28 +31,6 @@ function getSubagentSessionRoot(parentSessionFile: string | null): string {
 
 function expandTilde(value: string): string {
   return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
-}
-
-function createState(): SubagentState {
-  return {
-    baseCwd: process.cwd(),
-    currentSessionId: null,
-    asyncJobs: new Map(),
-    foregroundRuns: new Map(),
-    foregroundControls: new Map(),
-    lastForegroundControlId: null,
-    pendingForegroundControlNotices: new Map(),
-    cleanupTimers: new Map(),
-    lastUiContext: null,
-    poller: null,
-    completionSeen: new Map(),
-    watcher: null,
-    watcherRestartTimer: null,
-    resultFileCoalescer: {
-      schedule: () => false,
-      clear: () => {},
-    },
-  };
 }
 
 function resolveMode(params: TakomiSubagentToolParams): "single" | "parallel" | "chain" | "action" | undefined {
@@ -266,36 +245,58 @@ function toSubagentParams(params: TakomiSubagentToolParams, rootCwd: string, dis
 }
 
 export function createTakomiPiSubagentsEngine(pi: ExtensionAPI) {
-  const state = createState();
-  let executorPromise: Promise<any> | null = null;
+  let executorBinding: {
+    state: SubagentState;
+    generation: number;
+    promise: Promise<any>;
+  } | null = null;
 
-  async function getExecutor() {
-    if (!executorPromise) {
-      executorPromise = loadPiSubagentsInternals().then((internals) => {
-        const config = {
-          maxSubagentDepth: 2,
-          asyncByDefault: false,
-          forceTopLevelAsync: false,
-        };
-        return {
-          executor: internals.createSubagentExecutor({
-            pi,
-            state,
-            config,
-            asyncByDefault: false,
-            tempArtifactsDir: internals.TEMP_ARTIFACTS_DIR,
-            getSubagentSessionRoot,
-            expandTilde,
-            discoverAgents: (cwd: string, scope: AgentScope) => discoverUnifiedAgents(internals.discoverPiAgents, cwd, scope),
+  async function getExecutor(ctx: ExtensionContext) {
+    // Ownership can change when either extension reloads. Re-check after the
+    // executor factory resolves so an in-flight native takeover can never return
+    // an executor bound to a lifecycle that was disposed during initialization.
+    for (;;) {
+      const lifecycle = await ensureTakomiAsyncLifecycle(pi, ctx);
+      if (!executorBinding
+        || executorBinding.state !== lifecycle.state
+        || executorBinding.generation !== lifecycle.generation) {
+        const state = lifecycle.state;
+        executorBinding = {
+          state,
+          generation: lifecycle.generation,
+          promise: loadPiSubagentsInternals().then((internals) => {
+            const config = {
+              maxSubagentDepth: 2,
+              asyncByDefault: false,
+              forceTopLevelAsync: false,
+            };
+            return {
+              executor: internals.createSubagentExecutor({
+                pi,
+                state,
+                config,
+                asyncByDefault: false,
+                tempArtifactsDir: internals.TEMP_ARTIFACTS_DIR,
+                getSubagentSessionRoot,
+                expandTilde,
+                discoverAgents: (cwd: string, scope: AgentScope) => discoverUnifiedAgents(internals.discoverPiAgents, cwd, scope),
+              }),
+              discoverPiAgents: internals.discoverPiAgents,
+            };
           }),
-          discoverPiAgents: internals.discoverPiAgents,
         };
-      });
+      }
+      const binding = executorBinding;
+      const executor = await binding.promise;
+      const current = getTakomiAsyncLifecycleSnapshot(pi);
+      if (current?.state === binding.state && current?.generation === binding.generation) return executor;
     }
-    return executorPromise;
   }
 
   return {
+    dispose(): void {
+      executorBinding = null;
+    },
     async execute(
       id: string,
       params: TakomiSubagentToolParams,
@@ -304,7 +305,7 @@ export function createTakomiPiSubagentsEngine(pi: ExtensionAPI) {
       ctx: ExtensionContext,
     ): Promise<AgentToolResult<Details>> {
       const rootCwd = resolveRelativeCwd(ctx.cwd, params.cwd, "cwd");
-      const { executor, discoverPiAgents } = await getExecutor();
+      const { executor, discoverPiAgents } = await getExecutor(ctx);
       const subagentParams = toSubagentParams(params, rootCwd, discoverPiAgents);
       return executor.execute(id, subagentParams, signal ?? NEVER_ABORT, onUpdate, ctx);
     },

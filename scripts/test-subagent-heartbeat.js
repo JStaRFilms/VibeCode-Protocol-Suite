@@ -113,7 +113,14 @@ try {
     export function renderTakomiSubagentResult() {}
   `);
   const internalsStubUrl = dataModule(`export async function loadPiSubagentsInternals() { return {}; }`);
-  const toolRunnerStubUrl = dataModule(`export async function executeTakomiSubagentTool() { return {}; }`);
+  const lifecycleStubUrl = dataModule(`
+    export async function initializeTakomiAsyncLifecycle() { return () => {}; }
+    export function resetTakomiAsyncLifecycle() {}
+  `);
+  const toolRunnerStubUrl = dataModule(`
+    export async function executeTakomiSubagentTool() { return {}; }
+    export function invalidateTakomiPiSubagentsEngine() {}
+  `);
   const detachedStubUrl = dataModule(`
     export async function initializeDetachedSession() { globalThis.__detachedRestores = (globalThis.__detachedRestores ?? 0) + 1; }
     export function clearDetachedResults() { globalThis.__detachedClears = (globalThis.__detachedClears ?? 0) + 1; }
@@ -125,6 +132,7 @@ try {
   `);
   const indexUrl = await transpile("index.ts", {
     typebox: typeboxStubUrl,
+    "./async-lifecycle": lifecycleStubUrl,
     "./detached-results": detachedStubUrl,
     "./native-render": entryNativeStubUrl,
     "./pi-subagents-internal": internalsStubUrl,

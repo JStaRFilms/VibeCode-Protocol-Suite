@@ -14,21 +14,27 @@ let cachedInternals: any | null = null;
 export async function loadPiSubagentsInternals() {
   if (cachedInternals) return cachedInternals;
 
-  const [executorModule, agentsModule, sharedTypesModule, renderModule] = await Promise.all([
+  const [executorModule, agentsModule, sharedTypesModule, renderModule, watcherModule, sessionModule] = await Promise.all([
     dynamicImport(spec("src/runs/foreground/subagent-executor")),
     dynamicImport(spec("src/agents/agents")),
     dynamicImport(spec("src/shared/types")),
     dynamicImport(spec("src/tui/render")),
+    dynamicImport(spec("src/runs/background/result-watcher")),
+    dynamicImport(spec("src/shared/session-identity")),
   ]);
 
   cachedInternals = {
     createSubagentExecutor: executorModule.createSubagentExecutor,
+    createResultWatcher: watcherModule.createResultWatcher,
     discoverPiAgents: agentsModule.discoverAgents,
+    resolveCurrentSessionId: sessionModule.resolveCurrentSessionId,
     DEFAULT_ARTIFACT_CONFIG: sharedTypesModule.DEFAULT_ARTIFACT_CONFIG,
     ASYNC_DIR: sharedTypesModule.ASYNC_DIR,
     RESULTS_DIR: sharedTypesModule.RESULTS_DIR,
     TEMP_ARTIFACTS_DIR: sharedTypesModule.TEMP_ARTIFACTS_DIR,
+    WIDGET_KEY: sharedTypesModule.WIDGET_KEY,
     renderSubagentResult: renderModule.renderSubagentResult,
+    renderWidget: renderModule.renderWidget,
   };
   return cachedInternals;
 }
