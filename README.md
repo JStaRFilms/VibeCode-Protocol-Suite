@@ -1,4 +1,4 @@
-# Takomi
+# Takomi 
 
 <div align="center">
   <h3>🎯 Stop Wrestling With AI. Start Building With Purpose.</h3>

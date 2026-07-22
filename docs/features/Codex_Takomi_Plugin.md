@@ -317,6 +317,7 @@ The first plugin pass has been implemented and validated. Future work should tre
 - [x] Validated the plugin with the Codex plugin validator.
 - [x] Smoke-tested detection, doctor, policy, board, and dispatch status commands.
 - [x] Audited onboarding surfaces for the Codex plugin docs roadbook.
+- [x] Added `.agents/plugins` and `plugins` to the npm package allowlist for release `2.1.39`, so global `takomi` installs include the Codex plugin package and marketplace metadata.
 
 ## Verification
 
@@ -347,3 +348,9 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\plugins\takomi-codex\scripts\tak
 ```
 
 Result: temp roadbook was created, task was added, task moved to completed, summary was written, and status showed `completed: 1`.
+
+```powershell
+npm pack --dry-run --json
+```
+
+Result: release packaging includes `.agents/plugins/marketplace.json` and `plugins/takomi-codex/**`, including manifest, assets, scripts, and skill entrypoint.

@@ -1,11 +1,6 @@
 import {loadFont} from '@remotion/google-fonts/Inter';
 import React from 'react';
-import {
-	AbsoluteFill,
-	spring,
-	useCurrentFrame,
-	useVideoConfig,
-} from 'remotion';
+import {AbsoluteFill, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 
 /*
  * Highlight a word in a sentence with a spring-animated wipe effect.
