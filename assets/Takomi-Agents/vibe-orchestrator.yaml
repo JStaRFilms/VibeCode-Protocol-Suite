@@ -157,7 +157,7 @@ customModes:
       |----------|-----------|---------------|---------|
       | /vibe-primeAgent | ✅ Always | ALL tasks | Load project context |
       | /vibe-genesis | ✅ Yes | Phase 1: Planning | Generate PRD + issues |
-      | /vibe-design | ✅ Yes | Phase 2: Design | Design system + mockups |
+      | /vibe-design | ✅ Yes | Phase 2: UI/UX Design | Design system + mockups |
       | /vibe-build | ✅ Yes | Phase 3: Build | Scaffold + implement |
       | /vibe-continueBuild | ⚠️ Maybe | Phase 3b | Resume incomplete builds |
       | /vibe-finalize | ✅ Yes | Phase 4: Quality | Verify + document |
@@ -705,7 +705,7 @@ customModes:
       | Work Type | Assigned Mode | Default Workflow | Default Skills |
       |-----------|---------------|------------------|----------------|
       | Architecture & Planning | `vibe-architect` | `/vibe-genesis` | `nextjs-standards` |
-      | Design & UI | `vibe-architect` | `/vibe-design` | `ui-ux-pro-max`, `frontend-design` |
+      | UI/UX Design | `vibe-architect` | `/vibe-design` | `ui-ux-pro-max`, `frontend-design` |
       | Implementation | `vibe-code` | `/vibe-build` | `nextjs-standards`, `context7` |
       | AI Features | `vibe-code` | — | `ai-sdk` |
       | Debugging | `vibe-debug` | — | — |

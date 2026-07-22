@@ -28,6 +28,7 @@ export type TakomiRuntimeCommandState = {
 type RegisterTakomiCommandOptions = {
   getState(): TakomiRuntimeCommandState;
   updateState(ctx: ExtensionContext, mutator: () => void, message?: string | (() => string)): Promise<void>;
+  recordUserGateAutoProvenance(authorized: boolean): void;
   resetRuntime(ctx: ExtensionCommandContext): Promise<void>;
   setStageAndWorkflow(stage: VibeLifecycleStage, options?: { preserveRole?: boolean }): void;
   createPlanSession(ctx: ExtensionCommandContext, title?: string): Promise<string>;
@@ -36,6 +37,13 @@ type RegisterTakomiCommandOptions = {
 };
 
 export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomiCommandOptions): void {
+  // The custom runtime widget is intentionally absent in idle/direct mode, so
+  // suppress routine notifications only while the changed state remains visible.
+  function hasVisibleRuntimeWidget(): boolean {
+    const state = options.getState();
+    return state.enabled && (state.modeSource ?? "idle") !== "idle";
+  }
+
   async function handleStage(ctx: ExtensionCommandContext, stage: VibeLifecycleStage, prompt?: string): Promise<void> {
     await options.updateState(ctx, () => {
       options.getState().enabled = true;
@@ -47,54 +55,58 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
   }
 
   async function handleMode(ctx: ExtensionCommandContext, mode?: string): Promise<void> {
-    if (mode !== "direct" && mode !== "orchestrate" && mode !== "review") {
-      ctx.ui.notify("Usage: /takomi mode <direct|orchestrate|review>", "warning");
+    if (mode === "direct") mode = "code";
+    if (mode !== "idle" && mode !== "code" && mode !== "orchestrate" && mode !== "review") {
+      ctx.ui.notify("Usage: /takomi mode <idle|code|review|orchestrate>", "warning");
       return;
     }
-    const hasGenesis = await options.hasGenesisArtifacts(ctx.cwd);
     await options.updateState(ctx, () => {
       const state = options.getState();
       state.enabled = true;
-      if (mode === "direct") {
+      if (mode === "idle") {
         state.autoOrch = false;
         state.planMode = false;
         state.role = "general";
-        state.stage = undefined;
-        state.workflow = undefined;
         state.modeSource = "idle";
         state.modeReason = undefined;
+      } else if (mode === "code") {
+        state.autoOrch = false;
+        state.planMode = false;
+        state.role = "coder";
+        state.modeSource = "manual";
+        state.modeReason = "/takomi mode code";
       } else if (mode === "orchestrate") {
         state.autoOrch = true;
         state.planMode = true;
         state.role = "orchestrator";
-        state.stage = hasGenesis ? "build" : "genesis";
-        state.workflow = hasGenesis ? "vibe-build" : "vibe-genesis";
         state.modeSource = "manual";
         state.modeReason = "/takomi mode orchestrate";
       } else {
         state.autoOrch = false;
         state.planMode = true;
         state.launchMode = "manual";
-        state.role = "review";
-        state.stage = undefined;
-        state.workflow = undefined;
+        options.recordUserGateAutoProvenance(false);
+        state.role = "reviewer";
         state.modeSource = "manual";
         state.modeReason = "/takomi mode review";
       }
-    }, () => `Takomi mode set to ${mode}`);
+    }, () => hasVisibleRuntimeWidget() ? "" : `Takomi mode set to ${mode}`);
   }
 
   async function handleGate(ctx: ExtensionCommandContext, gate?: string): Promise<void> {
-    if (gate !== "auto" && gate !== "review") {
-      ctx.ui.notify("Usage: /takomi gate <auto|review>", "warning");
+    if (gate !== "auto" && gate !== "review" && gate !== "manual") {
+      ctx.ui.notify("Usage: /takomi gate <auto|review|manual>", "warning");
       return;
     }
+    const auto = gate === "auto";
     await options.updateState(ctx, () => {
       const state = options.getState();
       state.enabled = true;
-      state.launchMode = gate === "review" ? "manual" : "auto";
-      state.autoOrch = gate === "auto";
-    }, () => `Takomi execution gate set to ${gate}`);
+      state.launchMode = auto ? "auto" : "manual";
+      state.autoOrch = auto;
+      // This dedicated entry is the only user-gate authorization signal.
+      options.recordUserGateAutoProvenance(auto);
+    }, () => hasVisibleRuntimeWidget() ? "" : `Takomi execution gate set to ${auto ? "auto" : "review"}`);
   }
 
   async function handleRouting(ctx: ExtensionCommandContext, body?: string): Promise<void> {
@@ -173,19 +185,40 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
     const policyText = scopeMatch?.[2] ?? trimmed.replace(/^set\s+/i, "");
 
     try {
-      const preview = previewTakomiRoutingPolicy(ctx.cwd, policyText, { scope });
+      const availableModels = (() => {
+        try {
+          const available = (ctx as ExtensionCommandContext & { modelRegistry?: { getAvailable?: () => Array<{ provider?: string; id?: string; name?: string }> } }).modelRegistry?.getAvailable?.() ?? [];
+          return available.map((model) => `${model.provider ? `${model.provider}/` : ""}${model.id ?? model.name ?? ""}`).filter(Boolean);
+        } catch {
+          return [];
+        }
+      })();
+      const [preview, activePolicy] = await Promise.all([
+        Promise.resolve(previewTakomiRoutingPolicy(ctx.cwd, policyText, { scope, availableModels })),
+        resolveTakomiRoutingPolicy(ctx.cwd),
+      ]);
+      const replacementWarning = activePolicy.text && activePolicy.text.trim().length > preview.policy.trim().length * 2
+        ? `WARNING: This input is much shorter than the active policy (${preview.policy.length} vs ${activePolicy.text.length} characters). It will replace the file, not merge into it. If the user referred to a full source file or prior policy, inspect and use that complete text instead.`
+        : "This input replaces the selected policy file exactly; it is not merged with the active policy.";
       const reviewPrompt = [
-        "Review this Takomi routing policy extraction before it is saved.",
+        "Review this advisory Takomi model-routing guidance before it is saved.",
         "",
         "Rules:",
         "- Do not invent providers or model IDs not grounded in the policy.",
-        "- Providerless names like GPT-5.5 are routing intent unless a preferred provider/router is declared.",
-        "- Valid Takomi roles are: general, orchestrator, architect, designer, coder, reviewer.",
-        "- If the extraction is correct and safe, call takomi_apply_routing_policy with the exact policyText and scope below.",
-        "- If it is ambiguous or wrong, explain what the user should clarify and do not call the tool.",
+        "- Providerless names such as Sol, Terra, and Luna are valid advisory routing concepts.",
+        "- Do not infer executable providers, allowlists, fallbacks, or persona defaults from this prose.",
+        "- Executable changes belong in takomi.routing settings through takomi_config_routing.",
+        "- Canonical Takomi personas are: architect, designer, coder, worker, reviewer, orchestrator.",
+        "- Preserve the user's full authored policy. If this looks like a summary/excerpt and a richer referenced source exists, inspect that source and apply the complete intended text instead of overwriting it with the excerpt.",
+        "- If the extraction is correct and safe, call takomi_apply_routing_policy with the complete intended policyText and scope below.",
+        "- Ask only for unresolved provider/account choices or genuine policy ambiguity; do not ask for facts available from the registry or files.",
         "",
         "Deterministic extraction:",
         renderRoutingPolicyPreview(preview),
+        "",
+        replacementWarning,
+        "",
+        availableModels.length ? `Available Pi models:\n${availableModels.map((model) => `- ${model}`).join("\n")}` : "Available Pi models: registry unavailable; inspect it before asking the user if possible.",
         "",
         "Original policy text:",
         "```",
@@ -194,7 +227,7 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
         "",
         `Tool call to apply if safe: takomi_apply_routing_policy({ scope: ${JSON.stringify(scope)}, policyText: <original policy text> })`,
       ].join("\n");
-      ctx.ui.notify("Takomi routing extraction prepared. Sending it to the active model for review before saving.", "info");
+      ctx.ui.notify("Takomi routing guidance prepared. Sending it to the active model for preservation review before saving.", "info");
       pi.sendUserMessage(reviewPrompt);
     } catch (error) {
       ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
@@ -217,7 +250,7 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
     if (action === "on" || action === "off") {
       await options.updateState(ctx, () => {
         options.getState().subagentsEnabled = action === "on";
-      }, `Takomi subagents ${action}`);
+      }, () => hasVisibleRuntimeWidget() ? "" : `Takomi subagents ${action}`);
       return;
     }
     if (action === "status" || !action) {

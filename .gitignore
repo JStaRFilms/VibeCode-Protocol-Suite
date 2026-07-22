@@ -23,3 +23,5 @@ docs/OtherChats/
 .pi/notify-sound.ps1
 .pi/notify-sound.vbs
 .pi/notify-sound.wav
+output/
+tmp/

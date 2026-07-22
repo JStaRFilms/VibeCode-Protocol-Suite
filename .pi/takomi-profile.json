@@ -14,15 +14,19 @@
       "agent": "architect",
       "dispatchPolicy": "subagent"
     },
-    "design": {
+    "designer": {
       "agent": "designer",
       "dispatchPolicy": "subagent"
     },
-    "code": {
+    "coder": {
       "agent": "coder",
       "dispatchPolicy": "subagent"
     },
-    "review": {
+    "worker": {
+      "agent": "worker",
+      "dispatchPolicy": "subagent"
+    },
+    "reviewer": {
       "agent": "reviewer",
       "dispatchPolicy": "review-first"
     }
@@ -37,7 +41,7 @@
       "dispatchPolicy": "subagent"
     },
     "build": {
-      "agent": "orchestrator",
+      "agent": "coder",
       "dispatchPolicy": "subagent"
     }
   },

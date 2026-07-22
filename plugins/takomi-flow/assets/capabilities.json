@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "provider": "takomi-flow",
+  "description": "Safe browser-driven Google Flow asset generation for Codex agents.",
+  "kinds": ["video", "image"],
+  "modes": {
+    "video": ["text-to-video", "image-to-video"],
+    "image": ["text-to-image"]
+  },
+  "variations": {
+    "min": 1,
+    "max": 4,
+    "default": 1
+  },
+  "aspectRatios": ["16:9", "9:16", "1:1"],
+  "durationSeconds": {
+    "suggested": [4, 6, 8, 10],
+    "default": 4
+  },
+  "requestFields": [
+    {
+      "name": "kind",
+      "type": "enum",
+      "required": true,
+      "values": ["video", "image"],
+      "description": "The asset type to ask Flow for."
+    },
+    {
+      "name": "prompt",
+      "type": "string",
+      "required": true,
+      "description": "The natural-language generation prompt."
+    },
+    {
+      "name": "mode",
+      "type": "enum",
+      "required": false,
+      "values": ["text-to-video", "image-to-video", "text-to-image"],
+      "description": "The basic Flow generation mode hint."
+    },
+    {
+      "name": "variations",
+      "type": "integer",
+      "required": false,
+      "min": 1,
+      "max": 4,
+      "description": "How many variations to request or look for."
+    },
+    {
+      "name": "aspectRatio",
+      "type": "enum",
+      "required": false,
+      "values": ["16:9", "9:16", "1:1"],
+      "description": "Preferred image/video frame shape."
+    },
+    {
+      "name": "durationSeconds",
+      "type": "number",
+      "required": false,
+      "values": [4, 6, 8, 10],
+      "description": "Preferred video duration hint."
+    },
+    {
+      "name": "sourceAssets",
+      "type": "string[]",
+      "required": false,
+      "description": "Local images/videos to use as references when the Flow UI supports the selected mode."
+    },
+    {
+      "name": "extractFrames",
+      "type": "integer",
+      "required": false,
+      "description": "Number of review frames to extract from downloaded videos."
+    },
+    {
+      "name": "allowSpend",
+      "type": "boolean",
+      "required": false,
+      "description": "Explicit user approval to submit a generation that may spend Flow credits."
+    },
+    {
+      "name": "projectUrl",
+      "type": "string",
+      "required": false,
+      "description": "Existing Flow project URL to reuse instead of creating a new project."
+    },
+    {
+      "name": "reuseCurrentProject",
+      "type": "boolean",
+      "required": false,
+      "description": "Prefer the already open Flow project tab when attached to trusted Chrome."
+    },
+    {
+      "name": "allowNewProject",
+      "type": "boolean",
+      "required": false,
+      "description": "Permit clicking New project when no reusable project is available."
+    },
+    {
+      "name": "freshChatOnFailure",
+      "type": "boolean",
+      "required": false,
+      "description": "Recover stale or broken chat state by starting a fresh chat inside the same project."
+    },
+    {
+      "name": "editorWaitMs",
+      "type": "integer",
+      "required": false,
+      "description": "Override the Flow project editor readiness wait budget in milliseconds."
+    }
+  ],
+  "sourceAssets": {
+    "supported": true,
+    "note": "Source assets are part of the request contract; live UI attachment selectors still need tuning after observation."
+  },
+  "outputs": {
+    "runMetadata": "run.json",
+    "assetCatalog": "assets.json",
+    "downloadsFolder": "downloads/",
+    "screenshotsFolder": "screenshots/",
+    "framesFolder": "frames/"
+  },
+  "schemas": {
+    "request": "takomi-flow://schemas/request",
+    "result": "takomi-flow://schemas/result",
+    "collection": "takomi-flow://schemas/collection"
+  },
+  "settingsCoverage": {
+    "automatic": ["prompt", "project reuse", "same-project chat recovery", "download folder", "metadata", "asset catalog", "video review frame extraction"],
+    "selectorDependent": ["mode", "aspectRatio", "durationSeconds", "modelHint", "sourceAssets", "variations"],
+    "note": "Selector-dependent settings are preserved in settingsPlan metadata until live Flow controls are observed and tuned."
+  },
+  "safety": {
+    "spendGuardDefault": false,
+    "requiresAllowSpend": true,
+    "newProjectDefault": false,
+    "sameProjectChatRecovery": true,
+    "bypassCaptcha": false,
+    "bypassQuota": false,
+    "automateCredentials": false
+  },
+  "commands": [
+    "doctor",
+    "audit",
+    "examples",
+    "trusted-chrome",
+    "plan",
+    "bootstrap",
+    "observe",
+    "smoke",
+    "template",
+    "prepare",
+    "workflow",
+    "validate",
+    "generate",
+    "selftest",
+    "inspect",
+    "latest",
+    "runs",
+    "assets",
+    "review",
+    "collect",
+    "report",
+    "capabilities"
+  ],
+  "mcpTools": [
+    "takomi_flow_capabilities",
+    "takomi_flow_doctor",
+    "takomi_flow_audit",
+    "takomi_flow_examples",
+    "takomi_flow_plan",
+    "takomi_flow_template",
+    "takomi_flow_prepare",
+    "takomi_flow_workflow",
+    "takomi_flow_validate",
+    "takomi_flow_observe",
+    "takomi_flow_generate",
+    "takomi_flow_selftest",
+    "takomi_flow_inspect",
+    "takomi_flow_latest",
+    "takomi_flow_runs",
+    "takomi_flow_assets",
+    "takomi_flow_review",
+    "takomi_flow_collect",
+    "takomi_flow_report"
+  ],
+  "mcpResources": [
+    "takomi-flow://contract",
+    "takomi-flow://capabilities",
+    "takomi-flow://examples",
+    "takomi-flow://schemas/request",
+    "takomi-flow://schemas/result",
+    "takomi-flow://schemas/collection",
+    "takomi-flow://templates/video",
+    "takomi-flow://templates/image"
+  ],
+  "mcpPrompts": [
+    "takomi_flow_video_workflow",
+    "takomi_flow_image_workflow",
+    "takomi_flow_review_workflow",
+    "takomi_flow_collect_workflow"
+  ]
+}

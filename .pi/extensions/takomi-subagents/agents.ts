@@ -5,6 +5,9 @@ import type { TakomiThinkingLevel } from "../../../src/pi-takomi-core";
 
 export type TakomiAgentScope = "user" | "project" | "both";
 
+export const TAKOMI_PUBLIC_AGENT_NAMES = ["architect", "designer", "coder", "worker", "reviewer", "orchestrator"] as const;
+const TAKOMI_PUBLIC_AGENT_SET = new Set<string>(TAKOMI_PUBLIC_AGENT_NAMES);
+
 export type TakomiAgentConfig = {
   name: string;
   description: string;
@@ -12,6 +15,7 @@ export type TakomiAgentConfig = {
   model?: string;
   fallbackModels?: string[];
   thinking?: TakomiThinkingLevel;
+  defaultContext?: "fresh" | "fork";
   systemPrompt: string;
   filePath: string;
   source: "user" | "project";
@@ -52,6 +56,8 @@ function loadAgentsFromDirectory(agentsDir: string, source: "user" | "project"):
     const { frontmatter, body } = parseFrontmatter<Record<string, string>>(content);
     if (!frontmatter.name || !frontmatter.description) continue;
 
+    if (!TAKOMI_PUBLIC_AGENT_SET.has(frontmatter.name)) continue;
+
     agents.push({
       name: frontmatter.name,
       description: frontmatter.description,
@@ -59,6 +65,9 @@ function loadAgentsFromDirectory(agentsDir: string, source: "user" | "project"):
       model: frontmatter.model,
       fallbackModels: splitList(frontmatter.fallbackModels ?? frontmatter.fallback_models),
       thinking: normalizeThinking(frontmatter.thinking),
+      defaultContext: frontmatter.defaultContext === "fork" || frontmatter.defaultContext === "fresh"
+        ? frontmatter.defaultContext
+        : undefined,
       systemPrompt: body,
       filePath,
       source,

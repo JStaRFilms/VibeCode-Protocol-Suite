@@ -1,0 +1,36 @@
+{
+  "name": "takomi-flow",
+  "version": "0.1.0+codex.20260701110901",
+  "description": "Agent-first Google Flow browser automation for Codex and Takomi workflows.",
+  "author": {
+    "name": "JStaR Films Studios"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "TakomiFlow",
+    "shortDescription": "Generate Flow images, videos, moodboards, and scene assets from Codex.",
+    "longDescription": "TakomiFlow turns Google Flow into a reusable creative asset lane for Codex and Takomi: bootstrap a trusted Chrome session, reuse an existing Flow browser, generate image keyframes or video shots with explicit spend guards, download assets, extract review frames, record project URLs, and hand off clean reports to the next agent.",
+    "developerName": "JStaR Films Studios",
+    "category": "Productivity",
+    "capabilities": [
+      "browser-automation",
+      "mcp-tools",
+      "video-generation",
+      "image-generation",
+      "asset-pipeline"
+    ],
+    "defaultPrompt": [
+      "Create a 4-second cinematic Google Flow shot for this scene and return the MP4, project URL, frames, and report.",
+      "Generate a 1:1 Flow keyframe image for this concept, then download and catalog it for my asset pipeline.",
+      "Turn this reference image into a short Flow video with a slow camera move and package the result for review.",
+      "Make a moodboard-style image set in Flow for this brand direction: premium, cinematic, practical lighting.",
+      "Check whether my trusted Flow browser is already running, reuse it if possible, then run a no-spend observe.",
+      "Review the latest TakomiFlow run, extract video frames, and collect the assets into my project folder."
+    ],
+    "brandColor": "#36DCFF",
+    "composerIcon": "./assets/composer-icon.png",
+    "logo": "./assets/logo.png",
+    "logoDark": "./assets/logo-dark.png"
+  }
+}

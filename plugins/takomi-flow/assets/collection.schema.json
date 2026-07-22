@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "takomi-flow://schemas/collection",
+  "title": "TakomiFlow Collection Manifest",
+  "description": "Manifest written by the collect command when packaging run outputs for downstream projects.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "status", "runId", "targetDir", "copied"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "status": { "type": "string", "enum": ["collected", "empty"] },
+    "runId": { "type": "string" },
+    "sourceRunDir": { "type": "string" },
+    "targetDir": { "type": "string" },
+    "manifestPath": { "type": "string" },
+    "copied": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target"],
+        "properties": {
+          "source": { "type": "string" },
+          "target": { "type": "string" }
+        }
+      }
+    },
+    "review": { "type": "object" }
+  }
+}

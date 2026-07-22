@@ -12,7 +12,7 @@ Takomi Codex is the Codex-native adapter for the Takomi protocol. Use it when th
 Choose the smallest execution mode that can do the work well, then delegate by default once Takomi decomposes the work:
 
 1. Direct Codex work for small, local, one-shot tasks.
-2. Planning mode for unclear or design-heavy work.
+2. Planning mode for unclear or UI/UX-heavy work.
 3. Markdown roadbook orchestration for broad multi-step work.
 4. Delegation-first orchestration when Takomi creates subtasks, roadbook tasks, or an orchestration session.
 
@@ -110,13 +110,16 @@ Expected artifacts:
 
 ### Design
 
-Use for UX, architecture shape, interface contracts, and build-ready direction.
+Use for UI/UX only: visual systems, screen structure, user journeys, interaction flows, mockups, accessibility expectations, and frontend handoff constraints.
+
+Do not use Design for application architecture, data models, API/interface contracts, backend service boundaries, deployment strategy, or implementation task planning. Route that work to Genesis or Architect planning.
 
 Expected artifacts:
 
-- design notes or specs
-- component/interface plan
-- risks and constraints
+- visual design notes or specs
+- screen/component appearance plan
+- interaction and responsive behavior
+- accessibility and usability constraints
 
 ### Build
 

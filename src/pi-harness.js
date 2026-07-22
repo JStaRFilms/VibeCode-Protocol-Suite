@@ -575,6 +575,45 @@ function printFirstRunGuidance(reason) {
   console.log(pc.dim('  takomi --help             Show all commands\n'));
 }
 
+export function getSourceCheckoutLaunchArgs(cwd) {
+  const packageJson = path.join(cwd, 'package.json');
+  const extensionsRoot = path.join(cwd, '.pi', 'extensions');
+  const required = [
+    path.join(extensionsRoot, 'oauth-router', 'index.ts'),
+    path.join(extensionsRoot, 'takomi-runtime', 'index.ts'),
+    path.join(extensionsRoot, 'takomi-subagents', 'index.ts'),
+    path.join(extensionsRoot, 'takomi-context-manager', 'index.ts'),
+    path.join(extensionsRoot, 'notify-sound', 'index.ts'),
+  ];
+  const promptsRoot = path.join(cwd, '.pi', 'prompts');
+  const theme = path.join(cwd, '.pi', 'themes', 'takomi-noir.json');
+
+  let isTakomiSourceCheckout = false;
+  try {
+    const pkg = fs.readJsonSync(packageJson);
+    isTakomiSourceCheckout = pkg?.name === 'takomi'
+      && required.every((entry) => fs.existsSync(entry))
+      && fs.existsSync(promptsRoot)
+      && fs.existsSync(theme);
+  } catch {}
+
+  if (!isTakomiSourceCheckout) return [];
+
+  // Normal Pi auto-discovery would load both the globally installed Takomi
+  // extensions and this checkout's project copies. Besides tool conflicts,
+  // both runtime instances register lifecycle/UI handlers, which causes slow
+  // startup and duplicated headers/widgets/footers. Match scripts/pi-dev.ps1:
+  // disable discovery and load exactly one local development set.
+  return [
+    '--no-extensions',
+    ...required.flatMap((entry) => ['--extension', entry]),
+    '--no-prompt-templates',
+    '--prompt-template', promptsRoot,
+    '--no-themes',
+    '--theme', theme,
+  ];
+}
+
 export async function launchTakomiHarness(cwd = process.cwd()) {
   // Keep the common `takomi` path lean. A full environment inspection shells out
   // to `pi --version`, which costs multiple seconds on Windows before Pi even
@@ -606,7 +645,8 @@ export async function launchTakomiHarness(cwd = process.cwd()) {
   };
 
   return await new Promise((resolve) => {
-    const resolved = resolveCommandForSpawn(pi.path || 'pi', []);
+    const launchArgs = getSourceCheckoutLaunchArgs(cwd);
+    const resolved = resolveCommandForSpawn(pi.path || 'pi', launchArgs);
     const child = spawn(resolved.command, resolved.args, {
       cwd,
       stdio: 'inherit',

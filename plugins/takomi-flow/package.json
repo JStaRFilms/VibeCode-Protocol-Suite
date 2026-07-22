@@ -1,0 +1,38 @@
+{
+  "name": "takomi-flow",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Agent-first Google Flow browser automation for Codex.",
+  "scripts": {
+    "takomi-flow": "node scripts/takomi-flow.mjs",
+    "doctor": "node scripts/takomi-flow.mjs doctor",
+    "audit": "node scripts/takomi-flow.mjs audit",
+    "capabilities": "node scripts/takomi-flow.mjs capabilities",
+    "examples": "node scripts/takomi-flow.mjs examples",
+    "trusted-chrome": "node scripts/takomi-flow.mjs trusted-chrome",
+    "plan": "node scripts/takomi-flow.mjs plan",
+    "observe": "node scripts/takomi-flow.mjs observe",
+    "bootstrap": "node scripts/takomi-flow.mjs bootstrap",
+    "smoke": "node scripts/takomi-flow.mjs smoke",
+    "template": "node scripts/takomi-flow.mjs template",
+    "validate-request": "node scripts/takomi-flow.mjs validate",
+    "prepare-request": "node scripts/takomi-flow.mjs prepare",
+    "workflow": "node scripts/takomi-flow.mjs workflow",
+    "generate": "node scripts/takomi-flow.mjs generate",
+    "selftest": "node scripts/takomi-flow.mjs selftest",
+    "mcp": "node scripts/mcp-server.mjs",
+    "mcp-smoke": "node scripts/mcp-smoke.mjs",
+    "inspect": "node scripts/takomi-flow.mjs inspect",
+    "runs": "node scripts/takomi-flow.mjs runs",
+    "assets": "node scripts/takomi-flow.mjs assets",
+    "review": "node scripts/takomi-flow.mjs review",
+    "collect": "node scripts/takomi-flow.mjs collect",
+    "report": "node scripts/takomi-flow.mjs report"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "playwright": "^1.61.1",
+    "zod": "^4.4.3"
+  }
+}

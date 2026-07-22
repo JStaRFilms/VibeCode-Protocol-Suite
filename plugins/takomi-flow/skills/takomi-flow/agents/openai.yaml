@@ -1,0 +1,7 @@
+interface:
+  display_name: "TakomiFlow"
+  short_description: "Safe Google Flow browser automation."
+  default_prompt: "Use $takomi-flow to bootstrap, smoke-check, prepare, or run a guarded Google Flow asset generation workflow."
+
+policy:
+  allow_implicit_invocation: true

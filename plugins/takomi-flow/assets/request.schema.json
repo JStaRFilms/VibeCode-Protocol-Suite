@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "takomi-flow://schemas/request",
+  "title": "TakomiFlow Request",
+  "description": "Request file for preparing or running a safe Google Flow image/video generation.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["kind", "prompt"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["video", "image"]
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "variations": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "default": 1
+    },
+    "aspectRatio": {
+      "type": "string",
+      "enum": ["16:9", "9:16", "1:1"]
+    },
+    "durationSeconds": {
+      "type": "number",
+      "enum": [4, 6, 8, 10]
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["text-to-video", "image-to-video", "text-to-image"]
+    },
+    "modelHint": {
+      "type": "string",
+      "default": "best-available"
+    },
+    "outputDir": {
+      "type": "string",
+      "description": "Base directory where requests, run metadata, downloads, screenshots, frames, and reports are written."
+    },
+    "allowSpend": {
+      "type": "boolean",
+      "default": false,
+      "description": "Must be true, or TAKOMI_FLOW_ALLOW_SPEND=true must be set, before TakomiFlow submits a generation."
+    },
+    "extractFrames": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "sourceAssets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "projectUrl": {
+      "type": "string",
+      "description": "Existing Google Flow project/editor URL to reuse for this generation."
+    },
+    "reuseCurrentProject": {
+      "type": "boolean",
+      "default": true,
+      "description": "When attached to Chrome, prefer an already open Flow project tab."
+    },
+    "allowNewProject": {
+      "type": "boolean",
+      "default": false,
+      "description": "Permit TakomiFlow to click New project when no reusable project/editor is available."
+    },
+    "freshChatOnFailure": {
+      "type": "boolean",
+      "default": true,
+      "description": "Try one same-project fresh chat recovery when prompt or submit controls are broken."
+    },
+    "editorWaitMs": {
+      "type": "integer",
+      "minimum": 1000,
+      "description": "Maximum time to wait for the Flow project editor to become usable."
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

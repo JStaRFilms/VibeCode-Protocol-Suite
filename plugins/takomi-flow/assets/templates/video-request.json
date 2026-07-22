@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "video",
+  "prompt": "Describe the video Flow should generate.",
+  "variations": 1,
+  "aspectRatio": "16:9",
+  "durationSeconds": 4,
+  "mode": "text-to-video",
+  "modelHint": "best-available",
+  "outputDir": "C:/Users/johno/.takomi-flow/runs",
+  "allowSpend": false,
+  "extractFrames": 4,
+  "sourceAssets": [],
+  "projectUrl": "",
+  "reuseCurrentProject": true,
+  "allowNewProject": false,
+  "freshChatOnFailure": true,
+  "notes": "Set allowSpend=true only after explicit user approval."
+}

@@ -21,7 +21,7 @@ REQUIRED = [
     ROOT / "types.ts",
     ROOT / "README.md",
 ]
-EXPECTED_MODELS = ["oauth-router", "gpt-4o", "gpt-4.1", "o4-mini", "gpt-5.4"]
+EXPECTED_MODELS = ["oauth-router", "gpt-5.4-mini", "gpt-5.4", "gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"]
 PI_CANDIDATES = [
     os.environ.get("PI_BIN"),
     shutil.which("pi"),

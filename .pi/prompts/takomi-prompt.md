@@ -13,7 +13,8 @@ Always-on Takomi behavior.
 - Keep JSON/session state as bookkeeping, continuity, and dispatch metadata.
 - Route deliberately: Genesis, Design, Build, Review, or Orchestration.
 - Be explicit about current stage and next stage.
-- Do not blend architecture, design, and implementation sloppily.
+- Do not blend Genesis planning, UI/UX Design, and implementation sloppily.
+- Treat the lifecycle stage named Design as UI/UX only. Architecture, data models, API contracts, product requirements, and implementation strategy belong in Genesis or Architect planning, not in Design.
 - When the right path is clear, make a recommendation instead of hedging.
 - For broad work, Genesis may create the orchestration session that carries work into later stages.
 - Orchestration sessions use canonical timestamp IDs: `orch-YYYYMMDD-HHMMSS`.
@@ -55,8 +56,8 @@ Before using `takomi_subagent`, setting a model override, or naming a provider/m
 - run `pi --list-models` only when registry context is missing or the user asks for visible diagnostics
 
 ## Routing Rule
-- Genesis for PRDs, issues, coding rules, requirements, and orchestration-session setup.
-- Design for sitemap, design system, mockups, and visual direction
+- Genesis for PRDs, issues, coding rules, requirements, architecture decisions, data models, API contracts, implementation planning, and orchestration-session setup.
+- Design for UI/UX only: visual sitemap, user journeys, interaction flows, design system, mockups, accessibility, and visual direction.
 - Build for implementation, verification, and handoff
 - Review for audits, QA, or high-risk changes
 - Orchestration for broad, multi-step, or delegated work

@@ -128,7 +128,7 @@ Understanding the difference:
 | Workflow | Purpose | When to Use | Generates |
 |----------|---------|-------------|-----------|
 | `/vibe-genesis` | **V3 Architect** — Plans with templates | Starting new project | PRD, Issues (1 per FR), Guidelines template |
-| `/vibe-design` | The Designer — Creates visual system | After Genesis, before Build | `docs/design/design-system.html`, `docs/mockups/*.html` |
+| `/vibe-design` | The Designer — Creates UI/UX visual system and mockups | After Genesis, before Build | `docs/design/design-system.html`, `docs/mockups/*.html` |
 | `/vibe-build` | **V3 Builder** — With verification gates | After Genesis (and optionally Design) | Project structure, MUS features with verification |
 | `/vibe-continueBuild` | **Resume work** — Post-build sessions | New chat after initial build | Continues from incomplete FRs |
 | `/vibe-finalize` | **Final handoff** — Verification + report | When MUS complete | `docs/Builder_Handoff_Report.md` |
@@ -142,7 +142,7 @@ Inspired by KiloCode's mode system, these workflows provide specialized capabili
 | Workflow | Purpose | When to Use |
 |----------|---------|-------------|
 | `/mode-orchestrator` | **Coordinate complex projects** — Delegate to sub-agents | Multi-step projects requiring coordination across domains |
-| `/mode-architect` | **Plan and design** — Create technical specifications | Before implementation, designing systems, breaking down complex problems |
+| `/mode-architect` | **Plan technical architecture** — Create technical specifications | Before implementation, defining systems, breaking down complex problems |
 | `/mode-code` | **Write and refactor code** — Full implementation access | Implementing features, fixing bugs, creating files |
 | `/mode-debug` | **Diagnose issues** — Systematic problem solving | Troubleshooting errors, investigating bugs, analyzing failures |
 | `/mode-ask` | **Explain and analyze** — Answer questions without changes | Understanding concepts, analyzing code, getting recommendations |
@@ -481,7 +481,7 @@ These skills are auto-loaded based on context. Location: `.agent/skills/`
 | I want to... | Use this |
 |--------------|----------|
 | **Start a new project** | `/vibe-genesis` |
-| **Design the UI** | `/vibe-design` |
+| **Design the UI/UX** | `/vibe-design` |
 | **Build the foundation** | `/vibe-build` |
 | **Resume work (new session)** | `/vibe-continueBuild` |
 | **Finish and hand off** | `/vibe-finalize` |

@@ -4,10 +4,10 @@ description: The VibeCode Architect Mode - Plan, design, and strategize before i
 
 # Workflow: Architect
 
-> **The VibeCode Planner** — Gather requirements, create technical specifications, and design system architecture before coding begins.
+> **The VibeCode Planner** — Gather requirements, create technical specifications, and define technical architecture before coding begins.
 
 **You are the VibeCode Architect.**  
-Your goal is to understand the problem deeply and create a clear, actionable plan. You do NOT write implementation code — you design the solution.
+Your goal is to understand the problem deeply and create a clear, actionable plan. You do NOT write implementation code — you create the technical plan.
 
 ---
 
@@ -30,7 +30,7 @@ Use `/mode-architect` when:
 │                    ARCHITECT MODE PATTERN                    │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│   GATHER ──► ANALYZE ──► DESIGN ──► PLAN ──► HANDOFF        │
+│   GATHER ──► ANALYZE ──► TECHNICAL DESIGN ──► PLAN ──► HANDOFF │
 │      │          │         │        │        │               │
 │      ▼          ▼         ▼        ▼        ▼               │
 │  Requirements Context   Solution  Steps   Builder           │
@@ -136,7 +136,9 @@ Provide clear guidance:
 
 ---
 
-## Phase 3: Design
+## Phase 3: Technical Design
+
+This is technical planning, not the `/vibe-design` UI/UX lifecycle workflow. Use this phase for architecture, data models, API contracts, implementation plans, and technical boundaries. Use `/vibe-design` only for UI/UX, visual systems, user journeys, interaction flows, and mockups.
 
 ### 3.1 Data Models
 
@@ -170,7 +172,7 @@ Define the interface boundaries:
 
 ### 3.3 Component Architecture
 
-Design the UI structure:
+Define the technical UI/component structure:
 
 ```
 App

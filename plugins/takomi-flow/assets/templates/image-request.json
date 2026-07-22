@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "kind": "image",
+  "prompt": "Describe the image Flow should generate.",
+  "variations": 1,
+  "aspectRatio": "1:1",
+  "mode": "text-to-image",
+  "modelHint": "best-available",
+  "outputDir": "C:/Users/johno/.takomi-flow/runs",
+  "allowSpend": false,
+  "sourceAssets": [],
+  "projectUrl": "",
+  "reuseCurrentProject": true,
+  "allowNewProject": false,
+  "freshChatOnFailure": true,
+  "notes": "Set allowSpend=true only after explicit user approval."
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "takomi-flow://schemas/result",
+  "title": "TakomiFlow Run Result",
+  "description": "Run metadata written by TakomiFlow browser, smoke, generate, and self-test commands.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "status", "runId"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["prepared", "ok", "downloaded", "manual_action_required", "blocked", "failed"]
+    },
+    "runId": { "type": "string" },
+    "command": { "type": "string" },
+    "kind": { "type": "string", "enum": ["video", "image"] },
+    "prompt": { "type": "string" },
+    "flowUrl": { "type": "string" },
+    "projectUrl": { "type": "string" },
+    "projectSession": { "type": "object" },
+    "settingsPlan": { "type": "object" },
+    "assets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "assetCatalogPath": { "type": "string" },
+    "screenshots": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "errors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "manualActions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "metadataPath": { "type": "string" }
+  }
+}

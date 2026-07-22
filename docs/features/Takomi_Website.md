@@ -3,6 +3,12 @@
 ## Goal
 Build a modern, high-converting landing page showcasing the Takomi VibeCode Protocol. It should explain the philosophy and how Takomi transforms AI from a chatbot into a development partner.
 
+## Implementation Status
+- Scaffolded a standalone Next.js App Router site in `website/`.
+- Added a static landing page with header, hero, Takomi-specific runtime strip, value pillars, PI demo, workflow timeline, installation CTA, and footer.
+- Added functional pages for Documents, Installation, Coding, Codex, and Plugin.
+- Used Anti-Gravity for the initial UI/code pass, then tightened install accuracy, script references, brand assets, routing links, and verification.
+
 ## Components (Client vs Server)
 - The website will be a **Next.js App Router** application (to be scaffolded in `website/`).
 - **Server First**: All UI components are React Server Components by default.
@@ -11,26 +17,16 @@ Build a modern, high-converting landing page showcasing the Takomi VibeCode Prot
 ## Data Flow
 - This is a static presentation site. No database schema or complex data fetching is required for V1.
 
-## 21st.dev Manual Handoff Integration
-Since this is a greenfield project and we don't have a reference site, we will use the **Manual Mode** of the `21st-dev-components` skill. 
+## Verification
+- `npm run lint` from `website/`
+- `npx tsc --noEmit` from `website/`
 
-### Sections to collect from 21st.dev:
-Please visit the links below and find a component that matches the Takomi "Vibe" (e.g., Terminal Noir, premium, dark-mode, developer-centric).
-
-**1. Header**
-- Suggested Categories: [Navigation Menus](https://21st.dev/s/navbar-navigation) | [Buttons](https://21st.dev/s/button)
-
-**2. Hero**
-- The main hook: "Stop wrestling with AI."
-- Suggested Categories: [Heroes](https://21st.dev/s/hero) | [Backgrounds](https://21st.dev/s/background) 
-
-**3. Features**
-- Highlighting the rules (Blueprint Rule, 200-Line Rule, etc.)
-- Suggested Categories: [Features](https://21st.dev/s/features) | [Cards](https://21st.dev/s/card)
-
-**4. Pricing / CTA**
-- The "Install Now" section.
-- Suggested Categories: [Calls to Action](https://21st.dev/s/call-to-action)
-
-**5. Footer**
-- Suggested Categories: [Footers](https://21st.dev/s/footer)
+## Current Landing Sections
+- Header: logo-only wordmark, functional route navigation, GitHub link, and installation CTA.
+- Hero: real Takomi logo, repo package version pulled at render time, primary install command, and terminal setup preview.
+- Runtime surfaces: PI Runtime, Codex, Kilo Code, Anti-Gravity as optional critique, Skills, and Strata Agents.
+- Value pillars: lifecycle workflows, sub-agent teams, progressive context loading, instance management, strata routing, and unified extensions.
+- PI demo: staged terminal trace showing prompt capture, runtime detection, policy routing, roadbook creation, sub-agent packet creation, and verification.
+- Lifecycle timeline: Genesis, Design, Build, Review, and Recovery.
+- Installation CTA: focuses on CLI, PI, and Codex plugin value rather than internal marketplace plumbing.
+- Footer: concise brand summary, functional site links, GitHub link, and ISC license note.

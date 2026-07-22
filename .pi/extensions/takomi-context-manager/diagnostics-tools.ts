@@ -2,9 +2,10 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { AutocompleteItem } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import type { ContextManagerState } from "./state";
-import { renderReport, type ContextReportMode } from "./diagnostics";
+import { contextReportPresentation, renderReport, type ContextReportMode } from "./diagnostics";
 import { discoverSkillsFromFilesystem, mergeSkills } from "./skill-registry";
 import { persistReportSnapshot, restoreReportFromSession } from "./session-state";
+import { renderCompactCard, renderExpandedMarkdown, renderToolCall, resultText, sanitizePresentation } from "./tool-renderers";
 
 export function registerDiagnostics(pi: ExtensionAPI, state: ContextManagerState): void {
   pi.registerTool({
@@ -29,7 +30,44 @@ export function registerDiagnostics(pi: ExtensionAPI, state: ContextManagerState
       state.report.toolCalls.contextReport += 1;
       persistReportSnapshot(pi, state, "context_report");
       const mode = (params.verbose ? "verbose" : params.mode ?? "summary") as ContextReportMode;
-      return { content: [{ type: "text", text: renderReport(state, mode) }], details: { ...state.report, mode } };
+      const text = renderReport(state, mode);
+      // Keep model-facing content exactly as requested. Expanded presentation
+      // renders that same mode-specific report rather than silently promoting
+      // summary/problems requests to verbose diagnostics.
+      const presentation = contextReportPresentation(state);
+      return { content: [{ type: "text", text }], details: { ...state.report, mode, presentation } };
+    },
+    renderCall(args, theme) {
+      return renderToolCall("context_report", args.verbose ? "verbose" : args.mode ?? "summary", theme);
+    },
+    renderResult(result, { expanded }, theme) {
+      const details = result.details as {
+        mode?: ContextReportMode;
+        skillCount?: number;
+        loadedByTool?: string[];
+        loadedPolicies?: string[];
+        presentation?: {
+          status?: "success" | "warning" | "error" | "pending";
+          summary?: string;
+          attentionCount?: number;
+        };
+      } | undefined;
+      const presentation = details?.presentation;
+      const text = resultText(result);
+      const status = presentation?.status ?? "pending";
+      const summary = presentation?.summary ?? "Informational";
+      const attentionCount = presentation?.attentionCount ?? 0;
+      const metadata = `${details?.skillCount ?? 0} skills · ${details?.loadedPolicies?.length ?? 0} policies loaded · ${attentionCount} attention items`;
+      if (!expanded) {
+        return renderCompactCard({ status, title: "Context health", summary, metadata }, theme);
+      }
+      return renderExpandedMarkdown({
+        status,
+        title: "Context report",
+        summary,
+        metadata: [metadata, `Requested mode: ${details?.mode ?? "summary"}`],
+        markdown: text,
+      }, theme);
     },
   });
 
@@ -55,7 +93,7 @@ export function registerDiagnostics(pi: ExtensionAPI, state: ContextManagerState
       persistReportSnapshot(pi, state, "context-report-command");
       const requested = args.trim();
       const mode: ContextReportMode = requested === "verbose" || requested === "problems" || requested === "summary" ? requested : "summary";
-      ctx.ui.notify(renderReport(state, mode), "info");
+      ctx.ui.notify(sanitizePresentation(renderReport(state, mode)), "info");
     },
   });
 }

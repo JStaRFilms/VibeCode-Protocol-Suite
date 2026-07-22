@@ -1,12 +1,28 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { initializeTakomiAsyncLifecycle, resetTakomiAsyncLifecycle } from "./async-lifecycle";
+import {
+  clearDetachedResults,
+  initializeDetachedSession,
+  registerDetachedCompletionNotifications,
+} from "./detached-results";
 import { renderTakomiSubagentCall, renderTakomiSubagentResult } from "./native-render";
 import { loadPiSubagentsInternals } from "./pi-subagents-internal";
-import { executeTakomiSubagentTool } from "./tool-runner";
+import { clearAllTakomiSubagentResultHeartbeats } from "./result-heartbeat";
+import { executeTakomiSubagentTool, invalidateTakomiPiSubagentsEngine, type TakomiAcceptanceInput } from "./tool-runner";
 
 const ChecklistItemSchema = Type.Object({
   text: Type.String(),
   done: Type.Optional(Type.Boolean()),
+});
+
+const AcceptanceSchema = Type.Unsafe<TakomiAcceptanceInput>({
+  anyOf: [
+    { type: "string", enum: ["auto", "none", "attested", "checked", "verified", "reviewed"] },
+    { type: "boolean", enum: [false] },
+    { type: "object", additionalProperties: true },
+  ],
+  description: "Optional explicit acceptance policy. Omitted Takomi tasks do not enforce acceptance; explicit contracts are forwarded to pi-subagents.",
 });
 
 const ThinkingSchema = Type.Union([
@@ -29,6 +45,8 @@ const TaskSchema = Type.Object({
   conversationId: Type.Optional(Type.String()),
   cwd: Type.Optional(Type.String()),
   checklist: Type.Optional(Type.Array(Type.Union([Type.String(), ChecklistItemSchema]))),
+  requiredCapabilities: Type.Optional(Type.Array(Type.String(), { description: "Capabilities required by the task, such as write-docs or write-code" })),
+  acceptance: Type.Optional(AcceptanceSchema),
 });
 
 const ContextSchema = Type.Union([
@@ -58,6 +76,8 @@ const SubagentParameters = Type.Object({
   conversationId: Type.Optional(Type.String({ description: "Persistent conversation id to resume the same subagent session" })),
   cwd: Type.Optional(Type.String({ description: "Working directory override" })),
   checklist: Type.Optional(Type.Array(Type.Union([Type.String(), ChecklistItemSchema]), { description: "Optional checklist for the subagent" })),
+  requiredCapabilities: Type.Optional(Type.Array(Type.String(), { description: "Capabilities required by the task, such as write-docs or write-code" })),
+  acceptance: Type.Optional(AcceptanceSchema),
   tasks: Type.Optional(Type.Array(TaskSchema, { description: "Parallel subagent tasks" })),
   confirmLaunch: Type.Optional(Type.Boolean({ description: "Required to launch immediately in manual Takomi launch mode" })),
   previewOnly: Type.Optional(Type.Boolean({ description: "Return the delegation plan without launching" })),
@@ -89,6 +109,8 @@ function registerSubagentTool(pi: ExtensionAPI): void {
       "Set context=fork only when inherited parent-session history is needed; otherwise prefer fresh or the agent default.",
       "Set async=true for long-running work when the parent can continue safely; keep active worktree writes single-threaded unless worktree isolation is enabled.",
       "Set clarify=true when the user asks to preview/edit a subagent run in the native Pi TUI before launch.",
+      "Use only Takomi's canonical personas: architect, designer, coder, worker, reviewer, and orchestrator.",
+      "Set requiredCapabilities for artifact-producing tasks; the runtime blocks inspection-only personas from write-required work.",
       "Use model, fallbackModels, and thinking only when deliberate; otherwise let the agent/profile defaults apply.",
       "If review sends work back to the same agent, reuse the same conversationId for continuity.",
       "If a launch is blocked, cancelled, paused, or review-gated, do not retry automatically; wait for the user's next prompt."
@@ -108,5 +130,32 @@ export default async function takomiSubagents(pi: ExtensionAPI) {
   // a completed takomi_subagent result can fall back to Takomi's plain text
   // renderer and lose the native compact/expanded details shown by `subagent`.
   await loadPiSubagentsInternals();
+  // A same-process Takomi reload reuses the ExtensionAPI identity, so explicitly
+  // discard the cached engine before replacing its lifecycle generation.
+  invalidateTakomiPiSubagentsEngine(pi);
+  const cleanupAsyncLifecycle = await initializeTakomiAsyncLifecycle(pi);
   registerSubagentTool(pi);
+
+  // Replace native completion notification through pi-subagents' own reload-safe
+  // registration slot. The shared renderer and dedupe key remain authoritative;
+  // Takomi enriches the single native notice without adding polling or timers.
+  const unregisterCompletionNotifications = registerDetachedCompletionNotifications(pi);
+
+  // Tool rows normally settle and clear their own heartbeat. A turn can also end
+  // without Pi rendering a final result (for example, after an abnormal tool
+  // interruption), so clear abandoned rows and rehydrate only authenticated
+  // launch provenance from the replacement session's own custom entries.
+  pi.on("agent_end", () => clearAllTakomiSubagentResultHeartbeats());
+  pi.on("session_start", async (_event, ctx) => {
+    clearAllTakomiSubagentResultHeartbeats();
+    await resetTakomiAsyncLifecycle(pi, ctx);
+    await initializeDetachedSession(pi, ctx);
+  });
+  pi.on("session_shutdown", () => {
+    clearAllTakomiSubagentResultHeartbeats();
+    clearDetachedResults(pi);
+    invalidateTakomiPiSubagentsEngine(pi);
+    cleanupAsyncLifecycle();
+    unregisterCompletionNotifications();
+  });
 }

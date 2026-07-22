@@ -1,4 +1,11 @@
-export type TakomiRole = "general" | "orchestrator" | "architect" | "design" | "code" | "review";
+export type TakomiPersona = "orchestrator" | "architect" | "designer" | "coder" | "worker" | "reviewer";
+
+/** @deprecated Runtime and persisted tasks should use TakomiPersona names. */
+export type LegacyTakomiRole = "general" | "design" | "code" | "review";
+
+export type TakomiRole = TakomiPersona | "general";
+
+export type TakomiMainMode = "idle" | "code" | "review" | "orchestrate";
 
 export type TakomiWorkflowId = "vibe-genesis" | "vibe-design" | "vibe-build";
 
@@ -38,7 +45,7 @@ export type TakomiProfile = {
   foreground?: boolean;
   background?: boolean;
   reviewAfterImplementation?: boolean;
-  roles?: Partial<Record<TakomiRole, TakomiDispatchDefaults>>;
+  roles?: Partial<Record<TakomiPersona, TakomiDispatchDefaults>>;
   stages?: Partial<Record<VibeLifecycleStage, TakomiDispatchDefaults>>;
   review?: TakomiReviewProfile;
 };
@@ -96,12 +103,22 @@ export type TakomiSubagentRunGroup = {
   sessionId?: string;
 };
 
+export type WorkflowAvailability = "embedded";
+
+export type WorkflowCatalogEntry = {
+  id: TakomiWorkflowId;
+  stage: VibeLifecycleStage;
+  name: string;
+  description: string;
+  availability: WorkflowAvailability;
+};
+
 export type WorkflowDefinition = {
   id: TakomiWorkflowId;
   stage: VibeLifecycleStage;
   title: string;
   purpose: string;
-  preferredRole: TakomiRole;
+  preferredRole: TakomiPersona;
   preferredAgent?: string;
   preferredModelHint?: string;
   nextStage?: VibeLifecycleStage;
@@ -109,7 +126,7 @@ export type WorkflowDefinition = {
 };
 
 export type RouteDecision = {
-  role: TakomiRole;
+  role: TakomiPersona;
   workflow?: TakomiWorkflowId;
   stage?: VibeLifecycleStage;
   executionMode: "direct" | "orchestrate";
@@ -127,13 +144,14 @@ export type TaskChecklistItem = {
 export type OrchestratorTask = {
   id: string;
   title: string;
-  role: TakomiRole;
+  role: TakomiPersona;
   stage?: VibeLifecycleStage;
   workflow?: TakomiWorkflowId;
   parentTaskId?: string;
   preferredAgent?: string;
   preferredModelHint?: string;
   preferredModel?: string;
+  preferredModelConfirmed?: boolean;
   preferredThinking?: TakomiThinkingLevel;
   fallbackModels?: string[];
   dispatchPolicy?: TakomiDispatchPolicy;
@@ -143,6 +161,7 @@ export type OrchestratorTask = {
   scope?: string[];
   definitionOfDone?: string[];
   expectedArtifacts?: string[];
+  requiredCapabilities?: string[];
   dependencies?: string[];
   reviewCheckpoint?: string;
   instructions?: string[];
@@ -161,6 +180,14 @@ export type LifecycleStageState = {
 
 export type SessionIntent = "full-project" | "feature-scope" | "follow-up-task";
 
+export type MasterPlanOwner = "human" | "board" | "caller";
+
+export type MasterPlanArtifactProvenance = {
+  owner: MasterPlanOwner;
+  sha256: string;
+  lastSeenAt: string;
+};
+
 export type OrchestratorSessionState = {
   sessionId: string;
   title: string;
@@ -169,5 +196,8 @@ export type OrchestratorSessionState = {
   mode: "hybrid";
   lifecycle: Record<VibeLifecycleStage, LifecycleStageState>;
   sessionIntent?: SessionIntent;
+  artifacts?: {
+    masterPlan?: MasterPlanArtifactProvenance;
+  };
   tasks: OrchestratorTask[];
 };

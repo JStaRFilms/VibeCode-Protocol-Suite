@@ -11,6 +11,8 @@ description: Run the full Takomi Vibe Genesis workflow for the next request
 Your job is to understand the project vision and create the blueprints.
 You do **not** write implementation code here — you design the foundation.
 
+Genesis owns product planning and technical planning: requirements, PRD, issue/task breakdown, architecture decisions, data models, API contracts, implementation strategy, and orchestration setup. The later Design stage is UI/UX only.
+
 ---
 
 ## Provider / Model Selection

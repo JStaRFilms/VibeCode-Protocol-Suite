@@ -11,42 +11,15 @@ export const STATE_PATH = join(DATA_ROOT, "state.json");
 
 const LEGACY_CODEX_CONTEXT_WINDOW = 272000;
 const SAFE_CODEX_CONTEXT_WINDOW = 240000;
-const CODEX_MODEL_IDS = new Set(["gpt-5.1", "gpt-5.4", "gpt-5.4-mini", "gpt-5.5"]);
+const CODEX_MODEL_IDS = new Set(["gpt-5.4", "gpt-5.4-mini", "gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"]);
 
 const DEFAULT_MODELS: RouterModelConfig[] = [
   {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    reasoning: false,
-    input: ["text", "image"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 128000,
-    maxTokens: 16384,
-  },
-  {
-    id: "gpt-4.1",
-    name: "GPT-4.1",
-    reasoning: false,
-    input: ["text", "image"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 128000,
-    maxTokens: 16384,
-  },
-  {
-    id: "o4-mini",
-    name: "o4-mini",
+    id: "gpt-5.4-mini",
+    name: "GPT-5.4 Mini",
     reasoning: true,
     input: ["text", "image"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 200000,
-    maxTokens: 100000,
-  },
-  {
-    id: "gpt-5.1",
-    name: "GPT-5.1",
-    reasoning: true,
-    input: ["text", "image"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    cost: { input: 0.75, output: 4.50, cacheRead: 0.075, cacheWrite: 0.9375 },
     contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
     maxTokens: 128000,
   },
@@ -55,16 +28,7 @@ const DEFAULT_MODELS: RouterModelConfig[] = [
     name: "GPT-5.4",
     reasoning: true,
     input: ["text", "image"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
-    maxTokens: 128000,
-  },
-  {
-    id: "gpt-5.4-mini",
-    name: "GPT-5.4 Mini",
-    reasoning: true,
-    input: ["text", "image"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    cost: { input: 2.50, output: 15.00, cacheRead: 0.25, cacheWrite: 3.125 },
     contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
     maxTokens: 128000,
   },
@@ -73,7 +37,34 @@ const DEFAULT_MODELS: RouterModelConfig[] = [
     name: "GPT-5.5",
     reasoning: true,
     input: ["text", "image"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    cost: { input: 5.00, output: 30.00, cacheRead: 0.50, cacheWrite: 6.25 },
+    contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
+    maxTokens: 128000,
+  },
+  {
+    id: "gpt-5.6-luna",
+    name: "GPT-5.6 Luna",
+    reasoning: true,
+    input: ["text", "image"],
+    cost: { input: 1.00, output: 6.00, cacheRead: 0.10, cacheWrite: 1.25 },
+    contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
+    maxTokens: 128000,
+  },
+  {
+    id: "gpt-5.6-sol",
+    name: "GPT-5.6 Sol",
+    reasoning: true,
+    input: ["text", "image"],
+    cost: { input: 5.00, output: 30.00, cacheRead: 0.50, cacheWrite: 6.25 },
+    contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
+    maxTokens: 128000,
+  },
+  {
+    id: "gpt-5.6-terra",
+    name: "GPT-5.6 Terra",
+    reasoning: true,
+    input: ["text", "image"],
+    cost: { input: 2.50, output: 15.00, cacheRead: 0.25, cacheWrite: 3.125 },
     contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
     maxTokens: 128000,
   },
@@ -88,7 +79,7 @@ const DEFAULT_UPSTREAMS: RouterUpstreamConfig[] = [
     api: "openai-responses",
     authMode: "api-key",
     enabled: true,
-    modelIds: ["gpt-4o", "gpt-4.1", "o4-mini"],
+    modelIds: ["gpt-5.4-mini", "gpt-5.4", "gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"],
   },
   {
     id: "chatgpt-codex",
@@ -99,7 +90,7 @@ const DEFAULT_UPSTREAMS: RouterUpstreamConfig[] = [
     authMode: "oauth",
     oauthProviderId: "openai-codex",
     enabled: true,
-    modelIds: ["gpt-5.1", "gpt-5.4", "gpt-5.4-mini", "gpt-5.5"],
+    modelIds: ["gpt-5.4-mini", "gpt-5.4", "gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"],
     usageProbe: {
       enabled: true,
       timeoutMs: 8_000,
@@ -209,8 +200,12 @@ function mergeModelConfigs(candidateModels: RouterModelConfig[] | undefined): Ro
     return deepClone(DEFAULT_CONFIG.models);
   }
 
+  const defaultIds = new Set(DEFAULT_CONFIG.models.map((m) => m.id));
   const merged = new Map(DEFAULT_CONFIG.models.map((model) => [model.id, deepClone(model)]));
   for (const model of candidateModels) {
+    if (!defaultIds.has(model.id)) {
+      continue;
+    }
     const previous = merged.get(model.id) ?? ({} as RouterModelConfig);
     merged.set(model.id, { ...previous, ...deepClone(model), id: model.id });
   }
@@ -227,6 +222,7 @@ function mergeUpstreamConfigs(candidateUpstreams: RouterUpstreamConfig[] | undef
     return deepClone(DEFAULT_CONFIG.upstreams);
   }
 
+  const defaultModelIds = new Set(DEFAULT_CONFIG.models.map((m) => m.id));
   const merged = new Map(DEFAULT_CONFIG.upstreams.map((upstream) => [upstream.id, deepClone(upstream)]));
   for (const upstream of candidateUpstreams) {
     const previous = merged.get(upstream.id);
@@ -235,7 +231,8 @@ function mergeUpstreamConfigs(candidateUpstreams: RouterUpstreamConfig[] | undef
       continue;
     }
 
-    const modelIds = Array.from(new Set([...(previous.modelIds ?? []), ...(upstream.modelIds ?? [])]));
+    const modelIds = Array.from(new Set([...(previous.modelIds ?? []), ...(upstream.modelIds ?? [])]))
+      .filter((id) => defaultModelIds.has(id));
     const usageProbe = {
       ...(previous.usageProbe ?? {}),
       ...(upstream.usageProbe ?? {}),

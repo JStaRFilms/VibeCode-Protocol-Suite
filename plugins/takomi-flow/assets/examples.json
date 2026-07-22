@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "examples": [
+    {
+      "name": "cinematic-video",
+      "description": "A polished text-to-video shot with review frames and a clean handoff.",
+      "request": {
+        "schemaVersion": 1,
+        "kind": "video",
+        "prompt": "A 4 second cinematic hero shot of a creator's production desk at night: printed storyboards, reference photos, camera lens, warm desk lamp, slow push-in, premium film look, no readable text",
+        "variations": 1,
+        "aspectRatio": "16:9",
+        "durationSeconds": 4,
+        "mode": "text-to-video",
+        "modelHint": "best-available",
+        "allowSpend": false,
+        "extractFrames": 4,
+        "sourceAssets": []
+      }
+    },
+    {
+      "name": "moodboard-keyframe",
+      "description": "A square image/keyframe request for brand, pitch, or scene development.",
+      "request": {
+        "schemaVersion": 1,
+        "kind": "image",
+        "prompt": "Generate 1 1:1 image of a premium creative studio moodboard on a clean table: printed reference photos, storyboard cards, color swatches, a camera lens, warm desk lamp lighting, realistic paper texture, editorial composition, no readable text",
+        "variations": 1,
+        "aspectRatio": "1:1",
+        "mode": "text-to-image",
+        "modelHint": "best-available",
+        "allowSpend": false,
+        "sourceAssets": []
+      }
+    },
+    {
+      "name": "reference-image-to-video",
+      "description": "Animate a local reference image into a short cinematic motion asset.",
+      "request": {
+        "schemaVersion": 1,
+        "kind": "video",
+        "prompt": "Animate the source image into a slow cinematic push-in with soft parallax, practical light flicker, subtle dust in the air, and no readable text",
+        "variations": 1,
+        "aspectRatio": "16:9",
+        "durationSeconds": 4,
+        "mode": "image-to-video",
+        "modelHint": "best-available",
+        "allowSpend": false,
+        "extractFrames": 4,
+        "sourceAssets": ["C:/path/to/source-image.png"]
+      }
+    },
+    {
+      "name": "product-reveal-video",
+      "description": "A quick product-style B-roll prompt for social, landing pages, or pitch decks.",
+      "request": {
+        "schemaVersion": 1,
+        "kind": "video",
+        "prompt": "A 4 second premium product reveal shot of a matte black creative workstation on a clean table, soft cyan rim light, camera gliding past glass reflections, practical studio lighting, no readable text",
+        "variations": 1,
+        "aspectRatio": "16:9",
+        "durationSeconds": 4,
+        "mode": "text-to-video",
+        "modelHint": "best-available",
+        "allowSpend": false,
+        "extractFrames": 4,
+        "sourceAssets": []
+      }
+    },
+    {
+      "name": "character-portrait-image",
+      "description": "A visual-development portrait that can become a Flow video source later.",
+      "request": {
+        "schemaVersion": 1,
+        "kind": "image",
+        "prompt": "Generate 1 cinematic character portrait image of a young film director in a neon-lit editing suite, thoughtful expression, shallow depth of field, editorial realism, no readable text",
+        "variations": 1,
+        "aspectRatio": "1:1",
+        "mode": "text-to-image",
+        "modelHint": "best-available",
+        "allowSpend": false,
+        "sourceAssets": []
+      }
+    },
+    {
+      "name": "collect-after-review",
+      "description": "Downstream packaging pattern after a run has downloaded assets.",
+      "commands": [
+        "node scripts/takomi-flow.mjs review --run <run.json|run-dir> --frames 4",
+        "node scripts/takomi-flow.mjs collect --run <run.json|run-dir> --target-dir <project-output-folder> --frames 4 --include-frames"
+      ]
+    }
+  ]
+}

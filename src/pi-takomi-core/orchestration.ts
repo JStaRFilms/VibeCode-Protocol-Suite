@@ -5,7 +5,8 @@ import type {
   OrchestratorTask,
   OrchestratorTaskStatus,
   SessionIntent,
-  TakomiRole,
+  LegacyTakomiRole,
+  TakomiPersona,
   TaskChecklistItem,
   VibeLifecycleStage,
 } from "./types";
@@ -57,18 +58,24 @@ export function workflowToStage(workflow?: OrchestratorTask["workflow"]): VibeLi
   }
 }
 
-function defaultStageForRole(role: TakomiRole): VibeLifecycleStage | undefined {
+export function canonicalizeTakomiPersona(role: TakomiPersona | LegacyTakomiRole): TakomiPersona {
   switch (role) {
-    case "architect":
-      return "genesis";
-    case "design":
-      return "design";
-    case "code":
-    case "review":
-    case "orchestrator":
-      return "build";
-    default:
-      return undefined;
+    case "design": return "designer";
+    case "code": return "coder";
+    case "review": return "reviewer";
+    case "general": return "worker";
+    default: return role;
+  }
+}
+
+function defaultStageForRole(role: TakomiPersona): VibeLifecycleStage | undefined {
+  switch (role) {
+    case "architect": return "genesis";
+    case "designer": return "design";
+    case "coder":
+    case "worker":
+    case "reviewer":
+    case "orchestrator": return "build";
   }
 }
 
@@ -123,19 +130,21 @@ export function normalizeChecklist(checklist?: Array<string | TaskChecklistItem>
   return checklist.map((item) => typeof item === "string" ? { text: item, done: false } : { text: item.text, done: item.done ?? false });
 }
 
-export function createTask(id: string, title: string, role: TakomiRole, extras?: Partial<OrchestratorTask>): OrchestratorTask {
-  const preferredAgent = extras?.preferredAgent ?? (role === "design" ? "designer" : role === "architect" ? "architect" : role === "review" ? "reviewer" : role === "code" ? "coder" : "orchestrator");
-  const stage = extras?.stage ?? workflowToStage(extras?.workflow) ?? defaultStageForRole(role);
+export function createTask(id: string, title: string, role: TakomiPersona | LegacyTakomiRole, extras?: Partial<OrchestratorTask>): OrchestratorTask {
+  const persona = canonicalizeTakomiPersona(role);
+  const preferredAgent = extras?.preferredAgent ?? persona;
+  const stage = extras?.stage ?? workflowToStage(extras?.workflow) ?? defaultStageForRole(persona);
   return {
     id,
     title,
-    role,
+    role: persona,
     status: "pending",
     ...extras,
     stage,
     preferredAgent,
     conversationId: extras?.conversationId ?? createConversationId(preferredAgent, id),
     preferredModel: extras?.preferredModel,
+    preferredModelConfirmed: extras?.preferredModelConfirmed,
     preferredModelHint: extras?.preferredModelHint,
     preferredThinking: extras?.preferredThinking,
     fallbackModels: extras?.fallbackModels,
@@ -181,7 +190,7 @@ function describeWorkflowPhase(workflow?: OrchestratorTask["workflow"]): string 
     case "vibe-genesis":
       return "Product framing and blueprint generation";
     case "vibe-design":
-      return "Design planning and interaction definition";
+      return "UI/UX design, visual system, and interaction definition";
     case "vibe-build":
       return "Implementation and delivery";
     default:
@@ -392,10 +401,13 @@ export function buildSessionState(
   title: string,
   tasks: OrchestratorTask[],
   now = new Date(),
-  extras?: Partial<Pick<OrchestratorSessionState, "sessionIntent" | "lifecycle">>,
+  extras?: Partial<Pick<OrchestratorSessionState, "sessionIntent" | "lifecycle" | "artifacts">>,
 ): OrchestratorSessionState {
   const stamp = now.toISOString();
-  const normalizedTasks = tasks.map((task) => ({ ...task, stage: task.stage ?? workflowToStage(task.workflow) ?? defaultStageForRole(task.role) }));
+  const normalizedTasks = tasks.map((task) => {
+    const role = canonicalizeTakomiPersona(task.role as TakomiPersona | LegacyTakomiRole);
+    return { ...task, role, preferredAgent: task.preferredAgent ?? role, stage: task.stage ?? workflowToStage(task.workflow) ?? defaultStageForRole(role) };
+  });
   return {
     sessionId,
     title,
@@ -404,6 +416,7 @@ export function buildSessionState(
     mode: "hybrid",
     lifecycle: deriveLifecycleFromTasks(normalizedTasks, extras?.lifecycle),
     sessionIntent: extras?.sessionIntent ?? "full-project",
+    artifacts: extras?.artifacts,
     tasks: normalizedTasks,
   };
 }
@@ -411,7 +424,10 @@ export function buildSessionState(
 export function normalizeSessionState(
   session: Partial<OrchestratorSessionState> & Pick<OrchestratorSessionState, "sessionId" | "title">,
 ): OrchestratorSessionState {
-  const tasks = (session.tasks ?? []).map((task) => ({ ...task, stage: task.stage ?? workflowToStage(task.workflow) ?? defaultStageForRole(task.role) }));
+  const tasks = (session.tasks ?? []).map((task) => {
+    const role = canonicalizeTakomiPersona(task.role as TakomiPersona | LegacyTakomiRole);
+    return { ...task, role, preferredAgent: task.preferredAgent ?? role, stage: task.stage ?? workflowToStage(task.workflow) ?? defaultStageForRole(role) };
+  });
   const normalized = buildSessionState(
     session.sessionId,
     session.title,
@@ -420,6 +436,7 @@ export function normalizeSessionState(
     {
       sessionIntent: session.sessionIntent ?? "full-project",
       lifecycle: session.lifecycle,
+      artifacts: session.artifacts,
     },
   );
 
@@ -428,6 +445,7 @@ export function normalizeSessionState(
     createdAt: session.createdAt ?? normalized.createdAt,
     updatedAt: session.updatedAt ?? normalized.updatedAt,
     mode: "hybrid",
+    artifacts: session.artifacts ?? normalized.artifacts,
   };
 }
 
@@ -458,10 +476,10 @@ export function createLifecycleStarterSession(
 ): OrchestratorSessionState {
   const sessionId = options?.sessionId ?? createSessionId(options?.now);
   const tasks = [
-    createTask("01", "Genesis foundation", "orchestrator", {
+    createTask("01", "Genesis foundation", "architect", {
       stage: "genesis",
       workflow: "vibe-genesis",
-      preferredAgent: "orchestrator",
+      preferredAgent: "architect",
       objective: "Establish the project foundation, produce the required planning docs, and decide what should split next.",
       scope: [
         "Clarify scope and mission",

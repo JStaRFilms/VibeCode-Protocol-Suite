@@ -2,6 +2,12 @@ export type SkillRecord = {
   name: string;
   description?: string;
   location?: string;
+  /** Explicit skill metadata, preferred over all other category sources. */
+  category?: string;
+  /** Category supplied by an installer/source registry for this exact skill path. */
+  sourceCategory?: string;
+  /** Package/source identifier used only when no explicit, registry, or path category exists. */
+  packageName?: string;
   source: "systemPromptOptions" | "xml" | "filesystem" | "tool";
 };
 

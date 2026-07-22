@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  --background: #050607;
+  --foreground: #f5f2e8;
+  --accent: #27c6d9;
+  --signal: #f6b74b;
+  --sage: #7ddf9b;
+  --accent-glow: rgba(39, 198, 217, 0.2);
+  --accent-muted: rgba(39, 198, 217, 0.08);
+  --border: #1d2428;
+  --grid: rgba(39, 198, 217, 0.025);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-signal: var(--signal);
+  --color-sage: var(--sage);
+  --color-accent-glow: var(--accent-glow);
+  --color-accent-muted: var(--accent-muted);
+  --color-border: var(--border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Custom terminal-noir scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050507;
+}
+::-webkit-scrollbar-thumb {
+  background: #18181b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  overflow-x: hidden;
+  background-image:
+    linear-gradient(115deg, rgba(39, 198, 217, 0.06), transparent 30%, rgba(246, 183, 75, 0.045) 66%, transparent),
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+}
+
+/* Custom terminal animations */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline-effect {
+  position: relative;
+  overflow: hidden;
+}
+.scanline-effect::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 2;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Glowing text */
+.glow-accent {
+  text-shadow: 0 0 10px rgba(39, 198, 217, 0.22);
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.52; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2.8s ease-in-out infinite;
+}
+
+.pi-grid {
+  background-color: #08111a;
+  background-image:
+    linear-gradient(rgba(88, 124, 150, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(88, 124, 150, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(88, 124, 150, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(88, 124, 150, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px, 24px 24px, 6px 6px, 6px 6px;
+}

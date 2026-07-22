@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { registerRouterCommands, formatStatusReport } from "./commands.ts";
+import { emitRouterReport, formatStatusReport, registerRouterCommands, type RouterReportControls } from "./commands.ts";
+import { ROUTER_REPORT_WIDGET_KEY } from "./report-ui.ts";
 import { registerRouterProvider, RouterRuntime } from "./provider.ts";
 import type { RouterUiEvent } from "./types.ts";
 
@@ -64,8 +65,33 @@ function notifyActivity(ctx: ExtensionContext, event: RouterUiEvent) {
   ctx.ui.notify(message, level);
 }
 
-function installRouterUiBridge(pi: ExtensionAPI, runtime: RouterRuntime, notifyOnLoad = false) {
+function installRouterUiBridge(pi: ExtensionAPI, runtime: RouterRuntime, notifyOnLoad = false): RouterReportControls {
   let activeCtx: ExtensionContext | undefined;
+  let reportGeneration = 0;
+  let activeReport: { generation: number; ctx: ExtensionContext } | undefined;
+
+  const clearReport = (fallbackCtx?: ExtensionContext, clearFallback = false) => {
+    const report = activeReport;
+    const ctx = report?.ctx ?? (clearFallback ? fallbackCtx : undefined);
+    if (!ctx) return;
+
+    try {
+      ctx.ui.setWidget(ROUTER_REPORT_WIDGET_KEY, undefined);
+    } catch {
+      // Widget lifecycle is best-effort and must not interrupt agent activity.
+    } finally {
+      // A re-entrant command can replace the report while the old widget clears.
+      // Its newer generation remains active instead of being erased by this clear.
+      if (report && activeReport?.generation === report.generation) activeReport = undefined;
+    }
+  };
+
+  const showReport: RouterReportControls["show"] = (ctx, text) => {
+    const report = { generation: ++reportGeneration, ctx };
+    activeCtx = ctx;
+    activeReport = report;
+    emitRouterReport(ctx, text);
+  };
 
   const setBaseStatus = (ctx: ExtensionContext) => {
     activeCtx = ctx;
@@ -84,12 +110,27 @@ function installRouterUiBridge(pi: ExtensionAPI, runtime: RouterRuntime, notifyO
   });
 
   pi.on("session_start", async (_event, ctx) => {
+    // A session replacement owns a fresh transport, so clear the old transport
+    // before accepting reports for the new one.
+    clearReport(activeCtx, true);
     setBaseStatus(ctx);
     if (notifyOnLoad) ctx.ui.notify("oauth-router loaded", "info");
   });
 
+  pi.on("input", async (event, ctx) => {
+    // Registered slash commands run before Pi emits input and return without an
+    // input event. Ordinary text/image input reaches this handler before its
+    // agent starts, which is the intended transient-dismissal boundary.
+    if (event.text.trim() || event.images?.length) clearReport(ctx);
+  });
+
   pi.on("agent_start", async (_event, ctx) => {
+    clearReport(ctx);
     setBaseStatus(ctx);
+  });
+
+  pi.on("tool_execution_start", async (_event, ctx) => {
+    clearReport(ctx);
   });
 
   pi.on("turn_start", async (_event, ctx) => {
@@ -105,26 +146,26 @@ function installRouterUiBridge(pi: ExtensionAPI, runtime: RouterRuntime, notifyO
   });
 
   pi.on("session_shutdown", async () => {
+    // The old context owns the RPC transport. Clear its report before releasing
+    // it so clients do not retain a widget across a session replacement.
+    clearReport(activeCtx, true);
     activeCtx = undefined;
   });
+
+  return { show: showReport, clear: (ctx) => clearReport(ctx, true) };
 }
 
 export default function (pi: ExtensionAPI) {
   const runtime = new RouterRuntime();
 
   registerRouterProvider(pi, runtime);
-  registerRouterCommands(pi, runtime);
-  installRouterUiBridge(pi, runtime, false);
+  const reportControls = installRouterUiBridge(pi, runtime, false);
+  registerRouterCommands(pi, runtime, reportControls);
 
   pi.registerCommand("router-debug-report", {
     description: "Show a detailed oauth-router report in the UI only",
     handler: async (_args, ctx) => {
-      const report = formatStatusReport(runtime);
-      ctx.ui.setWidget("oauth-router-report", [
-        "oauth-router debug report (UI-only; not sent to the agent)",
-        ...report.split(/\r?\n/),
-      ], { placement: "belowEditor" });
-      ctx.ui.notify("oauth-router debug report updated", "info");
+      reportControls.show(ctx, formatStatusReport(runtime));
     },
   });
 }
