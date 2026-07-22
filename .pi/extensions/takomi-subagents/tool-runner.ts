@@ -392,15 +392,50 @@ export async function executeTakomiSubagentTool(
         takomi: { action: "list", agentScope },
       });
     }
-    if ((params.action === "get" || params.action === "models") && params.agent) {
+    if (params.action === "get" || params.action === "models") {
       const agents = discoverTakomiAgents(rootCwd, agentScope);
-      if (!agents.some((agent) => agent.name === params.agent)) {
+      const selected = params.agent ? agents.find((agent) => agent.name === params.agent) : undefined;
+      if (!selected) {
         return textResult(
-          `Unknown or hidden Takomi persona '${params.agent}'. Available personas: ${agents.map((agent) => agent.name).join(", ") || "none"}.`,
-          { results: [], action: params.action, agentScope, reason: "unknown-persona" },
+          params.agent
+            ? `Unknown or hidden Takomi persona '${params.agent}'. Available personas: ${agents.map((agent) => agent.name).join(", ") || "none"}.`
+            : `agent is required for action=${params.action}.`,
+          { results: [], action: params.action, agentScope, reason: params.agent ? "unknown-persona" : "missing-agent" },
           true,
         );
       }
+      const routingSnapshot = await loadTakomiModelRoutingSnapshot(rootCwd);
+      const routed = applyTakomiRoutingDefaults({
+        agent: selected.name,
+        model: selected.model,
+        fallbackModels: selected.fallbackModels,
+        thinking: selected.thinking,
+      }, routingSnapshot);
+      const modelLines = [
+        `Model: ${routed.model ?? "Pi/harness default"}`,
+        `Thinking: ${routed.thinking ?? "Pi default"}`,
+        `Fallbacks: ${routed.fallbackModels?.join(", ") || "none"}`,
+      ];
+      const lines = params.action === "models"
+        ? [`Takomi model routing for ${selected.name}:`, ...modelLines]
+        : [
+            `Takomi persona: ${selected.name}`,
+            `Source: ${selected.source}`,
+            `Description: ${selected.description}`,
+            `Tools: ${selected.tools?.join(", ") || "Pi defaults"}`,
+            `Default context: ${selected.defaultContext ?? "fresh"}`,
+            `Definition: ${selected.filePath}`,
+            "",
+            ...modelLines,
+          ];
+      return textResult(lines.join("\n"), {
+        action: params.action,
+        agentScope,
+        agent: selected.name,
+        persona: selected,
+        routing: routed,
+        takomi: { action: params.action, agentScope },
+      });
     }
     try {
       const nativeResult: any = await engine.execute(

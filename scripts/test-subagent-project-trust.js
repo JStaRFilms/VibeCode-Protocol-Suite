@@ -160,6 +160,11 @@ try {
   assert.match(listed.result.content[0].text, /^Takomi personas:/, "Takomi list uses the canonical persona surface");
   assert.doesNotMatch(listed.result.content[0].text, /Executable agents|oracle|delegate|planner/, "Takomi list does not expose the native builtin catalog");
 
+  const models = await launch({ params: { action: "models", agent: "project-agent", agentScope: "both" }, hasUI: false });
+  assert.equal(models.executions, 0, "Takomi model inspection does not delegate custom personas to native builtin-only management");
+  assert.match(models.result.content[0].text, /^Takomi model routing for project-agent:/, "Takomi model inspection resolves the custom persona directly");
+  assert.doesNotMatch(models.result.content[0].text, /Builtin agent .* not found/, "Takomi model inspection cannot produce the native builtin lookup failure");
+
   // A model can persist takomi_mode's visible auto launch state, but cannot
   // create the dedicated user command provenance entry.
   const modelAuto = await launch({ entries: [runtimeEntry("auto")], hasUI: false });
