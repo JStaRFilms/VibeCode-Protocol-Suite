@@ -16,6 +16,10 @@ const repoRoot = path.resolve(__dirname, '..');
 const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'takomi-regression-test-'));
 
 try {
+  const packageJson = await fs.readJson(path.join(repoRoot, 'package.json'));
+  assert.ok(!packageJson.files.includes('plugins'), 'npm package allowlist must not include the entire plugins tree because nested pnpm node_modules contain hard links rejected by npm');
+  assert.ok(packageJson.files.includes('plugins/takomi-flow/scripts'), 'npm package retains Takomi Flow runtime scripts through explicit allowlisting');
+
   const cli = path.join(repoRoot, 'bin', 'takomi.js');
   const env = {
     ...process.env,
