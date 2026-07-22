@@ -5,6 +5,9 @@ import type { TakomiThinkingLevel } from "../../../src/pi-takomi-core";
 
 export type TakomiAgentScope = "user" | "project" | "both";
 
+export const TAKOMI_PUBLIC_AGENT_NAMES = ["architect", "designer", "coder", "worker", "reviewer", "orchestrator"] as const;
+const TAKOMI_PUBLIC_AGENT_SET = new Set<string>(TAKOMI_PUBLIC_AGENT_NAMES);
+
 export type TakomiAgentConfig = {
   name: string;
   description: string;
@@ -52,6 +55,8 @@ function loadAgentsFromDirectory(agentsDir: string, source: "user" | "project"):
     const content = fs.readFileSync(filePath, "utf8");
     const { frontmatter, body } = parseFrontmatter<Record<string, string>>(content);
     if (!frontmatter.name || !frontmatter.description) continue;
+
+    if (!TAKOMI_PUBLIC_AGENT_SET.has(frontmatter.name)) continue;
 
     agents.push({
       name: frontmatter.name,

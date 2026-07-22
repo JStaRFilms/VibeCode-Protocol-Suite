@@ -15,6 +15,7 @@ import { resolveAgentName } from "./agent-aliases";
 import { applyTakomiRoutingDefaults, loadTakomiModelRoutingSnapshotSync } from "../takomi-runtime/model-routing-defaults";
 import type { TakomiSubagentToolParams, TakomiSubagentToolTask } from "./tool-runner";
 import { ensureTakomiAsyncLifecycle, getTakomiAsyncLifecycleSnapshot } from "./async-lifecycle";
+import { TAKOMI_PUBLIC_AGENT_NAMES } from "./agents";
 
 type ToolUpdate = (partial: AgentToolResult<Details>) => void;
 
@@ -159,7 +160,12 @@ function withTakomiAgentDefaults(agent: AgentConfig, cwd: string): AgentConfig {
 }
 
 function discoverUnifiedAgents(discoverPiAgents: any, cwd: string, scope: AgentScope): { agents: AgentConfig[] } {
-  return { agents: discoverPiAgents(cwd, scope).agents.map((agent: AgentConfig) => withTakomiAgentDefaults(agent, cwd)) };
+  const publicNames = new Set<string>(TAKOMI_PUBLIC_AGENT_NAMES);
+  return {
+    agents: discoverPiAgents(cwd, scope).agents
+      .filter((agent: AgentConfig) => publicNames.has(agent.name))
+      .map((agent: AgentConfig) => withTakomiAgentDefaults(agent, cwd)),
+  };
 }
 
 function agentNameSet(discoverPiAgents: any, cwd: string): Set<string> {

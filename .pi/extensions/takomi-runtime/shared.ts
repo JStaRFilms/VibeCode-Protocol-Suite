@@ -443,38 +443,15 @@ function modelCandidates(requested?: string, fallback?: string | string[]): stri
   return [requested, ...fallbackList].filter(Boolean) as string[];
 }
 
-export async function resolvePreferredModel(ctx: ExtensionContext, requested?: string, fallback?: string | string[]): Promise<{ model?: string; warning?: string }> {
-  const candidates = modelCandidates(requested, fallback);
-  if (candidates.length === 0) return {};
+export async function resolvePreferredModel(ctx: ExtensionContext, requested?: string, _fallback?: string | string[]): Promise<{ model?: string; warning?: string }> {
+  if (!requested) return {};
   const keys = await getAvailableModelKeys(ctx);
-  const exact = candidates.find((candidate) => keys.includes(candidate));
+  const exact = keys.find((key) => key === requested) ?? keys.find((key) => key.toLowerCase() === requested.toLowerCase());
   if (exact) return { model: exact };
-
-  const loweredKeys = keys.map((key) => key.toLowerCase());
-  for (const candidate of candidates) {
-    const idx = loweredKeys.findIndex((key) => key === candidate.toLowerCase());
-    if (idx >= 0) return { model: keys[idx] };
-  }
-
-  for (const candidate of candidates) {
-    const idx = loweredKeys.findIndex((key) => key.includes(candidate.toLowerCase()) || candidate.toLowerCase().includes(key));
-    if (idx >= 0) {
-      return {
-        model: keys[idx],
-        warning: `Requested model '${candidate}' was unavailable; using '${keys[idx]}' instead.`,
-      };
-    }
-  }
-
-  const firstAvailable = keys.find((key) => key.includes("/"));
-  if (firstAvailable) {
-    return {
-      model: firstAvailable,
-      warning: `Requested models '${candidates.join("', '")}' were unavailable; using '${firstAvailable}' instead.`,
-    };
-  }
-
-  return { warning: `No available signed-in model matched '${candidates.join("', '")}'.` };
+  return {
+    model: requested,
+    warning: `Requested model '${requested}' is not currently enabled in Pi's model registry. The exact provider-qualified ID was preserved; no equivalent provider was substituted.`,
+  };
 }
 
 export async function listModelsViaPi(cwd: string, signal?: AbortSignal): Promise<{ ok: boolean; output: string }> {

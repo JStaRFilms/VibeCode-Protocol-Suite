@@ -40,15 +40,15 @@ const WORKFLOW_IMPLEMENTATIONS: Record<TakomiWorkflowId, Omit<WorkflowDefinition
     playbook: VIBE_GENESIS_PLAYBOOK,
   },
   "vibe-design": {
-    preferredRole: "design",
+    preferredRole: "designer",
     preferredAgent: "designer",
     preferredModelHint: "Prefer Gemini 3.1 Pro Preview or another strong design-capable model actually available in Pi.",
     nextStage: "build",
     playbook: VIBE_DESIGN_PLAYBOOK,
   },
   "vibe-build": {
-    preferredRole: "orchestrator",
-    preferredAgent: "orchestrator",
+    preferredRole: "coder",
+    preferredAgent: "coder",
     playbook: VIBE_BUILD_PLAYBOOK,
   },
 };

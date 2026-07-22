@@ -4,7 +4,7 @@ import path from "node:path";
 import type {
   TakomiDispatchDefaults,
   TakomiProfile,
-  TakomiRole,
+  TakomiPersona,
   VibeLifecycleStage,
 } from "../../../src/pi-takomi-core";
 
@@ -18,14 +18,15 @@ export const DEFAULT_TAKOMI_PROFILE: TakomiProfile = {
   roles: {
     orchestrator: { agent: "orchestrator", dispatchPolicy: "subagent" },
     architect: { agent: "architect", dispatchPolicy: "subagent" },
-    design: { agent: "designer", dispatchPolicy: "subagent" },
-    code: { agent: "coder", dispatchPolicy: "subagent" },
-    review: { agent: "reviewer", dispatchPolicy: "review-first" },
+    designer: { agent: "designer", dispatchPolicy: "subagent" },
+    coder: { agent: "coder", dispatchPolicy: "subagent" },
+    worker: { agent: "worker", dispatchPolicy: "subagent" },
+    reviewer: { agent: "reviewer", dispatchPolicy: "review-first" },
   },
   stages: {
     genesis: { agent: "architect", dispatchPolicy: "subagent" },
     design: { agent: "designer", dispatchPolicy: "subagent" },
-    build: { agent: "orchestrator", dispatchPolicy: "subagent" },
+    build: { agent: "coder", dispatchPolicy: "subagent" },
   },
   review: {
     enabled: true,
@@ -57,7 +58,7 @@ function mergeDefaults(
 function mergeProfile(base: TakomiProfile, next?: Partial<TakomiProfile>): TakomiProfile {
   if (!next) return base;
   const roles = { ...(base.roles ?? {}) };
-  for (const [role, defaults] of Object.entries(next.roles ?? {}) as Array<[TakomiRole, TakomiDispatchDefaults]>) {
+  for (const [role, defaults] of Object.entries(next.roles ?? {}) as Array<[TakomiPersona, TakomiDispatchDefaults]>) {
     roles[role] = mergeDefaults(roles[role], defaults);
   }
 
@@ -99,12 +100,12 @@ export async function loadTakomiProfile(cwd: string): Promise<TakomiProfile> {
   const userProfilePath = path.join(os.homedir(), ".pi", "agent", "takomi", "profile.json");
   const projectProfile = await readProfileFile(projectProfilePath);
   const userProfile = await readProfileFile(userProfilePath);
-  return mergeProfile(mergeProfile(DEFAULT_TAKOMI_PROFILE, projectProfile), userProfile);
+  return mergeProfile(mergeProfile(DEFAULT_TAKOMI_PROFILE, userProfile), projectProfile);
 }
 
 export function getProfileDefaults(
   profile: TakomiProfile,
-  role: TakomiRole,
+  role: TakomiPersona,
   stage?: VibeLifecycleStage,
 ): TakomiDispatchDefaults {
   return {

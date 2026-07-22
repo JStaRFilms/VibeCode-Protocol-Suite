@@ -1,113 +1,25 @@
-import { readFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ContextManagerState } from "./state";
 import { recordBlocked } from "./state";
-import { resolveTakomiRoutingPolicy } from "../takomi-runtime/routing-policy";
-import { approvedModelEquivalent, isTakomiModelApproved } from "../takomi-runtime/model-routing-defaults";
+import { isTakomiModelApproved, loadTakomiModelRoutingSnapshot } from "../takomi-runtime/model-routing-defaults";
 import { persistReportSnapshot } from "./session-state";
 import { sanitizePresentation } from "./tool-renderers";
-
-type Settings = {
-  takomi?: { modelRoutingPolicyFile?: string };
-  subagents?: { agentOverrides?: Record<string, unknown> };
-};
 
 type ModelPolicySnapshot = {
   approvedModels: string[];
   preferredModels: string[];
   sourceFiles: string[];
+  policyConflicts?: string[];
 };
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-async function readSettingsFile(filePath: string): Promise<Settings> {
-  try {
-    return JSON.parse(await readFile(filePath, "utf8")) as Settings;
-  } catch {
-    return {};
-  }
-}
-
-function mergeSettings(globalSettings: Settings, projectSettings: Settings): Settings {
-  const globalOverrides = asRecord(globalSettings.subagents?.agentOverrides);
-  const projectOverrides = asRecord(projectSettings.subagents?.agentOverrides);
-  return {
-    ...globalSettings,
-    ...projectSettings,
-    takomi: { ...(globalSettings.takomi ?? {}), ...(projectSettings.takomi ?? {}) },
-    subagents: {
-      ...(globalSettings.subagents ?? {}),
-      ...(projectSettings.subagents ?? {}),
-      agentOverrides: { ...globalOverrides, ...projectOverrides },
-    },
-  };
-}
-
-async function readSettings(cwd: string): Promise<Settings> {
-  const globalSettings = await readSettingsFile(path.join(os.homedir(), ".pi", "agent", "settings.json"));
-  const projectSettings = await readSettingsFile(path.resolve(cwd, ".pi/settings.json"));
-  return mergeSettings(globalSettings, projectSettings);
-}
-
-function modelFamily(model: string): string {
-  return model.split("/").at(-1)?.toLowerCase() ?? model.toLowerCase();
-}
-
-function unique(values: string[]): string[] {
-  return [...new Set(values.filter(Boolean))];
-}
-
-function collectModelsFromSettings(settings: Settings): string[] {
-  const overrides = asRecord(settings.subagents?.agentOverrides);
-  const models: string[] = [];
-  for (const value of Object.values(overrides)) {
-    const record = asRecord(value);
-    if (typeof record.model === "string") models.push(record.model);
-    if (Array.isArray(record.fallbackModels)) {
-      for (const fallback of record.fallbackModels) if (typeof fallback === "string") models.push(fallback.split(":")[0]);
-    }
-  }
-  return models;
-}
-
-function isModelLike(value: string): boolean {
-  const lower = value.toLowerCase();
-  return /(^|\/)(gpt|claude|gemini|o[0-9]|qwen|deepseek|llama|mistral|kimi|grok|sonnet|haiku|opus|codex|mini|max)/i.test(lower)
-    || lower.includes("oauth-router/")
-    || lower.includes("openai-codex/")
-    || lower.includes("lmstudio/");
-}
-
-function extractPreferredProvider(text: string): string | undefined {
-  const match = text.match(/(?:preferred|default)\s+(?:provider|router)(?:\s*\/\s*(?:provider|router))?\s*:\s*([a-z0-9-]+)/i)
-    ?? text.match(/use\s+([a-z0-9-]+)\s+as\s+(?:the\s+)?(?:provider|router)/i);
-  return match?.[1];
-}
-
-function collectModelsFromPolicy(text: string): string[] {
-  // Providerless names such as "GPT-5.5" are intent labels unless the policy
-  // declares a preferred provider/router header.
-  const explicit = (text.match(/[a-z0-9-]+\/[a-z0-9._-]+/gi) ?? []).filter(isModelLike);
-  const preferredProvider = extractPreferredProvider(text);
-  const inferred: string[] = [];
-  if (preferredProvider && /gpt[- ]?5\.5/i.test(text)) inferred.push(`${preferredProvider}/gpt-5.5`);
-  if (preferredProvider && /gpt[- ]?5\.4(?!\s*mini)/i.test(text)) inferred.push(`${preferredProvider}/gpt-5.4`);
-  if (preferredProvider && /gpt[- ]?5\.4\s*mini/i.test(text)) inferred.push(`${preferredProvider}/gpt-5.4-mini`);
-  return unique([...explicit, ...inferred]);
-}
-
 async function loadSnapshot(cwd: string): Promise<ModelPolicySnapshot> {
-  const settings = await readSettings(cwd);
-  const settingsModels = collectModelsFromSettings(settings);
-  const resolvedPolicy = await resolveTakomiRoutingPolicy(cwd);
-  const sourceFiles = resolvedPolicy.policyPath ? [resolvedPolicy.policyPath] : [];
-  const policyModels = resolvedPolicy.text ? collectModelsFromPolicy(resolvedPolicy.text) : [];
-  const approvedModels = unique([...settingsModels, ...policyModels]);
-  return { approvedModels, preferredModels: settingsModels.length ? unique(settingsModels) : approvedModels, sourceFiles };
+  const snapshot = await loadTakomiModelRoutingSnapshot(cwd);
+  return {
+    approvedModels: snapshot.approvedModels,
+    preferredModels: snapshot.preferredModels,
+    sourceFiles: snapshot.sourceFiles,
+    policyConflicts: snapshot.policyConflicts,
+  };
 }
 
 function collectRequestedModelRefs(input: unknown): Array<{ holder: Record<string, unknown>; key: string; value: string; index?: number }> {
@@ -204,18 +116,18 @@ export function installModelPolicyGate(pi: ExtensionAPI, state: ContextManagerSt
     if (event.toolName !== "takomi_subagent") return;
     const snapshot = await loadSnapshot(ctx.cwd);
     const approved = snapshot.approvedModels;
+    if (snapshot.policyConflicts?.length) {
+      const reason = ["Blocked by conflicting Takomi routing guidance and executable settings.", "", ...snapshot.policyConflicts.map((item) => `- ${item}`)].join("\n");
+      recordBlocked(state, event.toolName, reason);
+      persistReportSnapshot(pi, state, "model-policy-conflict");
+      return { block: true, reason };
+    }
     if (approved.length === 0) return;
 
     const refs = collectRequestedModelRefs(event.input);
     const corrections: Array<{ from: string; to: string; recovery?: string }> = [];
     for (const ref of refs) {
       if (isTakomiModelApproved(ref.value, approved)) continue;
-      const equivalent = approvedModelEquivalent(ref.value, approved);
-      if (equivalent) {
-        setModelRef(ref, equivalent);
-        corrections.push({ from: ref.value, to: equivalent });
-        continue;
-      }
       const recovery = await askForInvalidModelRecovery(ctx, ref.value, approved);
       if (recovery.action === "retry") {
         setModelRef(ref, recovery.model);
@@ -244,7 +156,7 @@ export function installModelPolicyGate(pi: ExtensionAPI, state: ContextManagerSt
         timestamp,
       })));
       persistReportSnapshot(pi, state, "model-policy-correction");
-      const notification = `Takomi context manager corrected subagent model routing:\n- ${corrections.map((correction) => `${sanitizePresentation(correction.from)} -> ${sanitizePresentation(correction.to)}${correction.recovery ? ` (${sanitizePresentation(correction.recovery)})` : ""}`).join("\n- ")}\n\nBe careful to follow /takomi routing policy next time.`;
+      const notification = `Takomi model routing changed only after explicit user selection:\n- ${corrections.map((correction) => `${sanitizePresentation(correction.from)} -> ${sanitizePresentation(correction.to)}${correction.recovery ? ` (${sanitizePresentation(correction.recovery)})` : ""}`).join("\n- ")}`;
       ctx.ui.notify(notification, "warning");
     }
   });

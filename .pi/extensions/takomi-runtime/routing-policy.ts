@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const TAKOMI_ROUTING_POLICY_RELATIVE = path.join(".pi", "takomi", "model-routing.md");
-export const GLOBAL_TAKOMI_ROUTING_POLICY_PATH = path.join(os.homedir(), ".pi", "takomi", "model-routing.md");
+export const GLOBAL_TAKOMI_ROUTING_POLICY_PATH = path.join(os.homedir(), ".pi", "agent", "takomi", "model-routing.md");
 export const GLOBAL_PI_SETTINGS_PATH = path.join(os.homedir(), ".pi", "agent", "settings.json");
 export const PROJECT_PI_SETTINGS_RELATIVE = path.join(".pi", "settings.json");
 export const BUNDLED_TAKOMI_ROUTING_POLICY_PATH = path.resolve(
@@ -99,59 +99,6 @@ function normalizeForSettings(filePath: string): string {
   return filePath.replaceAll(path.sep, "/");
 }
 
-function extractPreferredProvider(policy: string): string | undefined {
-  const match = policy.match(/(?:preferred|default)\s+(?:provider|router)(?:\s*\/\s*(?:provider|router))?\s*:\s*([a-z0-9-]+)/i)
-    ?? policy.match(/use\s+([a-z0-9-]+)\s+as\s+(?:the\s+)?(?:provider|router)/i);
-  return match?.[1];
-}
-
-function findExplicitProviderModel(policy: string, family: RegExp): string | undefined {
-  const refs = policy.match(/[a-z0-9-]+\/[a-z0-9._-]+/gi) ?? [];
-  return refs.find((ref) => family.test(ref));
-}
-
-function providerModel(preferredProvider: string | undefined, model: string): string | undefined {
-  return preferredProvider ? `${preferredProvider}/${model}` : undefined;
-}
-
-function withOptionalModel(model: string | undefined, thinking: string, extra: JsonObject = {}): JsonObject {
-  return model ? { model, thinking, ...extra } : { thinking, ...extra };
-}
-
-function deriveSubagentDefaults(policy: string): { overrides: JsonObject; detected: string[] } {
-  const lower = policy.toLowerCase();
-  const has55 = /gpt[- ]?5\.5/.test(lower);
-  const has54 = /gpt[- ]?5\.4(?!\s*mini)/.test(lower);
-  const hasMini = /gpt[- ]?5\.4\s*mini/.test(lower);
-  if (!has55 && !has54 && !hasMini) return { overrides: {}, detected: [] };
-
-  // Keep generated settings provider-agnostic unless the policy explicitly
-  // declares provider-qualified models or a preferred provider/router header.
-  const preferredProvider = extractPreferredProvider(policy);
-  const model55 = findExplicitProviderModel(policy, /gpt[-_.]?5\.5/i) ?? providerModel(preferredProvider, "gpt-5.5");
-  const model54 = findExplicitProviderModel(policy, /gpt[-_.]?5\.4(?![-_.]?mini)/i) ?? providerModel(preferredProvider, "gpt-5.4");
-  const modelMini = findExplicitProviderModel(policy, /gpt[-_.]?5\.4[-_.]?mini/i) ?? providerModel(preferredProvider, "gpt-5.4-mini");
-  const overrides: JsonObject = {};
-  const detected: string[] = [];
-
-  if (has55) {
-    overrides.orchestrator = withOptionalModel(model55, "high");
-    overrides.architect = withOptionalModel(model55, "high");
-    overrides.reviewer = withOptionalModel(model55, "high");
-    detected.push(model55 ? `orchestrator/architect/reviewer → ${model55} high` : "orchestrator/architect/reviewer → GPT-5.5 high intent");
-  }
-  if (has54) {
-    overrides.general = withOptionalModel(model54, "high", model55 ? { fallbackModels: [`${model55}:low`] } : {});
-    overrides.coder = withOptionalModel(model54, "high", model55 ? { fallbackModels: [`${model55}:low`] } : {});
-    overrides.designer = withOptionalModel(model54, "high", model55 ? { fallbackModels: [`${model55}:low`] } : {});
-    detected.push(model54 ? `general/coder/designer → ${model54} high` : "general/coder/designer → GPT-5.4 high intent");
-  }
-  if (hasMini) {
-    detected.push(modelMini ? `GPT-5.4 Mini available for explicit small-task overrides: ${modelMini}` : "GPT-5.4 Mini available as small-task intent only");
-  }
-  return { overrides, detected };
-}
-
 export async function resolveTakomiRoutingPolicy(cwd: string): Promise<ResolvedRoutingPolicy> {
   const projectSettingsPath = path.join(cwd, PROJECT_PI_SETTINGS_RELATIVE);
   const projectSettings = await readJsonObject(projectSettingsPath);
@@ -216,9 +163,11 @@ export function previewTakomiRoutingPolicy(cwd: string, input: string, options: 
   const settingsPath = scope === "project"
     ? path.join(cwd, PROJECT_PI_SETTINGS_RELATIVE)
     : GLOBAL_PI_SETTINGS_PATH;
-  const { overrides, detected } = deriveSubagentDefaults(policy);
+  const overrides: JsonObject = {};
+  const detected: string[] = [];
 
-  // Resolve named model families from Pi's registry for review visibility. These
+  // Markdown is advisory model-facing guidance. It is never parsed into executable defaults.
+  // Resolve named model families from Pi's registry only for preview visibility.
   // are conditional routing intents, not role-wide defaults, so do not invent
   // agentOverrides merely to make the extraction non-empty.
   const availableModels = [...new Set(options.availableModels ?? [])];
@@ -246,13 +195,6 @@ export async function installTakomiRoutingPolicy(cwd: string, input: string, opt
     : normalizeForSettings(GLOBAL_TAKOMI_ROUTING_POLICY_PATH);
   settings.takomi = takomi;
 
-  if (Object.keys(overrides).length > 0) {
-    const subagents = asObject(settings.subagents);
-    const existingOverrides = asObject(subagents.agentOverrides);
-    subagents.agentOverrides = { ...existingOverrides, ...overrides };
-    settings.subagents = subagents;
-  }
-
   await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
   return { policyPath, settingsPath, settingsUpdated: true, detectedDefaults };
 }
@@ -264,11 +206,88 @@ export function renderRoutingPolicyPreview(preview: RoutingPolicyPreviewResult):
     `Policy path: ${preview.policyPath}`,
     `Settings path: ${preview.settingsPath}`,
     "",
-    preview.detectedDefaults.length ? "Detected routing defaults:" : "Detected routing defaults: none",
+    preview.detectedDefaults.length ? "Advisory model concepts recognized:" : "Advisory model concepts recognized: none",
     ...preview.detectedDefaults.map((item) => `- ${item}`),
     "",
-    overrideLines.length ? "Settings overrides to write:" : "Settings overrides to write: none",
+    overrideLines.length ? "Executable settings changes:" : "Executable settings changes: none (Markdown is advisory only)",
     ...overrideLines,
+  ].join("\n");
+}
+
+export type TakomiRoutingConfigUpdate = {
+  defaultProvider?: string;
+  approvedModels?: string[];
+  roleDefaults?: Record<string, { model?: string; thinking?: string; fallbackModels?: string[] }>;
+};
+
+export type TakomiRoutingConfigPreview = {
+  scope: RoutingPolicyInstallScope;
+  settingsPath: string;
+  before: JsonObject;
+  after: JsonObject;
+};
+
+const CANONICAL_ROUTING_ROLES = new Set(["architect", "designer", "coder", "worker", "reviewer", "orchestrator"]);
+
+function validateRoutingConfig(update: TakomiRoutingConfigUpdate, availableModels: string[] = []): void {
+  const allConfigured = [
+    ...(update.approvedModels ?? []),
+    ...Object.values(update.roleDefaults ?? {}).flatMap((entry) => [entry.model, ...(entry.fallbackModels ?? [])]).filter((item): item is string => Boolean(item)),
+  ];
+  for (const role of Object.keys(update.roleDefaults ?? {})) {
+    if (!CANONICAL_ROUTING_ROLES.has(role)) throw new Error(`Unknown Takomi persona '${role}'. Use architect, designer, coder, worker, reviewer, or orchestrator.`);
+  }
+  for (const model of allConfigured) {
+    const base = model.replace(/:(?:off|minimal|low|medium|high|xhigh)$/i, "");
+    if (!base.includes("/")) throw new Error(`Model '${model}' must be provider-qualified.`);
+    if (availableModels.length && !availableModels.includes(base)) throw new Error(`Model '${base}' is not enabled in Pi's available model registry.`);
+  }
+}
+
+export async function previewTakomiRoutingConfig(
+  cwd: string,
+  scope: RoutingPolicyInstallScope,
+  update: TakomiRoutingConfigUpdate,
+  availableModels: string[] = [],
+): Promise<TakomiRoutingConfigPreview> {
+  validateRoutingConfig(update, availableModels);
+  const settingsPath = scope === "project" ? path.join(cwd, PROJECT_PI_SETTINGS_RELATIVE) : GLOBAL_PI_SETTINGS_PATH;
+  const settings = await readJsonObject(settingsPath);
+  const takomi = asObject(settings.takomi);
+  const before = asObject(takomi.routing);
+  const existingRoles = asObject(before.roleDefaults);
+  const nextRoles = { ...existingRoles };
+  for (const [role, value] of Object.entries(update.roleDefaults ?? {})) {
+    nextRoles[role] = { ...asObject(existingRoles[role]), ...value };
+  }
+  const after: JsonObject = {
+    ...before,
+    ...(update.defaultProvider !== undefined ? { defaultProvider: update.defaultProvider } : {}),
+    ...(update.approvedModels !== undefined ? { approvedModels: [...new Set(update.approvedModels)] } : {}),
+    ...(update.roleDefaults !== undefined ? { roleDefaults: nextRoles } : {}),
+  };
+  return { scope, settingsPath, before, after };
+}
+
+export async function installTakomiRoutingConfig(preview: TakomiRoutingConfigPreview): Promise<void> {
+  const settings = await readJsonObject(preview.settingsPath);
+  const takomi = asObject(settings.takomi);
+  takomi.routing = preview.after;
+  settings.takomi = takomi;
+  await mkdir(path.dirname(preview.settingsPath), { recursive: true });
+  await writeFile(preview.settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+}
+
+export function renderTakomiRoutingConfigPreview(preview: TakomiRoutingConfigPreview): string {
+  return [
+    `Scope: ${preview.scope}`,
+    `Settings: ${preview.settingsPath}`,
+    "",
+    "Before:",
+    JSON.stringify(preview.before, null, 2),
+    "",
+    "After:",
+    JSON.stringify(preview.after, null, 2),
   ].join("\n");
 }
 

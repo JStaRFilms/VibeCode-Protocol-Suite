@@ -55,28 +55,30 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
   }
 
   async function handleMode(ctx: ExtensionCommandContext, mode?: string): Promise<void> {
-    if (mode !== "direct" && mode !== "orchestrate" && mode !== "review") {
-      ctx.ui.notify("Usage: /takomi mode <direct|orchestrate|review>", "warning");
+    if (mode === "direct") mode = "code";
+    if (mode !== "idle" && mode !== "code" && mode !== "orchestrate" && mode !== "review") {
+      ctx.ui.notify("Usage: /takomi mode <idle|code|review|orchestrate>", "warning");
       return;
     }
-    const hasGenesis = await options.hasGenesisArtifacts(ctx.cwd);
     await options.updateState(ctx, () => {
       const state = options.getState();
       state.enabled = true;
-      if (mode === "direct") {
+      if (mode === "idle") {
         state.autoOrch = false;
         state.planMode = false;
         state.role = "general";
-        state.stage = undefined;
-        state.workflow = undefined;
         state.modeSource = "idle";
         state.modeReason = undefined;
+      } else if (mode === "code") {
+        state.autoOrch = false;
+        state.planMode = false;
+        state.role = "coder";
+        state.modeSource = "manual";
+        state.modeReason = "/takomi mode code";
       } else if (mode === "orchestrate") {
         state.autoOrch = true;
         state.planMode = true;
         state.role = "orchestrator";
-        state.stage = hasGenesis ? "build" : "genesis";
-        state.workflow = hasGenesis ? "vibe-build" : "vibe-genesis";
         state.modeSource = "manual";
         state.modeReason = "/takomi mode orchestrate";
       } else {
@@ -84,9 +86,7 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
         state.planMode = true;
         state.launchMode = "manual";
         options.recordUserGateAutoProvenance(false);
-        state.role = "review";
-        state.stage = undefined;
-        state.workflow = undefined;
+        state.role = "reviewer";
         state.modeSource = "manual";
         state.modeReason = "/takomi mode review";
       }
@@ -201,14 +201,14 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
         ? `WARNING: This input is much shorter than the active policy (${preview.policy.length} vs ${activePolicy.text.length} characters). It will replace the file, not merge into it. If the user referred to a full source file or prior policy, inspect and use that complete text instead.`
         : "This input replaces the selected policy file exactly; it is not merged with the active policy.";
       const reviewPrompt = [
-        "Review this Takomi routing policy extraction before it is saved.",
+        "Review this advisory Takomi model-routing guidance before it is saved.",
         "",
         "Rules:",
         "- Do not invent providers or model IDs not grounded in the policy.",
-        "- Providerless names are valid routing intent. Require a provider only when writing an executable model override.",
-        "- Check the available Pi model registry below before asking the user whether a named model exists or what its exact ID is.",
-        "- Conditional task-shape routes do not need to be forced into role-wide defaults or agentOverrides.",
-        "- Valid role-wide Takomi overrides are: general, orchestrator, architect, designer, coder, reviewer. Other headings may still be policy concepts or execution routes.",
+        "- Providerless names such as Sol, Terra, and Luna are valid advisory routing concepts.",
+        "- Do not infer executable providers, allowlists, fallbacks, or persona defaults from this prose.",
+        "- Executable changes belong in takomi.routing settings through takomi_config_routing.",
+        "- Canonical Takomi personas are: architect, designer, coder, worker, reviewer, orchestrator.",
         "- Preserve the user's full authored policy. If this looks like a summary/excerpt and a richer referenced source exists, inspect that source and apply the complete intended text instead of overwriting it with the excerpt.",
         "- If the extraction is correct and safe, call takomi_apply_routing_policy with the complete intended policyText and scope below.",
         "- Ask only for unresolved provider/account choices or genuine policy ambiguity; do not ask for facts available from the registry or files.",
@@ -227,7 +227,7 @@ export function registerTakomiCommands(pi: ExtensionAPI, options: RegisterTakomi
         "",
         `Tool call to apply if safe: takomi_apply_routing_policy({ scope: ${JSON.stringify(scope)}, policyText: <original policy text> })`,
       ].join("\n");
-      ctx.ui.notify("Takomi routing extraction prepared. Sending it to the active model for review before saving.", "info");
+      ctx.ui.notify("Takomi routing guidance prepared. Sending it to the active model for preservation review before saving.", "info");
       pi.sendUserMessage(reviewPrompt);
     } catch (error) {
       ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");

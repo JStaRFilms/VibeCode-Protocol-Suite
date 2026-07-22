@@ -205,14 +205,17 @@ const lifecycleUrl = await transpileTakomi("async-lifecycle.ts", { "./pi-subagen
 const aliasesStub = dataModule(`export function resolveAgentName(name) { return name; }`);
 const routingStub = dataModule(`
   export function applyTakomiRoutingDefaults(value) { return value; }
+  export function isTakomiModelApproved() { return true; }
   export function loadTakomiModelRoutingSnapshotSync() { return {}; }
-  export async function loadTakomiModelRoutingSnapshot() { return {}; }
+  export async function loadTakomiModelRoutingSnapshot() { return { approvedModels: [] }; }
 `);
+const engineAgentsStub = dataModule(`export const TAKOMI_PUBLIC_AGENT_NAMES = ["architect", "designer", "coder", "worker", "reviewer", "orchestrator"];`);
 const engineUrl = await transpileTakomi("pi-subagents-engine.ts", {
   "./pi-subagents-internal": internalsUrl,
   "./agent-aliases": aliasesStub,
   "../takomi-runtime/model-routing-defaults": routingStub,
   "./async-lifecycle": lifecycleUrl,
+  "./agents": engineAgentsStub,
 });
 const profileStub = dataModule(`export async function loadTakomiProfile() { return { launchMode: "auto" }; }`);
 const provenanceStub = dataModule(`export function hasUserGateAutoProvenance() { return false; }`);

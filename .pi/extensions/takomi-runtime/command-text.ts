@@ -14,7 +14,7 @@ const ROOT_COMPLETIONS: TakomiCompletion[] = [
   { value: "design", label: "design", description: "Run UI/UX design from approved scope" },
   { value: "build", label: "build", description: "Implement against the agreed UI" },
   { value: "plan", label: "plan", description: "Create or update the orchestration plan" },
-  { value: "mode", label: "mode", description: "Set direct, orchestrate, or review mode" },
+  { value: "mode", label: "mode", description: "Set idle, code, review, or orchestrate main-agent mode" },
   { value: "gate", label: "gate", description: "Set auto or review-gated execution" },
   { value: "subagents", label: "subagents", description: "Control subagent usage and view" },
   { value: "stats", label: "stats", description: "Show token, model, project, session, tool, and subagent usage stats" },
@@ -23,9 +23,10 @@ const ROOT_COMPLETIONS: TakomiCompletion[] = [
 
 const SUBCOMMAND_COMPLETIONS: Record<string, TakomiCompletion[]> = {
   mode: [
-    { value: "direct", label: "direct", description: "Handle work directly unless delegation is explicit" },
-    { value: "orchestrate", label: "orchestrate", description: "Plan and delegate broad work" },
+    { value: "idle", label: "idle", description: "Clear active Takomi main-agent behavior" },
+    { value: "code", label: "code", description: "Implement directly in the main session" },
     { value: "review", label: "review", description: "Inspect outputs and route fixes" },
+    { value: "orchestrate", label: "orchestrate", description: "Coordinate lifecycle work and specialist personas" },
   ],
   gate: [
     { value: "review", label: "review", description: "Return to the user after each task" },
@@ -94,7 +95,7 @@ export function commandHelp(): string {
     "/takomi design [prompt]",
     "/takomi build [prompt]",
     "/takomi plan [title]",
-    "/takomi mode <direct|orchestrate|review>",
+    "/takomi mode <idle|code|review|orchestrate>",
     "/takomi gate <auto|review>",
     "/takomi subagents <list|on|off|status>",
     "/takomi stats [overview|daily|models|projects|projects-full|sessions|sessions-full|tasks|tasks-full|tools|subagents|sources] [since 7d]",

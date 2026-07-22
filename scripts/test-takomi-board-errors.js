@@ -101,6 +101,47 @@ try {
     tasks: [{ id: "BLD-002", title: "Guard completion", role: "code", stage: "build", checklist: ["Run tests"] }],
   });
 
+  const paths = {
+    masterPlan: path.join(workspace, "docs", "tasks", "orchestrator-sessions", sessionId, "master_plan.md"),
+  };
+  const authoredPlan = "# Human Master Plan\n\nThis detailed plan is canonical.\n\n## Architecture\n\n- Preserve this exact prose.\n";
+  await fs.writeFile(paths.masterPlan, authoredPlan, "utf8");
+  const expansion = await execute({
+    action: "expand_stage",
+    sessionId,
+    stage: "build",
+    masterPlanMarkdown: "short replacement",
+    tasks: [{ id: "BLD-003", title: "Implement safely", role: "coder", checklist: ["Verify"], expectedArtifacts: ["code"] }],
+  });
+  assert.equal(await fs.readFile(paths.masterPlan, "utf8"), authoredPlan, "stage expansion preserves a human-authored master plan byte-for-byte");
+  assert.equal(expansion.details.masterPlanDisposition, "preserved", "stage expansion reports preservation disposition");
+  assert.match(resultText(expansion), /WARNING: Preserved/, "stage expansion visibly warns when incoming content is rejected");
+
+  await execute({ action: "update_task", sessionId, taskId: "BLD-003", status: "in-progress" });
+  assert.equal(await fs.readFile(paths.masterPlan, "utf8"), authoredPlan, "task status changes cannot alter the authored master plan");
+
+  const currentHash = (await import("node:crypto")).createHash("sha256").update(authoredPlan).digest("hex");
+  const hashFailure = await execute({
+    action: "replace_master_plan",
+    sessionId,
+    confirmReplaceMasterPlan: true,
+    expectedCurrentSha256: "0".repeat(64),
+    masterPlanMarkdown: "replacement",
+  });
+  assert.equal(hashFailure.details.error.code, "master-plan-hash-mismatch", "destructive replacement fails closed on hash mismatch");
+  assert.equal(await fs.readFile(paths.masterPlan, "utf8"), authoredPlan, "hash mismatch leaves the plan untouched");
+
+  const replacement = "# Intentionally Replaced\n";
+  const replaced = await execute({
+    action: "replace_master_plan",
+    sessionId,
+    confirmReplaceMasterPlan: true,
+    expectedCurrentSha256: currentHash,
+    masterPlanMarkdown: replacement,
+  });
+  assert.equal(await fs.readFile(paths.masterPlan, "utf8"), replacement, "confirmed matching-hash replacement succeeds with exact bytes");
+  assert.equal(replaced.details.masterPlanDisposition, "written", "explicit replacement reports written disposition");
+
   const cases = [
     {
       name: "missing session identifier",
@@ -129,6 +170,37 @@ try {
       code: "completion-gate",
       severity: "warning",
       text: "Task BLD-002 cannot be marked completed until every checklist item is done.",
+    },
+    {
+      name: "hidden upstream persona",
+      args: {
+        action: "init_session",
+        sessionId: "orch-20260712-114202",
+        title: "Reject Oracle",
+        tasks: [{ title: "Write architecture", role: "architect", preferredAgent: "oracle", expectedArtifacts: ["architecture.md"] }],
+      },
+      code: "invalid-task-routing",
+      severity: "error",
+      text: "hidden or unknown agent 'oracle'",
+    },
+    {
+      name: "write capability mismatch",
+      args: {
+        action: "init_session",
+        sessionId: "orch-20260712-114203",
+        title: "Reject read-only writer",
+        tasks: [{ title: "Write audit", role: "reviewer", expectedArtifacts: ["audit.md"] }],
+      },
+      code: "invalid-task-routing",
+      severity: "error",
+      text: "requires writable artifacts",
+    },
+    {
+      name: "existing session initialization",
+      args: { action: "init_session", sessionId, title: "Duplicate" },
+      code: "session-already-exists",
+      severity: "warning",
+      text: `Session ${sessionId} already exists`,
     },
     {
       name: "invalid expansion",

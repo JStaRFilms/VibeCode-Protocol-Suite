@@ -4,7 +4,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import type { TakomiLaunchMode, TakomiThinkingLevel } from "../../../src/pi-takomi-core";
 import { loadTakomiProfile } from "../takomi-runtime/profile";
 import { hasUserGateAutoProvenance } from "../takomi-runtime/gate-provenance";
-import { applyTakomiRoutingDefaults, loadTakomiModelRoutingSnapshot } from "../takomi-runtime/model-routing-defaults";
+import { applyTakomiRoutingDefaults, isTakomiModelApproved, loadTakomiModelRoutingSnapshot } from "../takomi-runtime/model-routing-defaults";
 import { resolveAgentName } from "./agent-aliases";
 import { discoverTakomiAgents, type TakomiAgentConfig, type TakomiAgentScope } from "./agents";
 import { createTakomiDelegationPlan, renderTakomiDelegationPlan } from "./delegation-plan";
@@ -26,6 +26,7 @@ export type TakomiSubagentToolTask = {
   conversationId?: string;
   cwd?: string;
   checklist?: ChecklistItem[];
+  requiredCapabilities?: string[];
   acceptance?: TakomiAcceptanceInput;
 };
 
@@ -92,6 +93,19 @@ function hasProjectAgents(tasks: Array<{ agent: string }>, agents: Map<string, T
   return tasks.some((task) => agents.get(task.agent)?.source === "project");
 }
 
+function taskRequiresWrite(task: TakomiSubagentToolTask): boolean {
+  if (task.requiredCapabilities?.some((capability) => /^(write|edit|write-docs|write-code)$/i.test(capability))) return true;
+  return /\b(?:create|write|author|edit|modify|update|implement|fix)\b[\s\S]{0,100}\b(?:file|files|markdown|document|documents|artifact|artifacts|code|configuration)\b/i.test(task.task);
+}
+
+function capabilityMismatch(task: TakomiSubagentToolTask, agent: TakomiAgentConfig | undefined): string | undefined {
+  if (!agent) return undefined;
+  if (taskRequiresWrite(task) && !agent.tools?.some((tool) => tool === "write" || tool === "edit")) {
+    return `Task assigned to '${task.agent}' requires file writing, but that persona is inspection-only. Choose architect or designer for their authored Markdown, coder for code, or worker for other writable artifacts.`;
+  }
+  return undefined;
+}
+
 function hostTrustsProjectAgents(): boolean {
   return /^(1|true|yes)$/i.test(process.env.TAKOMI_TRUST_PROJECT_AGENTS || "");
 }
@@ -127,6 +141,7 @@ function compactTaskForFingerprint(task: TakomiSubagentToolTask): Record<string,
     conversationId: task.conversationId || undefined,
     cwd: task.cwd,
     checklist: compactChecklistForFingerprint(task.checklist),
+    requiredCapabilities: task.requiredCapabilities?.length ? task.requiredCapabilities : undefined,
     acceptance: task.acceptance,
   };
 }
@@ -332,6 +347,7 @@ function resolveTasks(params: TakomiSubagentToolParams): TakomiSubagentToolTask[
       conversationId: params.conversationId,
       cwd: undefined,
       checklist: params.checklist,
+      requiredCapabilities: params.requiredCapabilities,
       acceptance: params.acceptance,
     }];
   }
@@ -403,6 +419,29 @@ export async function executeTakomiSubagentTool(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return textResult(message, { results: [], availableAgents: agents.map((agent) => agent.name), agentScope }, true);
+  }
+
+  for (const task of tasks) {
+    if (!byName.has(task.agent)) {
+      return textResult(
+        `Unknown or hidden Takomi persona '${task.agent}'. Available personas: ${agents.map((agent) => agent.name).join(", ") || "none"}.`,
+        { results: [], agentScope, task, reason: "unknown-persona" },
+        true,
+      );
+    }
+    const mismatch = capabilityMismatch(task, byName.get(task.agent));
+    if (mismatch) return textResult(`Blocked by Takomi capability validation.\n\n${mismatch}`, { results: [], agentScope, task, reason: "capability-mismatch" }, true);
+    if (task.model && routingSnapshot.approvedModels.length && !isTakomiModelApproved(task.model, routingSnapshot.approvedModels)) {
+      return textResult(
+        `Blocked by Takomi routing policy. Exact model '${task.model}' is not approved. No provider-equivalent substitution was attempted.`,
+        { results: [], agentScope, task, reason: "model-not-approved", approvedModels: routingSnapshot.approvedModels },
+        true,
+      );
+    }
+    const invalidFallback = task.fallbackModels?.find((model) => routingSnapshot.approvedModels.length && !isTakomiModelApproved(model, routingSnapshot.approvedModels));
+    if (invalidFallback) {
+      return textResult(`Blocked by Takomi routing policy. Explicit fallback '${invalidFallback}' is not approved.`, { results: [], agentScope, task, reason: "fallback-not-approved" }, true);
+    }
   }
 
   if (!mode) {

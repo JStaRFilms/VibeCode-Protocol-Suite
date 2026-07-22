@@ -33,7 +33,7 @@ Inside Pi, use:
 - `/takomi design [prompt]` to run UI/UX design against the agreed project direction
 - `/takomi build [prompt]` to implement while cross-checking against approved UI/design artifacts
 - `/takomi plan [title]` to create a Genesis-first orchestration session that can expand through Design and Build
-- `/takomi mode direct`, `/takomi mode orchestrate`, or `/takomi mode review` to choose the session operating mode
+- `/takomi mode idle|code|review|orchestrate` to choose the main-agent mode; Genesis, Design, and Build remain separate lifecycle stages
 - `/takomi gate auto` to continue approved plans automatically and explicitly authorize project-local agents for this session
 - `/takomi gate review` (or `/takomi gate manual`) to return to the user after each task with results and verification guidance and revoke that authorization
 - `/takomi subagents on` or `/takomi subagents off` to allow or disable delegated subagents
@@ -100,12 +100,12 @@ So when working on packaging, agents should distinguish between:
 - Design stage includes a Gemini-oriented hint for model selection.
 - Build is treated as a workflow/stage, not as a separate specialist agent.
 - A fresh orchestration session starts with a Genesis foundation task, then expands Design and Build only when the scope justifies it.
-- The main execution roles remain things like `orchestrator`, `coder`, `designer`, `architect`, and `reviewer`.
+- The only public Takomi personas are `architect`, `designer`, `coder`, `worker`, `reviewer`, and `orchestrator`. Overlapping upstream built-ins remain hidden behind the execution engine.
 - Agent discovery prefers `project/.pi/agents/`, also supports legacy `project/.agents/`, and falls back to Pi's configured user agent directory so new projects can reuse the global Takomi agent pack without hard-coding `~/.pi` assumptions.
 - Orchestrator sessions run in hybrid mode:
   - human-readable docs live under `docs/tasks/orchestrator-sessions/<sessionId>/`
   - machine state lives under `.pi/takomi/orchestrator/<sessionId>.json`
-- Task packets can carry `workflow`, `skills`, `preferredModel`, `fallbackModels`, `preferredThinking`, `executionHint`, `conversationId`, and `checklist` metadata.
+- Task packets use canonical persona names and can carry `workflow`, `skills`, confirmed `preferredModel`, explicit `fallbackModels`, `requiredCapabilities`, `preferredThinking`, `executionHint`, `conversationId`, and `checklist` metadata.
 - Direct `takomi_subagent` calls build a `TakomiDelegationPlan` before launch. In auto mode the plan launches immediately; in manual mode the plan is returned for review until `confirmLaunch=true` is supplied.
 - The subagent tool supports `conversationId`, so reviewed work can be sent back to the same agent for continuation instead of restarting from scratch.
 - The subagent tool supports Pi-style single, parallel `tasks`, sequential `chain`, explicit `context=fork|fresh`, `async=true`, and native read/control actions such as `action=list`, `action=status`, `action=doctor`, `action=interrupt`, and `action=resume`.
@@ -119,9 +119,9 @@ So when working on packaging, agents should distinguish between:
 - Use Pi's native result expansion, `Alt+T`, or `/takomi subagents expand` to inspect detailed subagent output.
 - Takomi still tracks active runs internally for status and review continuity, but board synchronization is explicit: run with `takomi_subagent`, then update the board.
 - `takomi-context-manager` reduces prompt bloat by replacing the always-on skill description dump with a names-only Skill Index plus progressive `skill_manifest`/`skill_load` tools.
-- `takomi-context-manager` treats `/takomi routing` as the source of truth for model-routing policy via `.pi/settings.json -> takomi.modelRoutingPolicyFile`.
+- `model-routing.md` is advisory model-facing guidance. Executable provider allowlists and persona defaults live only under `takomi.routing` in global/project settings.
 - `takomi-context-manager` gates `takomi_subagent` when model-routing context has not been loaded, provides the routing policy, and tells the agent to retry.
-- `takomi-context-manager` can correct safe wrong-provider model requests, block or pause on policy violations, and ask the user whether to retry with an approved model or stop.
+- `takomi-context-manager` never performs provider-family substitution. It blocks unapproved exact IDs and changes models only after explicit user selection.
 - `takomi-context-manager` detects known duplicate global/project Takomi extension paths in `context_report` to help diagnose tool registration conflicts.
 - `context_report` restores context-manager snapshots and Pi tool-result history after reload/restart and explicitly labels gaps; it is not a replacement for Pi's Alt-C token/session stats.
 - `context_report` defaults to compact `mode: "summary"`; use `mode: "verbose"` for full diagnostics or `mode: "problems"` for attention-only output. `verbose: true` remains a compatibility alias. `/context-report` exposes `summary`, `verbose`, and `problems` as slash-command argument completions.

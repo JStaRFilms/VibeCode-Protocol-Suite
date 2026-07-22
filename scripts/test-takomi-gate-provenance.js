@@ -79,18 +79,22 @@ await handler("build preserve this optional request", context);
 assert.deepEqual(stageCalls, ["build"], "stage command sets the requested lifecycle stage");
 assert.deepEqual(notifications.at(-1), { message: "workflow:build:preserve this optional request", level: "info" }, "stage command restores workflowPrompt(stage, prompt), including optional request text");
 notifications.length = 0;
+state.stage = "design";
+state.workflow = "vibe-design";
 
-await handler("mode direct", context);
-assert.deepEqual(notifications, [{ message: "Takomi mode set to direct", level: "info" }], "direct mode remains visibly acknowledged when the runtime widget is absent");
+await handler("mode code", context);
+assert.deepEqual(notifications, [], "code mode notification is deduplicated when the runtime widget represents the active mode");
+assert.equal(state.role, "coder", "main-agent code mode selects the canonical coder persona");
+assert.equal(state.stage, "design", "main-agent mode changes do not mutate the lifecycle stage");
 
 await handler("gate auto", context);
 assert.deepEqual(provenance, [true], "/takomi gate auto records explicit user authorization");
 assert.equal(state.launchMode, "auto");
-assert.deepEqual(notifications.at(-1), { message: "Takomi execution gate set to auto", level: "info" }, "gate success remains visible in direct mode");
+assert.deepEqual(notifications, [], "gate success is represented by the active runtime widget");
 
 await handler("subagents off", context);
 assert.equal(state.subagentsEnabled, false);
-assert.deepEqual(notifications.at(-1), { message: "Takomi subagents off", level: "info" }, "subagent changes remain visible in direct mode");
+assert.deepEqual(notifications, [], "subagent changes are represented by the active runtime widget");
 
 const directNotificationCount = notifications.length;
 await handler("mode review", context);

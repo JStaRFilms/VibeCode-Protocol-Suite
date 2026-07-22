@@ -61,12 +61,14 @@ const routingUrl = dataModule(`
   export function applyTakomiRoutingDefaults(value) { return value; }
   export function loadTakomiModelRoutingSnapshotSync() { return {}; }
 `);
+const agentsUrl = dataModule(`export const TAKOMI_PUBLIC_AGENT_NAMES = ["architect", "designer", "coder", "worker", "reviewer", "orchestrator"];`);
 globalThis.__takomiAcceptanceState = state;
 const engineUrl = await transpile(path.join(extensionDir, "pi-subagents-engine.ts"), {
   "./pi-subagents-internal": internalsUrl,
   "./async-lifecycle": lifecycleUrl,
   "./agent-aliases": aliasesUrl,
   "../takomi-runtime/model-routing-defaults": routingUrl,
+  "./agents": agentsUrl,
 });
 const nativeAcceptanceUrl = await transpile(nativeAcceptancePath);
 const [{ createTakomiPiSubagentsEngine }, acceptance] = await Promise.all([

@@ -45,6 +45,7 @@ const TaskSchema = Type.Object({
   conversationId: Type.Optional(Type.String()),
   cwd: Type.Optional(Type.String()),
   checklist: Type.Optional(Type.Array(Type.Union([Type.String(), ChecklistItemSchema]))),
+  requiredCapabilities: Type.Optional(Type.Array(Type.String(), { description: "Capabilities required by the task, such as write-docs or write-code" })),
   acceptance: Type.Optional(AcceptanceSchema),
 });
 
@@ -75,6 +76,7 @@ const SubagentParameters = Type.Object({
   conversationId: Type.Optional(Type.String({ description: "Persistent conversation id to resume the same subagent session" })),
   cwd: Type.Optional(Type.String({ description: "Working directory override" })),
   checklist: Type.Optional(Type.Array(Type.Union([Type.String(), ChecklistItemSchema]), { description: "Optional checklist for the subagent" })),
+  requiredCapabilities: Type.Optional(Type.Array(Type.String(), { description: "Capabilities required by the task, such as write-docs or write-code" })),
   acceptance: Type.Optional(AcceptanceSchema),
   tasks: Type.Optional(Type.Array(TaskSchema, { description: "Parallel subagent tasks" })),
   confirmLaunch: Type.Optional(Type.Boolean({ description: "Required to launch immediately in manual Takomi launch mode" })),
@@ -107,6 +109,8 @@ function registerSubagentTool(pi: ExtensionAPI): void {
       "Set context=fork only when inherited parent-session history is needed; otherwise prefer fresh or the agent default.",
       "Set async=true for long-running work when the parent can continue safely; keep active worktree writes single-threaded unless worktree isolation is enabled.",
       "Set clarify=true when the user asks to preview/edit a subagent run in the native Pi TUI before launch.",
+      "Use only Takomi's canonical personas: architect, designer, coder, worker, reviewer, and orchestrator.",
+      "Set requiredCapabilities for artifact-producing tasks; the runtime blocks inspection-only personas from write-required work.",
       "Use model, fallbackModels, and thinking only when deliberate; otherwise let the agent/profile defaults apply.",
       "If review sends work back to the same agent, reuse the same conversationId for continuity.",
       "If a launch is blocked, cancelled, paused, or review-gated, do not retry automatically; wait for the user's next prompt."

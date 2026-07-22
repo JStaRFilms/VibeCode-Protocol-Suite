@@ -31,13 +31,14 @@ const provenanceStub = dataModule(`
   }
 `);
 const routingStub = dataModule(`
-  export async function loadTakomiModelRoutingSnapshot() { return {}; }
+  export async function loadTakomiModelRoutingSnapshot() { return { approvedModels: [] }; }
   export function applyTakomiRoutingDefaults(task) { return task; }
+  export function isTakomiModelApproved() { return true; }
 `);
 const aliasesStub = dataModule(`export function resolveAgentName(name) { return name; }`);
 const agentsStub = dataModule(`
   export function discoverTakomiAgents() {
-    return [{ name: "project-agent", source: "project", defaultContext: globalThis.__takomiTestAgentDefaultContext }];
+    return ["project-agent", "second-agent"].map((name) => ({ name, source: "project", defaultContext: globalThis.__takomiTestAgentDefaultContext }));
   }
 `);
 const delegationStub = dataModule(`

@@ -495,14 +495,14 @@ try {
     },
   };
   const toolCall = gateHandlers.get("tool_call");
-  const autoCorrectedInput = { model: maliciousRequestedModel };
-  await toolCall({ toolName: "takomi_subagent", input: autoCorrectedInput }, gateContext);
-  assert.equal(autoCorrectedInput.model, maliciousPolicyModel, "equivalent provider correction must retain the exact raw approved model ID");
-  assert.equal(gateSelections.length, 0, "equivalent raw model correction must not invoke recovery selection");
+  const explicitlyRecoveredInput = { model: maliciousRequestedModel };
+  await toolCall({ toolName: "takomi_subagent", input: explicitlyRecoveredInput }, gateContext);
+  assert.equal(explicitlyRecoveredInput.model, maliciousPolicyModel, "cross-provider change occurs only after the user selects the exact approved model ID");
+  assert.equal(gateSelections.length, 1, "same-family cross-provider requests require explicit recovery selection");
   assert.equal(gateState.report.modelRoutingCorrections.at(-1).from, maliciousRequestedModel, "correction reporting retains the exact raw requested model ID");
   assert.equal(gateState.report.modelRoutingCorrections.at(-1).to, maliciousPolicyModel, "correction reporting retains the exact raw approved model ID");
   assert.doesNotMatch(gateNotifications.at(-1).message, /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]|\x1B/, "model correction notification must remove ANSI, OSC, and C0 controls");
-  assert.match(gateNotifications.at(-1).message, /openai-codex\/gpt-5.5redlink -> oauth-router\/gpt-5.5redlink/, "model correction notification retains printable model labels");
+  assert.match(gateNotifications.at(-1).message, /openai-codex\/gpt-5.5redlink -> oauth-router\/gpt-5.5redlink/, "explicit model-change notification retains printable model labels");
 
   const recoveredInput = { model: maliciousUnapprovedModel };
   await toolCall({ toolName: "takomi_subagent", input: recoveredInput }, gateContext);

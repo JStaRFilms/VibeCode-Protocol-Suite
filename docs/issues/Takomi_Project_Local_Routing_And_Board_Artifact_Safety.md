@@ -30,7 +30,24 @@ Use **both Markdown and JSON**, with distinct responsibilities. Do not replace o
 | `takomi_board` JSON state | Session/task lifecycle state only | Runtime |
 | `master_plan.md` | Rich human-authored project plan | Users and agents |
 
-Markdown should not be parsed heuristically to infer every executable default. JSON should not be used as a substitute for the explanation and policy rationale.
+Markdown must not be parsed heuristically to create executable defaults or allowlists. It remains model-facing routing guidance. JSON is the sole machine-enforced routing source, but must not be used as a substitute for explanation and policy rationale.
+
+## Approved Runtime Simplification
+
+Takomi now separates four concepts that were previously conflated:
+
+| Concept | Canonical values | Meaning |
+| --- | --- | --- |
+| Main-agent mode | `idle`, `code`, `review`, `orchestrate` | What the parent agent is doing now |
+| Lifecycle stage | `genesis`, `design`, `build` | Where the project is in its delivery lifecycle |
+| Subagent persona | `architect`, `designer`, `coder`, `worker`, `reviewer`, `orchestrator` | The specialist prompt and tool capability contract |
+| Model route | Sol, Terra, Luna guidance plus an exact provider-qualified runtime ID | Which model executes the persona |
+
+Genesis, Design, and Build are never main-agent modes. Design means UI/UX only; architecture belongs to Genesis and the Architect persona. A normal lifecycle is Architect work in Genesis, Designer work in Design, and Coder/Reviewer loops in Build.
+
+Takomi's six custom personas are primary. Upstream Planner and Oracle behavior is absorbed into Architect/Reviewer, Delegate is removed, and Takomi supplies its own Worker. Scout, Researcher, and Context Builder are task techniques/capabilities rather than public personas. The `pi-subagents` package remains an execution engine, but its overlapping built-in personas are hidden from normal Takomi discovery.
+
+Dispatch must validate capabilities before launch. Architect and Designer may author their Markdown artifacts; Reviewer and Orchestrator remain inspection/coordination-only. A task requiring writable artifacts must fail before launch when assigned to a non-writing persona.
 
 ## Required Configuration Model
 
@@ -228,6 +245,24 @@ The board result should state `masterPlanDisposition: written | preserved | unch
 - Stage expansion cannot overwrite authored plan.
 - Task status changes cannot alter authored plan.
 - Explicit replacement succeeds only with matching confirmation/hash.
+
+## Implementation Status
+
+Implemented in the project harness:
+
+- canonical main modes and lifecycle/persona separation
+- six-persona public discovery with a Takomi-owned Worker
+- writable Architect and Designer artifact contracts
+- pre-dispatch write-capability validation and rejection of hidden upstream personas
+- structured `takomi.routing` global/project overlays with project allowlist replacement
+- exact provider-qualified model handling without family substitution
+- explicit-task fallback isolation
+- advisory-only Markdown routing policy with structured conflict reporting
+- `takomi_config_routing` preview/write tooling with registry validation and confirmation
+- master-plan ownership, SHA-256 provenance, preservation dispositions, and atomic replacement
+- regression coverage for provider safety, lifecycle separation, capability mismatch, and master-plan preservation/replacement
+
+Legacy task role labels (`code`, `design`, `review`, `general`) are accepted only as migration inputs and normalized to canonical persona names in persisted state.
 
 ## Acceptance Criteria
 

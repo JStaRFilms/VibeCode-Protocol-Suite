@@ -47,7 +47,7 @@ type BoardDetails = {
 };
 
 type BoardArgs = {
-  action?: "init_session" | "expand_stage" | "show_workflows" | "show_session" | "update_task";
+  action?: "init_session" | "expand_stage" | "show_workflows" | "show_session" | "update_task" | "replace_master_plan";
   sessionId?: string;
   taskId?: string;
   stage?: string;
