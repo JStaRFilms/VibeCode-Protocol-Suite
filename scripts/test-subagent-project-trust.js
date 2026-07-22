@@ -155,6 +155,11 @@ async function assertChangedLaunchRequiresNewReview(name, initialParams, changed
 try {
   delete process.env.TAKOMI_TRUST_PROJECT_AGENTS;
 
+  const listed = await launch({ params: { action: "list", agentScope: "both" }, hasUI: false });
+  assert.equal(listed.executions, 0, "Takomi list is served by canonical discovery without invoking native pi-subagents management");
+  assert.match(listed.result.content[0].text, /^Takomi personas:/, "Takomi list uses the canonical persona surface");
+  assert.doesNotMatch(listed.result.content[0].text, /Executable agents|oracle|delegate|planner/, "Takomi list does not expose the native builtin catalog");
+
   // A model can persist takomi_mode's visible auto launch state, but cannot
   // create the dedicated user command provenance entry.
   const modelAuto = await launch({ entries: [runtimeEntry("auto")], hasUI: false });

@@ -44,6 +44,9 @@ function taskList(params: TakomiSubagentToolParams): Array<{ agent: string; task
 
 export function renderTakomiSubagentCall(params: TakomiSubagentToolParams, theme: Theme) {
   const safeParams = sanitizeUntrustedValue(params);
+  if (safeParams.action) {
+    return new Text(`${theme.fg("toolTitle", theme.bold("takomi_subagent "))}${theme.fg("accent", safeParams.action)}`, 0, 0);
+  }
   const tasks = taskList(safeParams);
   const mode = safeParams.chain?.length ? "chain" : safeParams.tasks?.length ? "parallel" : "single";
   if (tasks.length === 1) {

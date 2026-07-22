@@ -377,6 +377,31 @@ export async function executeTakomiSubagentTool(
   const agentScope = params.agentScope ?? "both";
 
   if (params.action) {
+    if (params.action === "list") {
+      const agents = discoverTakomiAgents(rootCwd, agentScope);
+      const lines = [
+        "Takomi personas:",
+        ...agents.map((agent) => `- ${agent.name} (${agent.source}): ${agent.description}`),
+        "",
+        "Canonical personas only: architect, designer, coder, worker, reviewer, orchestrator.",
+      ];
+      return textResult(lines.join("\n"), {
+        action: "list",
+        agentScope,
+        availableAgents: agents.map((agent) => ({ name: agent.name, source: agent.source, description: agent.description, tools: agent.tools })),
+        takomi: { action: "list", agentScope },
+      });
+    }
+    if ((params.action === "get" || params.action === "models") && params.agent) {
+      const agents = discoverTakomiAgents(rootCwd, agentScope);
+      if (!agents.some((agent) => agent.name === params.agent)) {
+        return textResult(
+          `Unknown or hidden Takomi persona '${params.agent}'. Available personas: ${agents.map((agent) => agent.name).join(", ") || "none"}.`,
+          { results: [], action: params.action, agentScope, reason: "unknown-persona" },
+          true,
+        );
+      }
+    }
     try {
       const nativeResult: any = await engine.execute(
         "takomi-tool",
