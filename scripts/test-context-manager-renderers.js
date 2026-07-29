@@ -474,7 +474,7 @@ try {
   const gateProject = path.join(tempRoot, "model-policy-gate");
   await fs.mkdir(path.join(gateProject, ".pi"), { recursive: true });
   await fs.writeFile(path.join(gateProject, ".pi", "settings.json"), JSON.stringify({
-    subagents: { agentOverrides: { worker: { model: maliciousPolicyModel } } },
+    takomi: { routing: { approvedModels: [maliciousPolicyModel] } },
   }));
   const gateHandlers = new Map();
   const gateState = createState();

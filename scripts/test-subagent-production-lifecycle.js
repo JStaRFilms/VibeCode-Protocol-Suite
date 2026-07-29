@@ -206,6 +206,7 @@ const aliasesStub = dataModule(`export function resolveAgentName(name) { return 
 const routingStub = dataModule(`
   export function applyTakomiRoutingDefaults(value) { return value; }
   export function isTakomiModelApproved() { return true; }
+  export function stripThinkingSuffix(model) { const match = model.match(/:(?:off|minimal|low|medium|high|xhigh)$/i); return { baseModel: match ? model.slice(0, -match[0].length) : model, thinkingSuffix: match?.[0] ?? "" }; }
   export function loadTakomiModelRoutingSnapshotSync() { return {}; }
   export async function loadTakomiModelRoutingSnapshot() { return { approvedModels: [] }; }
 `);

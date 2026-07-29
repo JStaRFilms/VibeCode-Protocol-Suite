@@ -167,6 +167,10 @@ export function installModelPolicyGate(pi: ExtensionAPI, state: ContextManagerSt
     if (!isModelFailure(content)) return;
 
     const snapshot = await loadSnapshot(ctx.cwd);
+    // Without an explicit strict allowlist, leave provider/runtime failures to the
+    // parent model so it can choose another exact registry model using policy and
+    // user guidance. Do not turn an open registry into an implicit stop-only gate.
+    if (snapshot.approvedModels.length === 0) return;
     const recovery = recoveryOptions(snapshot.approvedModels);
     const choice = await ctx.ui.select("Takomi subagent model/provider failure. How do you want to continue?", recovery.options);
     const retryModel = choice ? recovery.retryModels.get(choice) : undefined;

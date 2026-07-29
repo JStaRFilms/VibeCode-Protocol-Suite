@@ -104,7 +104,7 @@ function registerSubagentTool(pi: ExtensionAPI): void {
     promptSnippet: "Delegate lifecycle-aware Takomi work to specialist subagents. Use single, tasks, chain, or action=list/status/doctor; reuse conversationId for review loops.",
     promptGuidelines: [
       "Use this tool during orchestration when a specialist should handle a task.",
-      "Use action=list to discover agents and action=status/doctor for native pi-subagents diagnostics/control instead of raw subagent.",
+      "Use action=list to discover agents, action=get/models to inspect persona routing, and action=status/doctor for native pi-subagents diagnostics/control instead of raw subagent.",
       "Use tasks for independent parallel work and chain for dependent handoffs with {previous}.",
       "Set context=fork only when inherited parent-session history is needed; otherwise prefer fresh or the agent default.",
       "Set async=true for long-running work when the parent can continue safely; keep active worktree writes single-threaded unless worktree isolation is enabled.",
@@ -113,7 +113,8 @@ function registerSubagentTool(pi: ExtensionAPI): void {
       "Set requiredCapabilities for artifact-producing tasks; use requiredCapabilities=[] for explicitly read-only work. The runtime blocks inspection-only personas from write-required work.",
       "Always set cwd when the task targets another directory. Use an explicit absolute cwd for an external repository; relative cwd values must stay inside the parent workspace. A path mentioned only in task prose does not change launch cwd.",
       "Read validation failures as correction feedback: inspect reason, resolved cwd, and resolved capabilities before proposing a corrected call.",
-      "Use model, fallbackModels, and thinking only when deliberate; otherwise let the agent/profile defaults apply.",
+      "Deliberately choose an exact provider-qualified model from the current user instruction, routing policy, and active registry for normal subagent dispatch. Omit model only when intentionally choosing the Pi/harness default; never treat a role fallback as a restriction.",
+      "When the user requests a named model and its exact provider-qualified ID appears in the active registry context or action=models output, pass that model explicitly instead of declining or silently using a role default. A strict allowlist applies only when approvedModels is explicitly configured.",
       "If review sends work back to the same agent, reuse the same conversationId for continuity.",
       "If a launch is blocked, cancelled, paused, or review-gated, do not retry automatically; wait for the user's next prompt."
     ],

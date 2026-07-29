@@ -26,11 +26,11 @@ Use **both Markdown and JSON**, with distinct responsibilities. Do not replace o
 | Artifact | Purpose | Audience |
 | --- | --- | --- |
 | `model-routing.md` | Human-readable routing philosophy, rationale, team conventions, exceptions | Users and agents |
-| `.pi/settings.json` / `~/.pi/agent/settings.json` | Structured, machine-enforced provider/model role defaults and allowlists | Runtime |
+| `.pi/settings.json` / `~/.pi/agent/settings.json` | Optional fallback defaults and opt-in strict allowlists | Runtime |
 | `takomi_board` JSON state | Session/task lifecycle state only | Runtime |
 | `master_plan.md` | Rich human-authored project plan | Users and agents |
 
-Markdown must not be parsed heuristically to create executable defaults or allowlists. It remains model-facing routing guidance. JSON is the sole machine-enforced routing source, but must not be used as a substitute for explanation and policy rationale.
+Markdown must not be parsed heuristically into executable settings. It remains model-facing routing guidance. Pi's active exact model registry is the default executable set; JSON may optionally add fallback defaults or an explicit strict allowlist, but omission must remain flexible rather than infer restrictions from defaults.
 
 ## Approved Runtime Simplification
 
@@ -121,20 +121,20 @@ The runtime must report an error if the prose conflicts with structured executab
 
 Resolve every task in this order:
 
-1. Explicit provider-qualified `takomi_subagent.model` passed for this task.
-2. Explicit task packet model (`preferredModel`) after user/orchestrator confirmation.
-3. Project-local role default in `.pi/settings.json`.
-4. Global role default in `~/.pi/agent/settings.json`.
-5. Project-local default provider plus configured role/model mapping.
-6. Global default provider plus configured role/model mapping.
-7. Harness default only if no user or project configuration exists.
+1. Current explicit user model instruction, passed as an exact `takomi_subagent.model`.
+2. Explicit provider-qualified task or confirmed task-packet model.
+3. Project-local then global `model-routing.md` guidance, interpreted by the parent model against Pi's active registry.
+4. Optional project-local role fallback in `.pi/settings.json`.
+5. Optional global role fallback in `~/.pi/agent/settings.json`.
+6. Pi/harness default only when no deliberate choice or fallback exists.
 
 ### Non-negotiable rules
 
 - A provider-qualified selection is atomic: `openai-codex/gpt-5.6-sol` must never be replaced with `oauth-router/gpt-5.6-sol` by model-family matching.
 - Only an explicit `fallbackModels` list may authorize provider switching after the first model fails.
-- If an explicit model is not enabled, approved, or healthy, report that exact reason. Do not silently select an “equivalent.”
-- Project configuration must override global configuration, but never override an explicit task model.
+- If an explicit model is absent from Pi's active registry, blocked by an explicitly configured strict allowlist, or unhealthy, report that exact reason. Do not silently select an “equivalent.”
+- Project configuration must override global configuration, but never override a current user instruction or explicit task model.
+- Role defaults and legacy overrides are fallback preferences only; they never infer a strict allowlist.
 - The UI must display the final resolved source: `explicit task`, `project role default`, `global role default`, or `harness default`.
 
 ## Required User-Facing Tooling

@@ -4,7 +4,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import type { TakomiLaunchMode, TakomiThinkingLevel } from "../../../src/pi-takomi-core";
 import { loadTakomiProfile } from "../takomi-runtime/profile";
 import { hasUserGateAutoProvenance } from "../takomi-runtime/gate-provenance";
-import { applyTakomiRoutingDefaults, isTakomiModelApproved, loadTakomiModelRoutingSnapshot } from "../takomi-runtime/model-routing-defaults";
+import { applyTakomiRoutingDefaults, isTakomiModelApproved, loadTakomiModelRoutingSnapshot, stripThinkingSuffix } from "../takomi-runtime/model-routing-defaults";
 import { resolveAgentName } from "./agent-aliases";
 import { discoverTakomiAgents, type TakomiAgentConfig, type TakomiAgentScope } from "./agents";
 import { createTakomiDelegationPlan, renderTakomiDelegationPlan } from "./delegation-plan";
@@ -91,6 +91,24 @@ function textResult<TDetails extends Record<string, unknown>>(text: string, deta
 
 function hasProjectAgents(tasks: Array<{ agent: string }>, agents: Map<string, TakomiAgentConfig>): boolean {
   return tasks.some((task) => agents.get(task.agent)?.source === "project");
+}
+
+function availableRegistryModels(ctx: ExtensionContext): string[] {
+  try {
+    const available = (ctx as ExtensionContext & { modelRegistry?: { getAvailable?: () => Array<{ provider?: string; id?: string; name?: string }> } }).modelRegistry?.getAvailable?.() ?? [];
+    return [...new Set(available.map((model) => {
+      const id = model.id ?? model.name;
+      if (!id) return "";
+      return model.provider && !id.startsWith(`${model.provider}/`) ? `${model.provider}/${id}` : id;
+    }).filter(Boolean))];
+  } catch {
+    return [];
+  }
+}
+
+function isModelInRegistry(model: string, availableModels: string[]): boolean {
+  const base = stripThinkingSuffix(model).baseModel;
+  return availableModels.includes(base);
 }
 
 export function taskRequiresWrite(task: TakomiSubagentToolTask): boolean {
@@ -481,6 +499,7 @@ export async function executeTakomiSubagentTool(
         );
       }
       const routingSnapshot = await loadTakomiModelRoutingSnapshot(rootCwd);
+      const registryModels = availableRegistryModels(ctx);
       const routed = applyTakomiRoutingDefaults({
         agent: selected.name,
         model: selected.model,
@@ -491,6 +510,10 @@ export async function executeTakomiSubagentTool(
         `Model: ${routed.model ?? "Pi/harness default"}`,
         `Thinking: ${routed.thinking ?? "Pi default"}`,
         `Fallbacks: ${routed.fallbackModels?.join(", ") || "none"}`,
+        routingSnapshot.approvedModels.length
+          ? `Strict allowlist: ${routingSnapshot.approvedModels.join(", ")}`
+          : "Strict allowlist: disabled (active registry models are eligible)",
+        `Available registry models: ${registryModels.join(", ") || "registry unavailable"}`,
       ];
       const lines = params.action === "models"
         ? [`Takomi model routing for ${selected.name}:`, ...modelLines]
@@ -544,6 +567,7 @@ export async function executeTakomiSubagentTool(
   const byName = new Map<string, TakomiAgentConfig>(agents.map((agent) => [agent.name, agent]));
   const mode = resolveMode(params);
   const routingSnapshot = await loadTakomiModelRoutingSnapshot(rootCwd);
+  const registryModels = availableRegistryModels(ctx);
   let tasks: TakomiSubagentToolTask[];
   let taskCwdWasExplicit: boolean[];
   try {
@@ -597,6 +621,21 @@ export async function executeTakomiSubagentTool(
     const invalidFallback = task.fallbackModels?.find((model) => routingSnapshot.approvedModels.length && !isTakomiModelApproved(model, routingSnapshot.approvedModels));
     if (invalidFallback) {
       return textResult(`Blocked by Takomi routing policy. Explicit fallback '${invalidFallback}' is not approved.`, { results: [], agentScope, task, reason: "fallback-not-approved" }, true);
+    }
+    if (task.model && registryModels.length && !isModelInRegistry(task.model, registryModels)) {
+      return textResult(
+        `Blocked by Takomi registry validation. Exact model '${stripThinkingSuffix(task.model).baseModel}' is not available in Pi's active model registry. No provider substitution was attempted.`,
+        { results: [], agentScope, task, reason: "model-not-in-registry", availableModels: registryModels },
+        true,
+      );
+    }
+    const unavailableFallback = task.fallbackModels?.find((model) => registryModels.length && !isModelInRegistry(model, registryModels));
+    if (unavailableFallback) {
+      return textResult(
+        `Blocked by Takomi registry validation. Exact fallback '${stripThinkingSuffix(unavailableFallback).baseModel}' is not available in Pi's active model registry.`,
+        { results: [], agentScope, task, reason: "fallback-not-in-registry", availableModels: registryModels },
+        true,
+      );
     }
   }
 

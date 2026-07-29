@@ -119,9 +119,10 @@ So when working on packaging, agents should distinguish between:
 - Use Pi's native result expansion, `Alt+T`, or `/takomi subagents expand` to inspect detailed subagent output.
 - Takomi still tracks active runs internally for status and review continuity, but board synchronization is explicit: run with `takomi_subagent`, then update the board.
 - `takomi-context-manager` reduces prompt bloat by replacing the always-on skill description dump with a names-only Skill Index plus progressive `skill_manifest`/`skill_load` tools.
-- `model-routing.md` is advisory model-facing guidance. Executable provider allowlists and persona defaults live only under `takomi.routing` in global/project settings.
+- `model-routing.md` is advisory model-facing guidance and the normal source for model-selection judgment. Current user instructions and explicit task models override its recommendations.
+- Pi's active exact provider-qualified model registry is the default executable model set. `takomi.routing.approvedModels` is an optional strict allowlist only when explicitly configured; role defaults never become an inferred permission boundary.
 - `takomi-context-manager` gates `takomi_subagent` when model-routing context has not been loaded, provides the routing policy, and tells the agent to retry.
-- `takomi-context-manager` never performs provider-family substitution. It blocks unapproved exact IDs and changes models only after explicit user selection.
+- `takomi-context-manager` never performs provider-family substitution. It enforces an explicit strict allowlist when present; otherwise registry/provider failures return to the parent model for policy-guided recovery.
 - `takomi-context-manager` detects known duplicate global/project Takomi extension paths in `context_report` to help diagnose tool registration conflicts.
 - `context_report` restores context-manager snapshots and Pi tool-result history after reload/restart and explicitly labels gaps; it is not a replacement for Pi's Alt-C token/session stats.
 - `context_report` defaults to compact `mode: "summary"`; use `mode: "verbose"` for full diagnostics or `mode: "problems"` for attention-only output. `verbose: true` remains a compatibility alias. `/context-report` exposes `summary`, `verbose`, and `problems` as slash-command argument completions.

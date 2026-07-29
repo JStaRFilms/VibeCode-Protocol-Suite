@@ -128,6 +128,24 @@ function modelsFromDefaults(defaults: Iterable<TakomiAgentModelDefault>): string
   return unique(models);
 }
 
+function modelsFromConfiguredRouting(settings: RoutingSettings): string[] {
+  const models: string[] = [];
+  const inputs = [
+    ...Object.values(asRecord(settings.subagents?.agentOverrides)),
+    ...Object.values(asRecord(settings.takomi?.routing?.roleDefaults)),
+  ];
+  for (const value of inputs) {
+    const input = asRecord(value);
+    if (typeof input.model === "string" && input.model.trim()) models.push(stripThinkingSuffix(input.model.trim()).baseModel);
+    if (Array.isArray(input.fallbackModels)) {
+      for (const fallback of input.fallbackModels) {
+        if (typeof fallback === "string" && fallback.trim()) models.push(stripThinkingSuffix(fallback.trim()).baseModel);
+      }
+    }
+  }
+  return unique(models);
+}
+
 export function mergeTakomiRoutingSettings(globalSettings: RoutingSettings, projectSettings: RoutingSettings, sourceFiles: string[] = []): TakomiModelRoutingSnapshot {
   const globalDefaults = extractDefaults(globalSettings, "global role default");
   const projectDefaults = extractDefaults(projectSettings, "project role default");
@@ -145,17 +163,26 @@ export function mergeTakomiRoutingSettings(globalSettings: RoutingSettings, proj
 
   const globalApproved = configuredApprovedModels(globalSettings);
   const projectApproved = configuredApprovedModels(projectSettings);
+  // Exact allowlisting is opt-in. Defaults and legacy overrides are soft
+  // fallbacks, never permission boundaries. With no explicit approvedModels,
+  // the active Pi registry is the executable model set and policy Markdown
+  // guides the parent model's choice.
   const approvedModels = projectApproved.present
     ? projectApproved.models
     : globalApproved.present
       ? globalApproved.models
-      : modelsFromDefaults(mergedDefaults.values());
+      : [];
+  const preferredModels = unique([
+    ...modelsFromConfiguredRouting(globalSettings),
+    ...modelsFromConfiguredRouting(projectSettings),
+    ...modelsFromDefaults(mergedDefaults.values()),
+  ]);
   const defaultProvider = projectSettings.takomi?.routing?.defaultProvider
     ?? globalSettings.takomi?.routing?.defaultProvider;
 
   return {
     approvedModels,
-    preferredModels: approvedModels,
+    preferredModels,
     sourceFiles,
     defaultProvider,
     agentDefaults: [...mergedDefaults.values()],
@@ -253,7 +280,10 @@ export function renderCompactTakomiModelRoutingSummary(snapshot: TakomiModelRout
     "Active Takomi subagent routing summary:",
     `Executable settings: ${snapshot.sourceFiles.join(", ") || "harness defaults"}`,
     snapshot.policyFile ? `Advisory routing guidance: ${snapshot.policyFile}` : "",
-    snapshot.approvedModels.length ? `Approved exact model IDs: ${snapshot.approvedModels.join(", ")}` : "Approved exact model IDs: none configured",
+    snapshot.approvedModels.length
+      ? `Strict model allowlist: ${snapshot.approvedModels.join(", ")}`
+      : "Strict model allowlist: disabled; exact models available in Pi's active registry are eligible.",
+    snapshot.preferredModels.length ? `Configured fallback preferences: ${snapshot.preferredModels.join(", ")}` : "Configured fallback preferences: none; choose from policy and registry.",
     "Provider-qualified model IDs are atomic. Takomi never substitutes a different provider by model-family matching.",
     "Resolution: explicit task model → project role default → global role default → harness/Pi default.",
     ...(snapshot.policyConflicts?.length ? ["ROUTING CONFIGURATION ERROR:", ...snapshot.policyConflicts.map((item) => `- ${item}`)] : []),

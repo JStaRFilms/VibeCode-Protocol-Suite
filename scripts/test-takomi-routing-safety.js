@@ -56,6 +56,23 @@ assert.deepEqual(overlaid.agentDefaults.find((entry) => entry.agent === "coder")
 }, "project role fields deep-overlay global role fields");
 assert.equal(overlaid.agentDefaults.find((entry) => entry.agent === "reviewer")?.source, "global role default", "unmodified global role defaults remain available");
 
+const legacyInferred = routing.mergeTakomiRoutingSettings(
+  {
+    subagents: { agentOverrides: {
+      scout: { model: "openai-codex/gpt-5.6-luna", thinking: "high" },
+      worker: { model: "openai-codex/gpt-5.6-terra", fallbackModels: ["openai-codex/gpt-5.6-sol:low"] },
+    } },
+  },
+  {},
+);
+assert.deepEqual(legacyInferred.approvedModels, [], "role defaults and legacy overrides never become an implicit strict allowlist");
+assert.deepEqual(
+  legacyInferred.preferredModels,
+  ["openai-codex/gpt-5.6-luna", "openai-codex/gpt-5.6-terra", "openai-codex/gpt-5.6-sol"],
+  "legacy models remain soft fallback preferences when strict allowlisting is disabled",
+);
+assert.equal(legacyInferred.agentDefaults.some((entry) => entry.agent === "scout"), false, "legacy hidden personas do not reappear as public role defaults");
+
 const approved = ["oauth-router/gpt-5.6-sol"];
 assert.equal(routing.isTakomiModelApproved("openai-codex/gpt-5.6-sol", approved), false, "approval is provider-qualified and exact");
 assert.doesNotMatch(source, /approvedModelEquivalent|modelFamily/, "family-equivalence routing helpers are removed");

@@ -31,9 +31,10 @@ const provenanceStub = dataModule(`
   }
 `);
 const routingStub = dataModule(`
-  export async function loadTakomiModelRoutingSnapshot() { return { approvedModels: [] }; }
+  export async function loadTakomiModelRoutingSnapshot() { return { approvedModels: [], preferredModels: [] }; }
   export function applyTakomiRoutingDefaults(task) { return task; }
   export function isTakomiModelApproved() { return true; }
+  export function stripThinkingSuffix(model) { const match = model.match(/:(?:off|minimal|low|medium|high|xhigh)$/i); return { baseModel: match ? model.slice(0, -match[0].length) : model, thinkingSuffix: match?.[0] ?? "" }; }
 `);
 const aliasesStub = dataModule(`export function resolveAgentName(name) { return name; }`);
 const agentsStub = dataModule(`
@@ -117,6 +118,7 @@ async function launch({
   profile = {},
   pi = {},
   sessionId = "test-session",
+  availableModels = [],
   params = { agent: "project-agent", task: "perform work", agentScope: "project" },
 } = {}) {
   globalThis.__takomiTestProfile = profile;
@@ -134,6 +136,12 @@ async function launch({
     sessionManager: {
       getEntries: () => entries,
       getSessionId: () => sessionId,
+    },
+    modelRegistry: {
+      getAvailable: () => availableModels.map((model) => {
+        const separator = model.indexOf("/");
+        return separator === -1 ? { id: model } : { provider: model.slice(0, separator), id: model.slice(separator + 1) };
+      }),
     },
   });
   return { result, confirms, executions: globalThis.__takomiTestExecutions - executionsBefore };
@@ -190,6 +198,15 @@ try {
   assert.equal(explicitExternalCwd.executions, 1, "an explicit absolute cwd can launch a task in an external repository");
   delete process.env.TAKOMI_TRUST_PROJECT_AGENTS;
 
+  const unavailableModel = await launch({
+    params: { agent: "project-agent", task: "Review only.", model: "provider/missing-model", requiredCapabilities: [] },
+    availableModels: ["openai-codex/gpt-5.6-luna"],
+    hasUI: false,
+  });
+  assert.equal(unavailableModel.executions, 0, "an exact model absent from the active registry never launches");
+  assert.equal(unavailableModel.result.details.reason, "model-not-in-registry", "registry validation exposes a machine-readable failure reason");
+  assert.match(unavailableModel.result.content[0].text, /No provider substitution was attempted/, "registry validation preserves provider-qualified model identity");
+
   const listed = await launch({ params: { action: "list", agentScope: "both" }, hasUI: false });
   assert.equal(listed.executions, 0, "Takomi list is served by canonical discovery without invoking native pi-subagents management");
   assert.match(listed.result.content[0].text, /^Takomi personas:/, "Takomi list uses the canonical persona surface");
@@ -198,6 +215,8 @@ try {
   const models = await launch({ params: { action: "models", agent: "project-agent", agentScope: "both" }, hasUI: false });
   assert.equal(models.executions, 0, "Takomi model inspection does not delegate custom personas to native builtin-only management");
   assert.match(models.result.content[0].text, /^Takomi model routing for project-agent:/, "Takomi model inspection resolves the custom persona directly");
+  assert.match(models.result.content[0].text, /Strict allowlist: disabled/, "Takomi model inspection explains registry-guided selection when no allowlist is configured");
+  assert.match(models.result.content[0].text, /Available registry models:/, "Takomi model inspection exposes the executable registry set to the parent model");
   assert.doesNotMatch(models.result.content[0].text, /Builtin agent .* not found/, "Takomi model inspection cannot produce the native builtin lookup failure");
 
   // A model can persist takomi_mode's visible auto launch state, but cannot
