@@ -86,9 +86,10 @@ const toolRunnerUrl = await transpile("tool-runner.ts", {
   "./pi-subagents-engine": engineStub,
   "./subagent-ux": uxStub,
 });
-const { executeTakomiSubagentTool } = await import(toolRunnerUrl);
+const { executeTakomiSubagentTool, findTaskCwdMismatch, taskRequiresWrite } = await import(toolRunnerUrl);
 
 const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "takomi-project-agent-gate-test-"));
+const externalRoot = await fs.mkdtemp(path.join(os.tmpdir(), "takomi-subagent-target-test-"));
 await fs.mkdir(path.join(tempRoot, "subdir"));
 const originalTrustOverride = process.env.TAKOMI_TRUST_PROJECT_AGENTS;
 globalThis.__takomiTestExecutions = 0;
@@ -153,6 +154,33 @@ async function assertChangedLaunchRequiresNewReview(name, initialParams, changed
 }
 
 try {
+  delete process.env.TAKOMI_TRUST_PROJECT_AGENTS;
+
+  assert.equal(taskRequiresWrite({ task: "Do not edit files.", requiredCapabilities: [] }), false, "explicit read-only capabilities override negated write-language inference");
+  assert.equal(taskRequiresWrite({ task: "Edit the files." }), true, "write-language inference remains available when capabilities are omitted");
+  assert.equal(taskRequiresWrite({ task: "Review only.", requiredCapabilities: ["write-code"] }), true, "explicit write capabilities remain enforced");
+  assert.equal(
+    await findTaskCwdMismatch({ agent: "reviewer", task: `Review the implementation in ${externalRoot}.`, cwd: tempRoot }, false),
+    path.resolve(externalRoot),
+    "an existing external directory in task prose is reported when cwd was omitted",
+  );
+  assert.equal(
+    await findTaskCwdMismatch({ agent: "reviewer", task: `Review the implementation in ${externalRoot}.`, cwd: tempRoot }, true),
+    undefined,
+    "an explicit cwd remains authoritative even when task prose references another directory",
+  );
+  assert.equal(
+    await findTaskCwdMismatch({ agent: "reviewer", task: "Review the default route path /. without editing files.", cwd: tempRoot }, false),
+    undefined,
+    "route-like prose that trims to a bare filesystem root does not trigger cwd mismatch feedback",
+  );
+
+  process.env.TAKOMI_TRUST_PROJECT_AGENTS = "1";
+  const explicitExternalCwd = await launch({
+    params: { agent: "project-agent", task: "Review only.", cwd: externalRoot, requiredCapabilities: [] },
+    hasUI: false,
+  });
+  assert.equal(explicitExternalCwd.executions, 1, "an explicit absolute cwd can launch a task in an external repository");
   delete process.env.TAKOMI_TRUST_PROJECT_AGENTS;
 
   const listed = await launch({ params: { action: "list", agentScope: "both" }, hasUI: false });
@@ -403,5 +431,8 @@ try {
   delete globalThis.__takomiTestExecutions;
   delete globalThis.__takomiTestProfile;
   delete globalThis.__takomiTestAgentDefaultContext;
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await Promise.all([
+    fs.rm(tempRoot, { recursive: true, force: true }),
+    fs.rm(externalRoot, { recursive: true, force: true }),
+  ]);
 }

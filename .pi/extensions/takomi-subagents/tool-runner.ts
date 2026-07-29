@@ -93,15 +93,49 @@ function hasProjectAgents(tasks: Array<{ agent: string }>, agents: Map<string, T
   return tasks.some((task) => agents.get(task.agent)?.source === "project");
 }
 
-function taskRequiresWrite(task: TakomiSubagentToolTask): boolean {
-  if (task.requiredCapabilities?.some((capability) => /^(write|edit|write-docs|write-code)$/i.test(capability))) return true;
+export function taskRequiresWrite(task: TakomiSubagentToolTask): boolean {
+  // An explicit capability contract is authoritative, including an empty array
+  // for read-only work. Falling back to prose inference when [] is supplied can
+  // misread negative instructions such as "do not edit files" as a write task.
+  if (task.requiredCapabilities !== undefined) {
+    return task.requiredCapabilities.some((capability) => /^(write|edit|write-docs|write-code)$/i.test(capability));
+  }
   return /\b(?:create|write|author|edit|modify|update|implement|fix)\b[\s\S]{0,100}\b(?:file|files|markdown|document|documents|artifact|artifacts|code|configuration)\b/i.test(task.task);
 }
 
 function capabilityMismatch(task: TakomiSubagentToolTask, agent: TakomiAgentConfig | undefined): string | undefined {
   if (!agent) return undefined;
   if (taskRequiresWrite(task) && !agent.tools?.some((tool) => tool === "write" || tool === "edit")) {
-    return `Task assigned to '${task.agent}' requires file writing, but that persona is inspection-only. Choose architect or designer for their authored Markdown, coder for code, or worker for other writable artifacts.`;
+    return [
+      `Task assigned to '${task.agent}' requires file writing, but that persona is inspection-only.`,
+      `Resolved cwd: ${task.cwd ?? "not set"}`,
+      `Resolved requiredCapabilities: ${JSON.stringify(task.requiredCapabilities ?? "inferred from task prose")}`,
+      "Correction: choose architect or designer for authored Markdown, coder for code, or worker for other writable artifacts. For a genuinely read-only review, set requiredCapabilities: [] and keep all write requests out of the task.",
+      "No subagent ran. Do not retry this blocked launch automatically; present the correction and wait for the user's next prompt.",
+    ].join("\n");
+  }
+  return undefined;
+}
+
+export async function findTaskCwdMismatch(task: TakomiSubagentToolTask, cwdWasExplicit: boolean): Promise<string | undefined> {
+  if (cwdWasExplicit || !task.cwd) return undefined;
+  const candidates = task.task.match(/(?:[A-Za-z]:[\\/]|\/)[^\s"'`<>|]+/g) ?? [];
+  for (const rawCandidate of candidates) {
+    const candidate = rawCandidate.replace(/[),.;:!?]+$/, "");
+    // Route-like prose such as "/." normalizes to a real filesystem root after
+    // punctuation trimming. A bare root is not a useful repository cwd hint and
+    // would otherwise create a false-positive launch block.
+    if (candidate === "/" || /^[A-Za-z]:[\\/]$/.test(candidate)) continue;
+    let stat;
+    try {
+      stat = await fs.stat(candidate);
+    } catch {
+      continue;
+    }
+    if (!stat.isDirectory()) continue;
+    const referencedDirectory = path.resolve(candidate);
+    if (isPathInside(path.resolve(task.cwd), referencedDirectory)) continue;
+    return referencedDirectory;
   }
   return undefined;
 }
@@ -251,17 +285,39 @@ function isPathInside(root: string, candidate: string): boolean {
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
+function renderCwdValidationFeedback(message: string, workspaceRoot: string): string {
+  if (!/cwd.*(?:escapes|must be an existing directory)/i.test(message)) return message;
+  return [
+    `Takomi rejected the cwd definition: ${message}`,
+    `Parent workspace: ${path.resolve(workspaceRoot)}`,
+    "A relative cwd must remain inside its parent workspace. An external target is supported when cwd is an explicit absolute path to an existing directory; task prose alone does not change cwd.",
+    "Correction: set cwd to the intended absolute target directory, or use a relative directory contained by the parent workspace.",
+    "No subagent ran. Do not retry this blocked launch automatically; present the correction and wait for the user's next prompt.",
+  ].join("\n");
+}
+
 async function resolveRelativeCwd(root: string, value: string | undefined, label: string): Promise<string> {
   const lexicalRoot = path.resolve(root);
-  const lexicalCandidate = value
-    ? path.isAbsolute(value) ? path.resolve(value) : path.resolve(lexicalRoot, value)
-    : lexicalRoot;
-  if (!isPathInside(lexicalRoot, lexicalCandidate)) throw new Error(`${label} escapes the current workspace.`);
+  if (value && path.isAbsolute(value)) {
+    const lexicalCandidate = path.resolve(value);
+    let realCandidate: string;
+    try {
+      realCandidate = await fs.realpath(lexicalCandidate);
+    } catch {
+      throw new Error(`${label} must be an existing directory: ${lexicalCandidate}`);
+    }
+    const stat = await fs.stat(realCandidate);
+    if (!stat.isDirectory()) throw new Error(`${label} must be an existing directory: ${lexicalCandidate}`);
+    return realCandidate;
+  }
+
+  const lexicalCandidate = value ? path.resolve(lexicalRoot, value) : lexicalRoot;
+  if (!isPathInside(lexicalRoot, lexicalCandidate)) throw new Error(`${label} escapes the current workspace; use an explicit absolute cwd for an external target.`);
 
   const [realRoot, realCandidate] = await Promise.all([fs.realpath(lexicalRoot), fs.realpath(lexicalCandidate)]);
   const stat = await fs.stat(realCandidate);
-  if (!stat.isDirectory()) throw new Error(`${label} must be a directory inside the current workspace.`);
-  if (!isPathInside(realRoot, realCandidate)) throw new Error(`${label} escapes the current workspace.`);
+  if (!stat.isDirectory()) throw new Error(`${label} must be an existing directory: ${lexicalCandidate}`);
+  if (!isPathInside(realRoot, realCandidate)) throw new Error(`${label} escapes the current workspace; use an explicit absolute cwd for an external target.`);
   return realCandidate;
 }
 
@@ -366,7 +422,7 @@ export async function executeTakomiSubagentTool(
     rootCwd = await resolveRelativeCwd(ctx.cwd, params.cwd, "cwd");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return textResult(message, { results: [], agentScope: params.agentScope ?? "both" }, true);
+    return textResult(renderCwdValidationFeedback(message, ctx.cwd), { results: [], agentScope: params.agentScope ?? "both", reason: "invalid-cwd" }, true);
   }
   const profile = await loadTakomiProfile(rootCwd);
   const runtimeLaunchMode = readRuntimeLaunchMode(ctx);
@@ -469,8 +525,10 @@ export async function executeTakomiSubagentTool(
   const mode = resolveMode(params);
   const routingSnapshot = await loadTakomiModelRoutingSnapshot(rootCwd);
   let tasks: TakomiSubagentToolTask[];
+  let taskCwdWasExplicit: boolean[];
   try {
     const rawTasks = resolveTasks(params);
+    taskCwdWasExplicit = rawTasks.map((task) => params.cwd !== undefined || task.cwd !== undefined);
     tasks = await Promise.all(rawTasks.map(async (task, index) => applyTakomiRoutingDefaults({
       ...task,
       agent: resolveAgentName(task.agent, byName),
@@ -478,14 +536,32 @@ export async function executeTakomiSubagentTool(
     }, routingSnapshot)));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return textResult(message, { results: [], availableAgents: agents.map((agent) => agent.name), agentScope }, true);
+    return textResult(renderCwdValidationFeedback(message, rootCwd), { results: [], availableAgents: agents.map((agent) => agent.name), agentScope, reason: /cwd/i.test(message) ? "invalid-cwd" : "invalid-task-definition" }, true);
   }
 
-  for (const task of tasks) {
+  for (const [taskIndex, task] of tasks.entries()) {
     if (!byName.has(task.agent)) {
       return textResult(
         `Unknown or hidden Takomi persona '${task.agent}'. Available personas: ${agents.map((agent) => agent.name).join(", ") || "none"}.`,
         { results: [], agentScope, task, reason: "unknown-persona" },
+        true,
+      );
+    }
+    const referencedCwd = await findTaskCwdMismatch(task, taskCwdWasExplicit[taskIndex] ?? false);
+    if (referencedCwd) {
+      return textResult(
+        [
+          "Takomi task definition needs correction before launch.",
+          "",
+          `The task references an existing directory outside its resolved cwd.`,
+          `Referenced directory: ${referencedCwd}`,
+          `Resolved cwd: ${task.cwd}`,
+          "A path written only in task prose does not change the subagent working directory.",
+          `Parent workspace: ${rootCwd}`,
+          `Correction: retry with the explicit absolute cwd ${JSON.stringify(referencedCwd)} if that directory is the intended task root.`,
+          "No subagent ran. Do not retry this blocked launch automatically; present the correction and wait for the user's next prompt.",
+        ].join("\n"),
+        { results: [], agentScope, task, reason: "cwd-mismatch", referencedCwd, resolvedCwd: task.cwd },
         true,
       );
     }
