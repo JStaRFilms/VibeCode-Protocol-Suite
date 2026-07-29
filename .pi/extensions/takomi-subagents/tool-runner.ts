@@ -95,12 +95,26 @@ function hasProjectAgents(tasks: Array<{ agent: string }>, agents: Map<string, T
 
 export function taskRequiresWrite(task: TakomiSubagentToolTask): boolean {
   // An explicit capability contract is authoritative, including an empty array
-  // for read-only work. Falling back to prose inference when [] is supplied can
-  // misread negative instructions such as "do not edit files" as a write task.
+  // for read-only work. Prose inference is only a fallback for omitted contracts.
   if (task.requiredCapabilities !== undefined) {
     return task.requiredCapabilities.some((capability) => /^(write|edit|write-docs|write-code)$/i.test(capability));
   }
-  return /\b(?:create|write|author|edit|modify|update|implement|fix)\b[\s\S]{0,100}\b(?:file|files|markdown|document|documents|artifact|artifacts|code|configuration)\b/i.test(task.task);
+
+  const writeRequest = /\b(?:create|write|author|edit|modify|update|implement|fix)\b[\s\S]{0,100}?\b(?:file|files|markdown|document|documents|artifact|artifacts|code|configuration)\b/gi;
+  for (const match of task.task.matchAll(writeRequest)) {
+    const prefix = task.task.slice(Math.max(0, (match.index ?? 0) - 120), match.index);
+    // Only the current clause controls negation. A contrast or sentence boundary
+    // resets it, so "do not edit files, but update configuration" still writes.
+    const boundary = Math.max(
+      prefix.lastIndexOf("."), prefix.lastIndexOf("!"), prefix.lastIndexOf("?"),
+      prefix.lastIndexOf(";"), prefix.lastIndexOf("\n"),
+      ...[...prefix.matchAll(/\b(?:but|however|instead)\b/gi)].map((item) => (item.index ?? -1) + item[0].length),
+    );
+    const clausePrefix = prefix.slice(boundary + 1);
+    if (/\b(?:do\s+not|don't|never|must\s+not|without)\b/i.test(clausePrefix)) continue;
+    return true;
+  }
+  return false;
 }
 
 function capabilityMismatch(task: TakomiSubagentToolTask, agent: TakomiAgentConfig | undefined): string | undefined {
@@ -119,8 +133,14 @@ function capabilityMismatch(task: TakomiSubagentToolTask, agent: TakomiAgentConf
 
 export async function findTaskCwdMismatch(task: TakomiSubagentToolTask, cwdWasExplicit: boolean): Promise<string | undefined> {
   if (cwdWasExplicit || !task.cwd) return undefined;
-  const candidates = task.task.match(/(?:[A-Za-z]:[\\/]|\/)[^\s"'`<>|]+/g) ?? [];
-  for (const rawCandidate of candidates) {
+  const absolutePath = /(?:[A-Za-z]:[\\/]|\/)[^\s"'`<>|]+/g;
+  for (const match of task.task.matchAll(absolutePath)) {
+    const rawCandidate = match[0];
+    const prefix = task.task.slice(Math.max(0, (match.index ?? 0) - 100), match.index);
+    // Existing paths can be examples, comparison inputs, API routes, or output
+    // locations. Infer a missing cwd only when prose identifies the path as the
+    // task's repository/project location; otherwise an explicit cwd is required.
+    if (!/\b(?:in|inside|under|repository|repo|project|clone|worktree|cwd|working\s+directory)\s*(?:[:=]|at\s+|in\s+)?$/i.test(prefix)) continue;
     const candidate = rawCandidate.replace(/[),.;:!?]+$/, "");
     // Route-like prose such as "/." normalizes to a real filesystem root after
     // punctuation trimming. A bare root is not a useful repository cwd hint and

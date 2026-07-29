@@ -156,7 +156,9 @@ async function assertChangedLaunchRequiresNewReview(name, initialParams, changed
 try {
   delete process.env.TAKOMI_TRUST_PROJECT_AGENTS;
 
-  assert.equal(taskRequiresWrite({ task: "Do not edit files.", requiredCapabilities: [] }), false, "explicit read-only capabilities override negated write-language inference");
+  assert.equal(taskRequiresWrite({ task: "Do not edit files.", requiredCapabilities: [] }), false, "explicit read-only capabilities override write-language inference");
+  assert.equal(taskRequiresWrite({ task: "Do not edit or modify files." }), false, "negated write prose remains read-only when capabilities are omitted");
+  assert.equal(taskRequiresWrite({ task: "Do not edit files, but update configuration." }), true, "a positive write request after a contrast is not hidden by earlier negation");
   assert.equal(taskRequiresWrite({ task: "Edit the files." }), true, "write-language inference remains available when capabilities are omitted");
   assert.equal(taskRequiresWrite({ task: "Review only.", requiredCapabilities: ["write-code"] }), true, "explicit write capabilities remain enforced");
   assert.equal(
@@ -168,6 +170,11 @@ try {
     await findTaskCwdMismatch({ agent: "reviewer", task: `Review the implementation in ${externalRoot}.`, cwd: tempRoot }, true),
     undefined,
     "an explicit cwd remains authoritative even when task prose references another directory",
+  );
+  assert.equal(
+    await findTaskCwdMismatch({ agent: "reviewer", task: `Compare the current implementation with the reference files from ${externalRoot}.`, cwd: tempRoot }, false),
+    undefined,
+    "an existing external comparison or reference directory is not inferred as the task cwd",
   );
   assert.equal(
     await findTaskCwdMismatch({ agent: "reviewer", task: "Review the default route path /. without editing files.", cwd: tempRoot }, false),
