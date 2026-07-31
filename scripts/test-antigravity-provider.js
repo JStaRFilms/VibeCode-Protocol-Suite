@@ -6,11 +6,16 @@ import { ANTIGRAVITY_MODELS, AntigravityProviderRuntime } from "../.pi/extension
 console.log("🧪 Running Antigravity Provider Tests...");
 
 // Test 1: Verify model catalog entries
-assert.strictEqual(ANTIGRAVITY_MODELS.length, 3, "Should define 3 Antigravity models");
+assert.strictEqual(ANTIGRAVITY_MODELS.length, 11, "Should define 11 official Antigravity models");
 const modelIds = ANTIGRAVITY_MODELS.map((m) => m.id);
-assert.ok(modelIds.includes("antigravity/gemini-3.5-pro"), "Should include gemini-3.5-pro");
-assert.ok(modelIds.includes("antigravity/gemini-3.6-flash"), "Should include gemini-3.6-flash");
-assert.ok(modelIds.includes("antigravity/gemini-3.6-ultra"), "Should include gemini-3.6-ultra");
+assert.ok(modelIds.includes("antigravity/gemini-3.6-flash-high"), "Should include gemini-3.6-flash-high");
+assert.ok(modelIds.includes("antigravity/gemini-3.6-flash-medium"), "Should include gemini-3.6-flash-medium");
+assert.ok(modelIds.includes("antigravity/gemini-3.6-flash-low"), "Should include gemini-3.6-flash-low");
+assert.ok(modelIds.includes("antigravity/gemini-3.5-flash-high"), "Should include gemini-3.5-flash-high");
+assert.ok(modelIds.includes("antigravity/gemini-3.1-pro-high"), "Should include gemini-3.1-pro-high");
+assert.ok(modelIds.includes("antigravity/claude-sonnet-4-6"), "Should include claude-sonnet-4-6");
+assert.ok(modelIds.includes("antigravity/claude-opus-4-6-thinking"), "Should include claude-opus-4-6-thinking");
+assert.ok(modelIds.includes("antigravity/gpt-oss-120b-medium"), "Should include gpt-oss-120b-medium");
 
 console.log("✅ Test 1 Passed: Model catalog definitions valid");
 
@@ -45,7 +50,7 @@ console.log("✅ Test 2 Passed: File-based context generation and @file tag form
 // Test 3: Verify AntigravityProviderRuntime model transformation
 const runtime = new AntigravityProviderRuntime();
 const models = runtime.getModels();
-assert.strictEqual(models.length, 3, "Runtime should expose 3 models");
+assert.strictEqual(models.length, 11, "Runtime should expose 11 official models");
 for (const model of models) {
   assert.strictEqual(model.provider, "antigravity", `Model ${model.id} should have provider 'antigravity'`);
   assert.strictEqual(model.api, "antigravity-api", `Model ${model.id} should have api 'antigravity-api'`);

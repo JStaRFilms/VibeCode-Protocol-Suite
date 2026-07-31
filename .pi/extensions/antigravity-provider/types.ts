@@ -21,6 +21,7 @@ export interface AntigravityOptions {
   timeoutSeconds?: number;
   logFilePath?: string;
   modelId?: string;
+  effort?: "low" | "medium" | "high";
 }
 
 export type AntigravityUiEventPhase = "start" | "streaming" | "success" | "error";
