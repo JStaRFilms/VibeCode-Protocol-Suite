@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
+import { execSync } from "node:child_process";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
+const cleanTestRepo = await fs.mkdtemp(path.join(os.tmpdir(), "takomi-acceptance-"));
+try { execSync("git init", { cwd: cleanTestRepo, stdio: "ignore" }); } catch {}
 const extensionDir = path.join(repoRoot, ".pi", "extensions", "takomi-subagents");
 const nativeAcceptancePath = path.join(repoRoot, "node_modules", "pi-subagents", "src", "runs", "shared", "acceptance.ts");
 const dataModule = (source) => `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
@@ -144,7 +148,7 @@ try {
       residualRisks: [],
       noStagedFiles: true,
     }),
-    cwd: repoRoot,
+    cwd: cleanTestRepo,
   });
   assert.equal(acceptedLedger.status, "checked", "truthful explicit acceptance succeeds");
 
@@ -158,7 +162,7 @@ try {
       residualRisks: ["blocker remains"],
       noStagedFiles: true,
     }),
-    cwd: repoRoot,
+    cwd: cleanTestRepo,
   });
   assert.equal(rejectedLedger.status, "rejected", "explicitly failed acceptance remains rejected");
   assert.match(acceptance.acceptanceFailureMessage(rejectedLedger), /criterion-1.*not-satisfied/i, "explicit rejection reports the truthful criterion cause");

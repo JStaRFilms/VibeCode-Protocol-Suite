@@ -118,6 +118,11 @@ $directoryLinks = @(
         Source = Join-Path $repoPiRoot 'extensions\oauth-router'
     },
     @{
+        Label = 'antigravity-provider'
+        Destination = Join-Path $globalAgentExtensions 'antigravity-provider'
+        Source = Join-Path $repoPiRoot 'extensions\antigravity-provider'
+    },
+    @{
         Label = 'takomi-prompts'
         Destination = Join-Path $globalAgentPrompts 'takomi-prompts'
         Source = Join-Path $repoPiRoot 'prompts'
