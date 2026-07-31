@@ -76,8 +76,11 @@ export function executeAgyStream(
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const executable = options?.executablePath ?? (process.platform === "win32" ? "agy.exe" : "agy");
-    const timeoutSec = options?.timeoutSeconds ?? 300;
-    const args: string[] = ["-p", prompt, "--print-timeout", `${timeoutSec}s`, "--dangerously-skip-permissions"];
+    const args: string[] = ["-p", prompt, "--dangerously-skip-permissions"];
+
+    if (options?.timeoutSeconds) {
+      args.push("--print-timeout", `${options.timeoutSeconds}s`);
+    }
 
     if (options?.modelId) {
       const rawModel = options.modelId.replace(/^antigravity\//, "");
