@@ -35,7 +35,8 @@ try {
 
   const sourceLaunchArgs = getSourceCheckoutLaunchArgs(repoRoot);
   assert.ok(sourceLaunchArgs.includes('--no-extensions'), 'source checkout launch must disable duplicate global extension discovery');
-  assert.equal(sourceLaunchArgs.filter((arg) => arg === '--extension').length, 5, 'source checkout launch must explicitly load one Takomi extension set');
+  assert.equal(sourceLaunchArgs.filter((arg) => arg === '--extension').length, 6, 'source checkout launch must explicitly load every project Takomi extension once');
+  assert.ok(sourceLaunchArgs.some((arg) => arg.endsWith(path.join('antigravity-provider', 'index.ts'))), 'source checkout launch must include the Antigravity provider');
   assert.deepEqual(getSourceCheckoutLaunchArgs(tempRoot), [], 'ordinary projects must retain normal global extension discovery');
 
   const tree = path.join(tempRoot, 'tree');

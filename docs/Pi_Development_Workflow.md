@@ -29,26 +29,35 @@ takomi
 
 ### Takomi extension development
 
-Use the dev launcher from this repository:
+From this repository, just run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\pi-dev.ps1
+takomi
 ```
 
-This runs Pi with:
+The Takomi launcher recognizes its source checkout and starts Pi with one complete project-local set:
 
 ```txt
 --no-extensions
 --extension .pi/extensions/oauth-router/index.ts
 --extension .pi/extensions/takomi-runtime/index.ts
 --extension .pi/extensions/takomi-subagents/index.ts
+--extension .pi/extensions/takomi-context-manager/index.ts
+--extension .pi/extensions/notify-sound/index.ts
+--extension .pi/extensions/antigravity-provider/index.ts
 --no-prompt-templates
 --prompt-template .pi/prompts
 --no-themes
 --theme .pi/themes/takomi-noir.json
 ```
 
-That disables global/project extension, prompt, and theme auto-discovery, then loads only the repo-local Takomi assets.
+This keeps every project Takomi extension available while preventing duplicate global/project registrations. Plain `pi` cannot express this conditional behavior through `.pi/settings.json`: project settings can control project resources, but cannot conditionally disable matching user-global extensions.
+
+The PowerShell script remains an equivalent fallback for passing raw Pi arguments:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\pi-dev.ps1
+```
 
 You can pass normal Pi arguments after the script name:
 
