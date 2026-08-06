@@ -83,6 +83,7 @@ export async function generateFromRequest(args = {}) {
 
 function requestOverrides(args) {
   return Object.fromEntries([
+    ['allowSpend', args.allowSpend],
     ['projectUrl', args.projectUrl],
     ['reuseCurrentProject', args.reuseCurrentProject],
     ['allowNewProject', args.allowNewProject],
@@ -159,16 +160,16 @@ function shouldRetryOutcome(outcome = {}) {
 }
 
 async function pendingGenerationState(page, request) {
-  const pendingPattern = /would you like me to kick off|costing\s+\d+\s+credits|currently in the queue|waiting in the queue|been scheduled|i['’]ve scheduled|ready for you shortly/i;
-  const text = await page.locator('body').innerText({ timeout: 5000 }).catch(() => '');
-  const exists = pendingPattern.test(text);
-  if (!exists) return { exists: false, matchesRequest: false };
-  const pageText = compactText(text).toLowerCase();
-  const promptText = compactText(request.prompt).toLowerCase();
-  const corePrompt = compactText(request.prompt.replace(/^create exactly one.*?not still images\.\s*/i, '')).toLowerCase();
-  const matchesRequest = pageText.includes(promptText.slice(0, 80))
-    || (corePrompt.length > 20 && pageText.includes(corePrompt.slice(0, 80)));
-  return { exists, matchesRequest };
+  const hasActiveProgress = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll('*'))
+      .some(el => /^\d{1,2}%$/.test((el.textContent || '').trim()));
+  }).catch(() => false);
+
+  if (hasActiveProgress) {
+    return { exists: true, matchesRequest: false };
+  }
+
+  return { exists: false, matchesRequest: false };
 }
 
 function compactText(value) {

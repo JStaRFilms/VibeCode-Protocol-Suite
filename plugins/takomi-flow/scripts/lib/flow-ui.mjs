@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import { FLOW_URL } from './paths.mjs';
 import { openGeneratedMediaById } from './flow-media.mjs';
 
-export async function openFlow(page) {
+export async function openFlow(page, options = {}) {
+  const currentUrl = page.url() || '';
+  if (!options.force && currentUrl.includes('labs.google/fx/tools/flow')) {
+    return;
+  }
   await page.goto(FLOW_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
 }

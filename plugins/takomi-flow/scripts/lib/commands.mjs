@@ -56,6 +56,7 @@ export async function handleCommand(command, args) {
   if (command === 'smoke') return smoke(args);
   if (command === 'generate') return printJson(await api.generate({
     request: args.request,
+    allowSpend: booleanArg(args['allow-spend']),
     profileDir: args['profile-dir'],
     browserChannel: args['browser-channel'],
     cdpUrl: args['cdp-url'],
