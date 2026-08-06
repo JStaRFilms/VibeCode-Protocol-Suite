@@ -1,0 +1,163 @@
+{
+  "package": "zack-production-suite",
+  "version": "1.0.0",
+  "entryPoint": "SKILL.md",
+  "internalSkillCount": 4,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 941,
+      "sha256": "964bd35e2c3849c8c3d6cf0524825623dab5f391ca8c4bcf3dbd9dffe405016c"
+    },
+    {
+      "path": "SKILL.md",
+      "bytes": 5952,
+      "sha256": "53b26d59f0974546d2168d27d8f2d3cfafb38abb195fba4b4b50a6aa6af05bce"
+    },
+    {
+      "path": "resources/shared/contracts/zack-production-package.md",
+      "bytes": 3128,
+      "sha256": "fd50d131bd44a8e35b84ea28bfe5b1f88c1ce44649dc55a6794bf9bb3309db38"
+    },
+    {
+      "path": "resources/shared/contracts/zack-production-package.schema.json",
+      "bytes": 3936,
+      "sha256": "2be5d8d9432b2d240576c734eecdf2ef20f4bfb5b9b92434e8baa591377c865a"
+    },
+    {
+      "path": "resources/shared/scripts/validate_handoff.py",
+      "bytes": 5497,
+      "sha256": "cf886d1cc3e1e27943225c75fb3507447a4351169b89f966d4655f51135783cf"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/HANDOFF.md",
+      "bytes": 582,
+      "sha256": "f6e5dec6bb291df43703fab57af9ba8683f17069154f57b85a2bf94deaee92af"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/handoff.json",
+      "bytes": 1357,
+      "sha256": "f011f1eb3ae4ee919431d45dad7432534c3830b01315223ea1b5e1081ef90d1a"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/production/asset-roster.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/production/edit-map.json",
+      "bytes": 50,
+      "sha256": "338f8a9e74f3bc58ae6fecc19dbb2af682fc16b387bfee13d57143dbce1759a0"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/production/generation-queue.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/production/qc-checklist.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/production/scene-plan.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/prompts/assets/.gitkeep",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/prompts/blocks/.gitkeep",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/prompts/style-key.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/research/claims.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/research/research-summary.md",
+      "bytes": 19,
+      "sha256": "45dac61679059985d57f5845710fd31baeb528cdf298c3b22d747d39ecf6a54a"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/research/sources.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/script/narration.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "resources/shared/templates/zack-project/script/timed-script.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "resources/skills/takomi-flow/SKILL.md",
+      "bytes": 13062,
+      "sha256": "e8d1d1a1f0e60b58cd7809c1f2a4e5a9e38b431983eadbf0c5a95f10f909e199"
+    },
+    {
+      "path": "resources/skills/takomi-flow/references/flow-provider-contract.md",
+      "bytes": 1326,
+      "sha256": "4fb4c9c84fe8566a22db5c56904e9eb71bb01bd4d240bb4b7e9aabbfc81dda95"
+    },
+    {
+      "path": "resources/skills/zack-browser-planner/SKILL.md",
+      "bytes": 7544,
+      "sha256": "bbcc326d3a90689080d3d05e1f6d36adf37163999abeddc70203a146d4012c5d"
+    },
+    {
+      "path": "resources/skills/zack-higgsfield/SKILL.md",
+      "bytes": 13556,
+      "sha256": "c5481915622865ef52bc3f88a29320c49ed228ab05530ad51025bbb25be27108"
+    },
+    {
+      "path": "resources/skills/zack-higgsfield/references/replication-troy.md",
+      "bytes": 1028,
+      "sha256": "19c823ea2f82f5dc23cb481320cb387ea7b579373efbc9912c359afbab42f8f2"
+    },
+    {
+      "path": "resources/skills/zack-higgsfield/references/scene-planning.md",
+      "bytes": 1342,
+      "sha256": "8e390973214e634d0eafde8c41ca23c09c1b4d44ee8b5216b97515378ca55ca4"
+    },
+    {
+      "path": "resources/skills/zack-higgsfield/references/scriptwriter.md",
+      "bytes": 1040,
+      "sha256": "224df88244b244894c639fad0652d304d61167e1f3daef224b6c47ac33b865ef"
+    },
+    {
+      "path": "resources/skills/zack-higgsfield/references/style-3d.md",
+      "bytes": 885,
+      "sha256": "aeade9aadd276ea44cc749115e34dd867aa589937198aed562c4076b1e06bdc3"
+    },
+    {
+      "path": "resources/skills/zack-higgsfield/scripts/assemble_oneshot.sh",
+      "bytes": 674,
+      "sha256": "9890526f42a23a52c3deb94930a96391f6431dd65cfc4c300fe3fab45b55380e"
+    },
+    {
+      "path": "resources/skills/zack-higgsfield/scripts/zack_edit.py",
+      "bytes": 1732,
+      "sha256": "e97a0ff8e323d7656b1a02ed0afab8adbc3677e8bd17666701b1a5f9ea627dda"
+    },
+    {
+      "path": "resources/skills/zack-local-flow-producer/SKILL.md",
+      "bytes": 6877,
+      "sha256": "a8b781a965b4a2aa02749d67b2d66039b58172f04f5d63860f29dfbd87102977"
+    }
+  ]
+}

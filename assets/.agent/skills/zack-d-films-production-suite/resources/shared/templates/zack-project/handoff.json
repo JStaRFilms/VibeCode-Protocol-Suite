@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "replace-me-r1",
+  "packageStatus": "DRAFT",
+  "revision": 1,
+  "createdAt": "2026-08-06T10:48:00+01:00",
+  "project": {
+    "id": "replace-me",
+    "title": "Replace with project title",
+    "aspectRatio": "9:16",
+    "targetDurationSeconds": 30,
+    "blockDurationSeconds": 10,
+    "angle": "Replace with the evidence-backed myth reversal.",
+    "language": "en"
+  },
+  "approvals": {
+    "scriptLocked": false,
+    "productionPlanLocked": false,
+    "flowCreditSpendApproved": false,
+    "approvedBy": null,
+    "approvedAt": null
+  },
+  "provider": {
+    "visualProvider": "takomi-flow",
+    "reuseProject": true,
+    "projectUrl": null
+  },
+  "budget": {
+    "imageGenerations": 0,
+    "videoGenerations": 0,
+    "videoSeconds": 0,
+    "retryAllowance": 0
+  },
+  "files": {
+    "sources": "research/sources.json",
+    "claims": "research/claims.json",
+    "researchSummary": "research/research-summary.md",
+    "narration": "script/narration.txt",
+    "timedScript": "script/timed-script.json",
+    "scenePlan": "production/scene-plan.json",
+    "assetRoster": "production/asset-roster.json",
+    "generationQueue": "production/generation-queue.json",
+    "editMap": "production/edit-map.json",
+    "qcChecklist": "production/qc-checklist.json",
+    "stylePrompt": "prompts/style-key.txt"
+  },
+  "notes": []
+}

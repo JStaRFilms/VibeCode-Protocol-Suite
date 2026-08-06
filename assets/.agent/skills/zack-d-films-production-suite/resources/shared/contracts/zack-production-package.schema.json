@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/zack-production-package.schema.json",
+  "title": "Zack Production Package",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "packageId",
+    "packageStatus",
+    "revision",
+    "createdAt",
+    "project",
+    "approvals",
+    "provider",
+    "files",
+    "budget"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "packageId": {
+      "type": "string",
+      "minLength": 3
+    },
+    "packageStatus": {
+      "enum": [
+        "DRAFT",
+        "LOCKED_FOR_PRODUCTION"
+      ]
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "aspectRatio",
+        "targetDurationSeconds",
+        "blockDurationSeconds",
+        "angle"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aspectRatio": {
+          "enum": [
+            "9:16",
+            "16:9",
+            "1:1"
+          ]
+        },
+        "targetDurationSeconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "blockDurationSeconds": {
+          "enum": [
+            4,
+            6,
+            8,
+            10
+          ]
+        },
+        "angle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "language": {
+          "type": "string",
+          "default": "en"
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "required": [
+        "scriptLocked",
+        "productionPlanLocked",
+        "flowCreditSpendApproved"
+      ],
+      "properties": {
+        "scriptLocked": {
+          "type": "boolean"
+        },
+        "productionPlanLocked": {
+          "type": "boolean"
+        },
+        "flowCreditSpendApproved": {
+          "type": "boolean"
+        },
+        "approvedBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "approvedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "required": [
+        "visualProvider",
+        "reuseProject"
+      ],
+      "properties": {
+        "visualProvider": {
+          "enum": [
+            "takomi-flow",
+            "higgsfield",
+            "undecided"
+          ]
+        },
+        "reuseProject": {
+          "type": "boolean"
+        },
+        "projectUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "required": [
+        "imageGenerations",
+        "videoGenerations",
+        "videoSeconds"
+      ],
+      "properties": {
+        "imageGenerations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "videoGenerations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "videoSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "retryAllowance": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "required": [
+        "sources",
+        "claims",
+        "researchSummary",
+        "narration",
+        "timedScript",
+        "scenePlan",
+        "assetRoster",
+        "generationQueue",
+        "editMap",
+        "qcChecklist",
+        "stylePrompt"
+      ],
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
