@@ -8,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { hashPath, copyOwnedTree } from '../src/owned-tree.js';
 import { collectTakomiStats } from '../src/takomi-stats.js';
+import { collectTakomiStats as collectRuntimeTakomiStats } from '../.pi/extensions/takomi-runtime/takomi-stats.js';
 import { getSourceCheckoutLaunchArgs } from '../src/pi-harness.js';
 
 const execFileAsync = promisify(execFile);
@@ -75,6 +76,21 @@ try {
   assert.equal(stats.totals.input, 10, 'stats streaming should preserve usage parsing');
   assert.equal(stats.totals.toolCalls, 1, 'stats streaming should preserve tool call counting');
   assert.equal(stats.mostSubagentsSession.subagentCalls, 2, 'stats streaming should preserve subagent task counting');
+
+  await fs.writeFile(path.join(sessionsDir, 'gpt-5-6-pricing.jsonl'), [
+    JSON.stringify({ type: 'model_change', timestamp: '2026-07-29T23:59:58.000Z', modelId: 'gpt-5.6-luna' }),
+    JSON.stringify({ type: 'message', timestamp: '2026-07-29T23:59:59.000Z', message: { role: 'assistant', model: 'gpt-5.6-luna', usage: { input: 1_000_000, output: 0 }, content: [] } }),
+    JSON.stringify({ type: 'message', timestamp: '2026-07-30T00:00:00.000Z', message: { role: 'assistant', model: 'gpt-5.6-luna', usage: { input: 1_000_000, output: 0 }, content: [] } }),
+    JSON.stringify({ type: 'model_change', timestamp: '2026-07-29T23:59:58.000Z', modelId: 'gpt-5.6-terra' }),
+    JSON.stringify({ type: 'message', timestamp: '2026-07-29T23:59:59.000Z', message: { role: 'assistant', model: 'gpt-5.6-terra', usage: { input: 0, output: 1_000_000 }, content: [] } }),
+    JSON.stringify({ type: 'message', timestamp: '2026-07-30T00:00:00.000Z', message: { role: 'assistant', model: 'gpt-5.6-terra', usage: { input: 0, output: 1_000_000 }, content: [] } }),
+  ].join('\n'));
+  const pricingStats = await collectTakomiStats({ home: statsHome, cwd: statsCwd });
+  assert.equal(pricingStats.byDay.find((row) => row.key === '2026-07-29')?.cost, 16, 'GPT-5.6 usage before July 30 must retain the legacy Luna and Terra prices');
+  assert.equal(pricingStats.byDay.find((row) => row.key === '2026-07-30')?.cost, 12.2, 'GPT-5.6 usage on and after July 30 must use the lower Luna and Terra prices');
+  const runtimePricingStats = await collectRuntimeTakomiStats({ home: statsHome, cwd: statsCwd });
+  assert.equal(runtimePricingStats.byDay.find((row) => row.key === '2026-07-29')?.cost, 16, 'the /takomi-stats runtime must retain legacy GPT-5.6 prices');
+  assert.equal(runtimePricingStats.byDay.find((row) => row.key === '2026-07-30')?.cost, 12.2, 'the /takomi-stats runtime must use current GPT-5.6 prices');
 
   console.log('✓ regression tests passed');
 } finally {

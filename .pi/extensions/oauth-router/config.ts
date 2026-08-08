@@ -13,6 +13,11 @@ const LEGACY_CODEX_CONTEXT_WINDOW = 272000;
 const SAFE_CODEX_CONTEXT_WINDOW = 240000;
 const CODEX_MODEL_IDS = new Set(["gpt-5.4", "gpt-5.4-mini", "gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"]);
 
+const LEGACY_GPT_5_6_COSTS = {
+  "gpt-5.6-luna": { input: 1, output: 6, cacheRead: 0.1, cacheWrite: 1.25 },
+  "gpt-5.6-terra": { input: 2.5, output: 15, cacheRead: 0.25, cacheWrite: 3.125 },
+} as const;
+
 const DEFAULT_MODELS: RouterModelConfig[] = [
   {
     id: "gpt-5.4-mini",
@@ -46,7 +51,7 @@ const DEFAULT_MODELS: RouterModelConfig[] = [
     name: "GPT-5.6 Luna",
     reasoning: true,
     input: ["text", "image"],
-    cost: { input: 1.00, output: 6.00, cacheRead: 0.10, cacheWrite: 1.25 },
+    cost: { input: 0.20, output: 1.20, cacheRead: 0.02, cacheWrite: 0.25 },
     contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
     maxTokens: 128000,
   },
@@ -64,7 +69,7 @@ const DEFAULT_MODELS: RouterModelConfig[] = [
     name: "GPT-5.6 Terra",
     reasoning: true,
     input: ["text", "image"],
-    cost: { input: 2.50, output: 15.00, cacheRead: 0.25, cacheWrite: 3.125 },
+    cost: { input: 2.00, output: 12.00, cacheRead: 0.20, cacheWrite: 2.50 },
     contextWindow: SAFE_CODEX_CONTEXT_WINDOW,
     maxTokens: 128000,
   },
@@ -195,6 +200,20 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function isSameCost(left: RouterModelConfig["cost"] | undefined, right: RouterModelConfig["cost"]): boolean {
+  return left?.input === right.input
+    && left?.output === right.output
+    && left?.cacheRead === right.cacheRead
+    && left?.cacheWrite === right.cacheWrite;
+}
+
+function migrateGpt56Cost(model: RouterModelConfig): RouterModelConfig {
+  const legacyCost = LEGACY_GPT_5_6_COSTS[model.id as keyof typeof LEGACY_GPT_5_6_COSTS];
+  const currentDefault = DEFAULT_CONFIG.models.find((entry) => entry.id === model.id);
+  if (!legacyCost || !currentDefault || !isSameCost(model.cost, legacyCost)) return model;
+  return { ...model, cost: deepClone(currentDefault.cost) };
+}
+
 function mergeModelConfigs(candidateModels: RouterModelConfig[] | undefined): RouterModelConfig[] {
   if (!Array.isArray(candidateModels) || candidateModels.length === 0) {
     return deepClone(DEFAULT_CONFIG.models);
@@ -206,8 +225,9 @@ function mergeModelConfigs(candidateModels: RouterModelConfig[] | undefined): Ro
     if (!defaultIds.has(model.id)) {
       continue;
     }
-    const previous = merged.get(model.id) ?? ({} as RouterModelConfig);
-    merged.set(model.id, { ...previous, ...deepClone(model), id: model.id });
+    const migratedModel = migrateGpt56Cost(model);
+    const previous = merged.get(migratedModel.id) ?? ({} as RouterModelConfig);
+    merged.set(migratedModel.id, { ...previous, ...deepClone(migratedModel), id: migratedModel.id });
   }
   return Array.from(merged.values()).map((model) => {
     if (CODEX_MODEL_IDS.has(model.id) && model.contextWindow === LEGACY_CODEX_CONTEXT_WINDOW) {

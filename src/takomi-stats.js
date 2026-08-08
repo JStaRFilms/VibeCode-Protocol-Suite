@@ -16,10 +16,11 @@ const pc = {
   magenta: ansi(35, 39),
 };
 
+// USD per million tokens: input, cached input, output.
 const PRICES = {
-  'gpt-5.6-luna': [1.00, 0.10, 6.00],
+  'gpt-5.6-luna': [0.20, 0.02, 1.20],
   'gpt-5.6-sol': [5.00, 0.50, 30.00],
-  'gpt-5.6-terra': [2.50, 0.25, 15.00],
+  'gpt-5.6-terra': [2.00, 0.20, 12.00],
   'gpt-5.5': [5.00, 0.50, 30.00],
   'gpt-5.4': [2.50, 0.25, 15.00],
   'gpt-5.4-mini': [0.75, 0.075, 4.50],
@@ -40,8 +41,19 @@ const PRICES = {
 async function exists(target) { try { await fs.access(target); return true; } catch { return false; } }
 function safeJson(line) { try { return JSON.parse(line); } catch { return null; } }
 function dayOf(ts) { return typeof ts === 'string' && ts.length >= 10 ? ts.slice(0, 10) : 'unknown'; }
+const GPT_5_6_PRICE_CHANGE_AT = Date.parse('2026-07-30T00:00:00.000Z');
+const LEGACY_GPT_5_6_PRICES = {
+  'gpt-5.6-luna': [1.00, 0.10, 6.00],
+  'gpt-5.6-terra': [2.50, 0.25, 15.00],
+};
+
 function add(map, key, patch) { const row = map.get(key) || { key, input: 0, cache: 0, output: 0, total: 0, cost: 0, events: 0 }; for (const [k,v] of Object.entries(patch)) row[k] = (row[k] || 0) + (Number(v) || 0); if (!Object.prototype.hasOwnProperty.call(patch, 'events')) row.events += 1; map.set(key, row); }
-function cost(model, input, cache, output, additiveCache = true) { const p = PRICES[model]; if (!p) return 0; const nonCached = additiveCache ? input : Math.max(input - cache, 0); return (nonCached*p[0] + cache*p[1] + output*p[2]) / 1_000_000; }
+function priceForUsage(model, timestamp) {
+  const usageAt = timestampMs(timestamp);
+  if (usageAt !== null && usageAt < GPT_5_6_PRICE_CHANGE_AT && LEGACY_GPT_5_6_PRICES[model]) return LEGACY_GPT_5_6_PRICES[model];
+  return PRICES[model];
+}
+function cost(model, input, cache, output, additiveCache = true, timestamp) { const p = priceForUsage(model, timestamp); if (!p) return 0; const nonCached = additiveCache ? input : Math.max(input - cache, 0); return (nonCached*p[0] + cache*p[1] + output*p[2]) / 1_000_000; }
 function fmtTokens(n) { if (n >= 1e9) return `${(n/1e9).toFixed(2)}B`; if (n >= 1e6) return `${(n/1e6).toFixed(1)}M`; if (n >= 1e3) return `${(n/1e3).toFixed(1)}K`; return String(Math.round(n || 0)); }
 function fmtCount(n) { if (n >= 1e6) return `${(n/1e6).toFixed(1)}M`; if (n >= 1e3) return `${(n/1e3).toFixed(1)}K`; return String(Math.round(n || 0)); }
 function fmtPercent(n) { const value = Number(n) || 0; return `${(value * 100).toFixed(value >= 0.995 ? 1 : 0)}%`; }
@@ -212,7 +224,7 @@ async function scanPiSessions(root, source, events, sessionRows = [], taskRows =
           const cache = +u.cacheRead || +u.cachedInput || +u.cache_read || 0;
           const output = +u.output || +u.outputTokens || 0;
           const total = +u.totalTokens || +u.total || (input + cache + output);
-          events.push({ source, file, timestamp: obj.timestamp, day: dayOf(obj.timestamp), session, provider: msgProvider, model: msgModel, project: projectKey(file), kind: 'usage', input, cache, output, total, cost: cost(msgModel, input, cache, output, true) });
+          events.push({ source, file, timestamp: obj.timestamp, day: dayOf(obj.timestamp), session, provider: msgProvider, model: msgModel, project: projectKey(file), kind: 'usage', input, cache, output, total, cost: cost(msgModel, input, cache, output, true, ts) });
         }
 
         if (msg.role === 'user') {

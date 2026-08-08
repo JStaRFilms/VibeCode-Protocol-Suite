@@ -19,9 +19,9 @@ const pc = {
 // OAuth-router's configured catalog is merged over these fallbacks at runtime,
 // keeping Stats aligned with custom/new models without another hard-coded edit.
 const PRICES = {
-  'gpt-5.6-luna': [1.00, 0.10, 6.00, 1.25],
+  'gpt-5.6-luna': [0.20, 0.02, 1.20, 0.25],
   'gpt-5.6-sol': [5.00, 0.50, 30.00, 6.25],
-  'gpt-5.6-terra': [2.50, 0.25, 15.00, 3.125],
+  'gpt-5.6-terra': [2.00, 0.20, 12.00, 2.50],
   'gpt-5.5': [5.00, 0.50, 30.00, 6.25],
   'gpt-5.4': [2.50, 0.25, 15.00, 3.125],
   'gpt-5.4-mini': [0.75, 0.075, 4.50, 0.9375],
@@ -42,8 +42,19 @@ const PRICES = {
 async function exists(target) { try { await fs.access(target); return true; } catch { return false; } }
 function safeJson(line) { try { return JSON.parse(line); } catch { return null; } }
 function dayOf(ts) { return typeof ts === 'string' && ts.length >= 10 ? ts.slice(0, 10) : 'unknown'; }
+const GPT_5_6_PRICE_CHANGE_AT = Date.parse('2026-07-30T00:00:00.000Z');
+const LEGACY_GPT_5_6_PRICES = {
+  'gpt-5.6-luna': [1.00, 0.10, 6.00, 1.25],
+  'gpt-5.6-terra': [2.50, 0.25, 15.00, 3.125],
+};
+
 function add(map, key, patch) { const row = map.get(key) || { key, input: 0, cache: 0, cacheWrite: 0, output: 0, total: 0, cost: 0, events: 0 }; for (const [k,v] of Object.entries(patch)) row[k] = (row[k] || 0) + (Number(v) || 0); if (!Object.prototype.hasOwnProperty.call(patch, 'events')) row.events += 1; map.set(key, row); }
-function cost(model, input, cache, output, cacheWrite = 0, prices = PRICES) { const p = prices[model]; if (!p) return 0; return (input*p[0] + cache*p[1] + output*p[2] + cacheWrite*(p[3] ?? p[0])) / 1_000_000; }
+function priceForUsage(model, timestamp, prices) {
+  const usageAt = timestampMs(timestamp);
+  if (usageAt !== null && usageAt < GPT_5_6_PRICE_CHANGE_AT && LEGACY_GPT_5_6_PRICES[model]) return LEGACY_GPT_5_6_PRICES[model];
+  return Object.hasOwn(LEGACY_GPT_5_6_PRICES, model) ? PRICES[model] : prices[model];
+}
+function cost(model, input, cache, output, cacheWrite = 0, prices = PRICES, timestamp) { const p = priceForUsage(model, timestamp, prices); if (!p) return 0; return (input*p[0] + cache*p[1] + output*p[2] + cacheWrite*(p[3] ?? p[0])) / 1_000_000; }
 async function loadPrices(home) {
   const prices = { ...PRICES };
   const configPath = path.join(home, '.pi', 'agent', 'oauth-router', 'config.json');
@@ -161,9 +172,9 @@ async function scanPiSessions(root, source, events, sessionRows = [], taskRows =
         events.push({ source, file, timestamp: obj.timestamp, day: dayOf(obj.timestamp), session, provider, model, project: projectKey(file), kind: 'role', role, stage, workflow, input: 0, cache: 0, output: 0, total: 0, cost: 0 });
       }
       const msg = obj.type === 'message' && obj.message ? obj.message : null;
+      const ts = msg ? obj.timestamp || msg.timestamp || '' : '';
       if (msg) {
         row.messages += 1;
-        const ts = obj.timestamp || msg.timestamp || '';
         if (msg.role === 'user') {
           pushTask(taskRows, currentTask);
           row.turns += 1;
@@ -188,7 +199,7 @@ async function scanPiSessions(root, source, events, sessionRows = [], taskRows =
         }
       }
       const u = msg && msg.usage;
-      if (u) events.push({ source, file, timestamp: obj.timestamp, day: dayOf(obj.timestamp), session, provider, model, project: projectKey(file), kind: 'usage', input: +u.input||0, cache: +u.cacheRead||0, cacheWrite: +u.cacheWrite||0, output: +u.output||0, total: +u.totalTokens||0, cost: cost(model, +u.input||0, +u.cacheRead||0, +u.output||0, +u.cacheWrite||0, prices) });
+      if (u) events.push({ source, file, timestamp: obj.timestamp, day: dayOf(obj.timestamp), session, provider, model, project: projectKey(file), kind: 'usage', input: +u.input||0, cache: +u.cacheRead||0, cacheWrite: +u.cacheWrite||0, output: +u.output||0, total: +u.totalTokens||0, cost: cost(model, +u.input||0, +u.cacheRead||0, +u.output||0, +u.cacheWrite||0, prices, ts) });
       }
     } catch {
       continue;
