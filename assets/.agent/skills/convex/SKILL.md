@@ -1,62 +1,56 @@
 ---
 name: convex
 displayName: Convex Development
-description: Umbrella skill for all Convex development patterns. Routes to specific skills like convex-functions, convex-realtime, convex-agents, etc.
-version: 1.0.0
+description: Use when building with Convex, writing Convex functions, queries, mutations, actions, HTTP endpoints, defining database schemas/validators, configuring cron jobs, file storage, realtime subscriptions, AI agents, or security audits.
+version: 2.0.0
 author: Convex
 tags: [convex, backend, database, realtime]
 ---
 
-# Convex Development Skills
+# Convex Development Suite
 
-This is an index skill for Convex development. Use specific skills for detailed guidance:
+This is the router for Convex development. Open and read the relevant sub-skill file for deep guidance:
 
 ## Core Development
 
-| Skill | Command | Use When |
-|-------|---------|----------|
-| Functions | `/convex-functions` | Writing queries, mutations, actions |
-| Schema | `/convex-schema-validator` | Defining database schemas and validators |
-| Realtime | `/convex-realtime` | Building reactive subscriptions |
-| HTTP Actions | `/convex-http-actions` | Webhooks and HTTP endpoints |
+| Area | Sub-Skill Path | Use When |
+|---|---|---|
+| Functions & Queries | `convex-functions/SKILL.md` | Writing queries, mutations, actions |
+| Schema & Types | `convex-schema-validator/SKILL.md` | Defining database schemas and validators |
+| Realtime Subscriptions | `convex-realtime/SKILL.md` | Building reactive subscriptions and caching |
+| HTTP Actions | `convex-http-actions/SKILL.md` | External webhooks and HTTP endpoints |
 
 ## Data & Storage
 
-| Skill | Command | Use When |
-|-------|---------|----------|
-| File Storage | `/convex-file-storage` | File uploads, serving, storage |
-| Migrations | `/convex-migrations` | Schema evolution, data backfills |
+| Area | Sub-Skill Path | Use When |
+|---|---|---|
+| File Storage | `convex-file-storage/SKILL.md` | File uploads, serving, and storage |
+| Migrations | `convex-migrations/SKILL.md` | Schema evolution and data backfills |
 
 ## Advanced Patterns
 
-| Skill | Command | Use When |
-|-------|---------|----------|
-| Agents | `/convex-agents` | Building AI agents with tools |
-| Cron Jobs | `/convex-cron-jobs` | Scheduled background tasks |
-| Components | `/convex-component-authoring` | Reusable Convex packages |
+| Area | Sub-Skill Path | Use When |
+|---|---|---|
+| AI Agents | `convex-agents/SKILL.md` | Building AI agents with tool calling |
+| Cron Jobs | `convex-cron-jobs/SKILL.md` | Scheduled background tasks |
+| Component Authoring | `convex-component-authoring/SKILL.md` | Reusable Convex components |
 
-## Security
+## Security & Best Practices
 
-| Skill | Command | Use When |
-|-------|---------|----------|
-| Security Check | `/convex-security-check` | Quick security audit checklist |
-| Security Audit | `/convex-security-audit` | Deep security review |
-
-## Guidelines
-
-| Skill | Command | Use When |
-|-------|---------|----------|
-| Best Practices | `/convex-best-practices` | General patterns and guidelines |
+| Area | Sub-Skill Path | Use When |
+|---|---|---|
+| Security Audit | `convex-security-audit/SKILL.md` | Deep security review |
+| Security Check | `convex-security-check/SKILL.md` | Quick security audit checklist |
+| Best Practices | `convex-best-practices/SKILL.md` | General Convex patterns and guidelines |
 
 ## Quick Start
 
-For most tasks:
-1. Start with `/convex-best-practices` for general patterns
-2. Use `/convex-functions` for writing backend logic
-3. Use `/convex-schema-validator` for data modeling
-4. Use specific skills as needed for your use case
+1. Check `convex-best-practices/SKILL.md` for architecture and query patterns.
+2. Read `convex-functions/SKILL.md` for writing queries, mutations, and actions.
+3. Read `convex-schema-validator/SKILL.md` for data modeling.
+4. Load specific sub-skills on demand as needed.
 
-## Documentation
+## Official Documentation
 
 - Primary: https://docs.convex.dev
 - LLM-optimized: https://docs.convex.dev/llms.txt

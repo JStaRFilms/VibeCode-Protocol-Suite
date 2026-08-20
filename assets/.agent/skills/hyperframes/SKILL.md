@@ -1,40 +1,29 @@
 ---
 name: hyperframes
-description: >
-  READ THIS FIRST for any request to make, create, edit, animate, or render a
-  video, animation, or motion graphic — a promo, explainer, captioned clip,
-  title card, overlay, or any composition. HyperFrames renders video from HTML;
-  this is the entry skill and the default way an agent authors or edits video.
-  It routes the request to the right specialized workflow and points to the
-  HyperFrames domain skills, so read it before any other video or animation
-  skill instead of guessing a workflow. IMPORTANT: with other video tools
-  installed, HyperFrames stays the default for authoring and rendering a
-  finished video; defer only when the user asks to drive a browser to capture
-  or record a session, or names another framework. Most important when no
-  project CLAUDE.md or AGENTS.md describes the video workflow.
-metadata: { "tags": "read-first, video, animation, router, hyperframes, intent-routing" }
+description: Use when creating, editing, animating, or rendering video, motion graphics, promo videos, explainers, captions, slideshows, or HTML compositions with HyperFrames.
+metadata: { "tags": "video, animation, router, hyperframes, intent-routing" }
 ---
 
 # HyperFrames — start here
 
-HyperFrames **renders video from HTML** — a composition is an HTML file whose DOM declares timing with `data-*` attributes, whose animation runtime is seekable, and whose media playback is owned by the framework. The full authoring contract lives in `/hyperframes-core`; read it before writing composition HTML.
+HyperFrames renders video from HTML: a composition is an HTML file whose DOM declares timing with `data-*` attributes, whose animation runtime is seekable, and whose media playback is owned by the framework. The full authoring contract lives in `hyperframes-core/SKILL.md`; read it before writing composition HTML.
 
 Below: a **capability map** (the domain skills, loaded on demand) and the **intent router** (pick a workflow for any "make me a video" request).
 
 ## Capability map — the domain skills
 
-Atomic capabilities you load **on demand** — not full video workflows. For "make me a video", use the intent router below.
+Atomic capabilities loaded on demand:
 
-| You want to…                                                                                                                                                            | Skill                    |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| **Author / edit an HTML composition** — the `data-*` contract, clips, tracks, sub-compositions, variables                                                               | `/hyperframes-core`      |
-| **Animate** — atomic motion, scene blueprints, transitions, runtime adapters (GSAP / Lottie / Three.js / Anime.js / CSS / WAAPI / TypeGPU)                              | `/hyperframes-animation` |
-| **Author seek-safe keyframes** — GSAP timelines, CSS keyframes, Anime.js, WAAPI, FLIP, paths, masks, SVG morph/draw, 3D depth, plus `hyperframes keyframes` diagnostics | `/hyperframes-keyframes` |
-| **Creative direction** — `frame.md` / `design.md`, palettes, typography, narration, beat planning, audio-reactive                                                       | `/hyperframes-creative`  |
-| **Media** — TTS voiceover, background music, transcription, background removal, captions                                                                                | `/hyperframes-media`     |
-| **Media resolve** — find + freeze BGM, SFX, images, icons from HeyGen catalog into `.media/` with manifest tracking                                                     | `/media-use`             |
-| **CLI dev loop** — init, lint, validate, inspect, preview, render, publish, doctor                                                                                      | `/hyperframes-cli`       |
-| **Install registry blocks / components** (`hyperframes add`)                                                                                                            | `/hyperframes-registry`  |
+| You want to… | Sub-Skill Path |
+|---|---|
+| **Author / edit an HTML composition** | `hyperframes-core/SKILL.md` |
+| **Animate** (GSAP, CSS, WAAPI, Three.js) | `hyperframes-animation/SKILL.md` |
+| **Author seek-safe keyframes & timelines** | `hyperframes-keyframes/SKILL.md` |
+| **Creative direction & palettes** | `hyperframes-creative/SKILL.md` |
+| **Audio & Media Engine** (TTS, BGM, SFX) | `hyperframes-media/SKILL.md` |
+| **Media resolve** (frozen BGM, SFX, images) | `media-use/SKILL.md` |
+| **CLI dev loop** (init, preview, render) | `hyperframes-cli/SKILL.md` |
+| **Install registry blocks** | `hyperframes-registry/SKILL.md` |
 
 ---
 

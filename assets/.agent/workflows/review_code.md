@@ -1,96 +1,57 @@
 ---
-description: Run the up-to-date J-Star review and audit loop for a change set.
+description: Run the VibeCode expert code review and verification pass on current changes.
 ---
 
-# J-Star Review Workflow
+# Code Review Workflow
 
-Use this workflow when the repository already has J-Star installed and you need to verify a change set.
+Use this workflow to review uncommitted changes, staged changes, or branch diffs before committing or merging.
 
 ## Core Rule
 
-`review` and `audit` are separate steps.
+Code review and security audit are structured passes:
+1. **Review**: Identify bugs, logic issues, error handling gaps, and code quality.
+2. **Audit**: Verify security, input validation, authentication boundaries, and secret leaks.
 
-For a serious verification pass, run both.
-
-## 1. Build the Local Index
-
-If the repository is missing `.jstar/storage`, or if major files were added, run:
-
-```bash
-jstar init
-```
-
-## 2. Choose the Scope
+## 1. Identify Scope
 
 ### Staged changes
-
 ```bash
-git add .
-jstar review
-jstar audit
+git diff --staged
 ```
 
-### Last commit
-
+### Working tree changes (uncommitted)
 ```bash
-jstar review --last
-jstar audit --last
+git diff
 ```
 
-### Branch or PR scope
-
+### Branch diff against main
 ```bash
-jstar review --pr
-jstar audit --pr
+git diff main..HEAD
 ```
 
-## 3. Read the Outputs
+## 2. Review Checklist
 
-Review outputs:
-- `.jstar/last-review.md`
-- `.jstar/session.json`
+### Security
+- [ ] No hardcoded secrets, API keys, or credentials
+- [ ] Proper authentication and permission checks
+- [ ] Input validation on all external endpoints and forms
+- [ ] No SQL/command injection or unsafe evaluations
 
-Audit outputs:
-- `.jstar/audit_report.md`
-- `.jstar/audit_report.json`
+### Logic & Correctness
+- [ ] Edge cases and null/undefined conditions handled
+- [ ] Correct async/await and promise resolution
+- [ ] Error boundaries and try-catch blocks where failures can occur
+- [ ] Direct control flow without unnecessary layers or dead code
 
-## 4. Fix Loop
+### Performance & Cleanliness
+- [ ] No unnecessary renders or unindexed database queries
+- [ ] Clean type narrowing without unsafe casts
+- [ ] Meaningful comments on non-obvious logic (no code restatements)
 
-Agent instructions:
-1. Read both the review and audit outputs.
-2. Prioritize review `P0_CRITICAL` and `P1_HIGH` issues first.
-3. Prioritize audit `CRITICAL` and `HIGH` findings first.
-4. Apply fixes.
-5. Stage changes with `git add .`.
-6. Re-run both `review` and `audit` for the same scope.
-7. If only lower-priority review issues remain, stop when the remaining work is not worth another loop.
-8. Maximum loops: 3. If issues persist, stop and ask the user.
+## 3. Reporting Findings
 
-## 5. False Positives and Debate
-
-For review findings that need challenge or adjudication:
-
-```bash
-jstar chat --headless
-```
-
-Headless commands:
-- `{"action":"list"}`
-- `{"action":"debate","issueId":0,"argument":"..."}`
-- `{"action":"ignore","issueId":0}`
-- `{"action":"accept","issueId":0}`
-- `{"action":"exit"}`
-
-For known deterministic audit false positives, use:
-- `.jstar/audit-ignore.json`
-
-## 6. Automation Mode
-
-Machine-readable review output:
-
-```bash
-jstar review --json > .jstar/last-review.json
-jstar audit --json > .jstar/audit_report.json
-```
-
-Use `review --json` and `audit --json` for automation. Do not rely on `review --headless`.
+Format your review report with:
+1. **Summary**: Brief assessment of the change set.
+2. **Issues Table**: Categorized by severity (`CRITICAL`, `WARNING`, `SUGGESTION`) with `File:Line`.
+3. **Actionable Suggestions**: Concrete code diffs showing the recommended fix.
+4. **Verdict**: `APPROVE`, `APPROVE WITH SUGGESTIONS`, or `NEEDS CHANGES`.

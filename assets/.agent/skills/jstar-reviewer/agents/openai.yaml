@@ -1,7 +1,0 @@
-interface:
-  display_name: "J-Star Reviewer"
-  short_description: "Install and run J-Star review and audit"
-  default_prompt: "Use $jstar-reviewer to install J-Star in this repository and run both the review and audit flows."
-
-policy:
-  allow_implicit_invocation: true

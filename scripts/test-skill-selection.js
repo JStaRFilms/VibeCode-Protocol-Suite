@@ -41,7 +41,6 @@ try {
   assert.deepEqual(core, [
     'takomi',
     'sync-docs',
-    'code-review',
     'security-audit',
     'optimize-agent-context',
     'agent-recovery',
@@ -52,8 +51,10 @@ try {
   assert.equal(core.includes('context7'), false, 'context7 must not be core');
   assert.equal(core.includes('spawn-task'), false, 'spawn-task must not be core');
   assert.equal(catalog.getSkillCategory('frontend-design'), 'frontend', 'catalog taxonomy must expose the installer category');
-  assert.equal(catalog.getSkillCategory('shared-resend-portfolio'), 'developer', 'transactional email integration must use the developer category');
-  assert.equal(catalog.getSkillCategory('code-review'), 'core', 'multi-category skills must deterministically use their first catalog category');
+  assert.equal(catalog.getSkillCategory('shared-resend-portfolio'), 'dev-workflows', 'transactional email integration must use the dev-workflows category');
+  assert.equal(catalog.getSkillCategory('hyperframes'), 'video-motion', 'hyperframes must use the video-motion category');
+  assert.equal(catalog.getSkillCategory('office-docs'), 'office-docs', 'office-docs must use the office-docs category');
+  assert.equal(catalog.getSkillCategory('convex'), 'convex', 'convex must use the convex category');
   assert.equal(catalog.getSkillCategory('not-a-bundled-skill'), undefined, 'unknown skill names must not receive guessed categories');
 
   const allSkills = await catalog.listBundledSkillNames();
@@ -104,9 +105,10 @@ try {
   assert.equal(await fs.pathExists(skillPath('ai-avatar-video')), true);
   manifest = await installer.readSkillsInstallManifest();
   assert.equal(manifest.owned['frontend-design'].category, 'frontend', 'installer manifest must persist real catalog taxonomy for flat skills');
-  assert.equal(manifest.owned['shared-resend-portfolio'].category, 'developer', 'future explicit installs must persist transactional email taxonomy');
-  assert.equal(manifest.owned['code-review'].category, 'core', 'installer manifest taxonomy must use deterministic catalog precedence');
-  assert.equal(manifest.owned.hyperframes.category, 'creative-video', 'overlapping optional categories must retain their stable primary taxonomy');
+  assert.equal(manifest.owned['shared-resend-portfolio'].category, 'dev-workflows', 'future explicit installs must persist transactional email taxonomy');
+  assert.equal(manifest.owned.hyperframes.category, 'video-motion', 'atomic hyperframes package must use video-motion taxonomy');
+  assert.equal(manifest.owned.convex.category, 'convex', 'atomic convex package must use convex taxonomy');
+  assert.equal(manifest.owned['office-docs'].category, 'office-docs', 'atomic office-docs package must use office-docs taxonomy');
 
   await fs.ensureDir(skillPath('my-manual-skill'));
   await fs.writeFile(path.join(skillPath('my-manual-skill'), 'SKILL.md'), 'manual skill');
