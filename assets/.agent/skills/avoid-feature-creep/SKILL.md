@@ -1,6 +1,8 @@
 ---
 name: avoid-feature-creep
-description: Prevent feature creep when building software, apps, and AI-powered products. Use this skill when planning features, reviewing scope, building MVPs, managing backlogs, or when a user says "just one more feature." Helps developers and AI agents stay focused, ship faster, and avoid bloated products.
+description: Use when planning features, reviewing scope, or building MVPs to prevent over-engineering, unnecessary abstractions, and unrequested scope expansion.
+author: J StaR Films
+version: 2.0.0
 ---
 
 # Avoid Feature Creep for Agents

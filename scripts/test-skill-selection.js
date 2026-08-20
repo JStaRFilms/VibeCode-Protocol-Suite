@@ -42,19 +42,18 @@ try {
     'takomi',
     'sync-docs',
     'security-audit',
-    'optimize-agent-context',
     'agent-recovery',
     'avoid-feature-creep',
-    'ai-sdk',
     'git-commit-generation',
   ]);
   assert.equal(core.includes('context7'), false, 'context7 must not be core');
   assert.equal(core.includes('spawn-task'), false, 'spawn-task must not be core');
-  assert.equal(catalog.getSkillCategory('frontend-design'), 'frontend', 'catalog taxonomy must expose the installer category');
-  assert.equal(catalog.getSkillCategory('shared-resend-portfolio'), 'dev-workflows', 'transactional email integration must use the dev-workflows category');
+  assert.equal(catalog.getSkillCategory('frontend-ui'), 'frontend', 'catalog taxonomy must expose the installer category');
+  assert.equal(catalog.getSkillCategory('web-dev-standards'), 'dev-workflows', 'standards must use the dev-workflows category');
   assert.equal(catalog.getSkillCategory('hyperframes'), 'video-motion', 'hyperframes must use the video-motion category');
   assert.equal(catalog.getSkillCategory('office-docs'), 'office-docs', 'office-docs must use the office-docs category');
   assert.equal(catalog.getSkillCategory('convex'), 'convex', 'convex must use the convex category');
+  assert.equal(catalog.getSkillCategory('agent-engineering'), 'agent-engineering', 'agent-engineering must use the agent-engineering category');
   assert.equal(catalog.getSkillCategory('not-a-bundled-skill'), undefined, 'unknown skill names must not receive guessed categories');
 
   const allSkills = await catalog.listBundledSkillNames();
@@ -81,7 +80,7 @@ try {
   // skills and manual collisions are preserved and tracked consistently.
   await fs.appendFile(path.join(skillPath('sync-docs'), 'SKILL.md'), '\nmanual edit');
   result = await installer.installBundledSkills('test', { mode: 'none', selectedSkills: [] });
-  assert.equal(await fs.pathExists(skillPath('ai-sdk')), false, 'unmodified owned skill should be pruned when switching to none');
+  assert.equal(await fs.pathExists(skillPath('git-commit-generation')), false, 'unmodified owned skill should be pruned when switching to none');
   assert.equal(await fs.pathExists(skillPath('sync-docs')), true, 'modified owned skill should be preserved when switching to none');
   assert.equal(await fs.pathExists(skillPath('takomi')), true, 'manual same-name skill should be preserved when switching to none');
   assert.deepEqual(result.preservedModified, ['sync-docs'], 'modified owned skill should be reported');
@@ -102,10 +101,10 @@ try {
   await resetSkillsInstallState();
   result = await installer.installBundledSkills('test', { mode: 'all', selectedSkills: allSkills });
   assert.equal(result.selectedCount, allSkills.length, 'all mode should select every bundled skill');
-  assert.equal(await fs.pathExists(skillPath('ai-avatar-video')), true);
+  assert.equal(await fs.pathExists(skillPath('ai-media')), true);
   manifest = await installer.readSkillsInstallManifest();
-  assert.equal(manifest.owned['frontend-design'].category, 'frontend', 'installer manifest must persist real catalog taxonomy for flat skills');
-  assert.equal(manifest.owned['shared-resend-portfolio'].category, 'dev-workflows', 'future explicit installs must persist transactional email taxonomy');
+  assert.equal(manifest.owned['frontend-ui'].category, 'frontend', 'installer manifest must persist real catalog taxonomy for flat skills');
+  assert.equal(manifest.owned['web-dev-standards'].category, 'dev-workflows', 'future explicit installs must persist transactional email taxonomy');
   assert.equal(manifest.owned.hyperframes.category, 'video-motion', 'atomic hyperframes package must use video-motion taxonomy');
   assert.equal(manifest.owned.convex.category, 'convex', 'atomic convex package must use convex taxonomy');
   assert.equal(manifest.owned['office-docs'].category, 'office-docs', 'atomic office-docs package must use office-docs taxonomy');
@@ -115,28 +114,27 @@ try {
 
   result = await installer.installBundledSkills('test', { mode: 'core', selectedSkills: core });
   assert.equal(result.selectedCount, core.length, 'core mode selected count mismatch');
-  assert.equal(await fs.pathExists(skillPath('ai-avatar-video')), false, 'deselected Takomi-owned optional skill should be pruned');
+  assert.equal(await fs.pathExists(skillPath('ai-media')), false, 'deselected Takomi-owned optional skill should be pruned');
   assert.equal(await fs.pathExists(skillPath('my-manual-skill')), true, 'manual skill must be preserved');
-  assert.equal(await fs.pathExists(skillPath('ai-sdk')), true, 'ai-sdk should remain core');
+  assert.equal(await fs.pathExists(skillPath('security-audit')), true, 'security-audit should remain core');
   assert.equal(await fs.pathExists(skillPath('git-commit-generation')), true, 'git-commit-generation should remain core');
 
   manifest = await installer.readSkillsInstallManifest();
   assert.equal(manifest.mode, 'core');
   assert.equal(manifest.selectedSkills.includes('context7'), false);
   assert.equal(manifest.selectedSkills.includes('spawn-task'), false);
-  assert.equal(manifest.selectedSkills.includes('ai-sdk'), true);
   assert.equal(manifest.selectedSkills.includes('git-commit-generation'), true);
-  assert.equal(manifest.owned['ai-sdk'].category, 'core', 'refreshed core manifest entries retain installer category metadata');
+  assert.equal(manifest.owned['git-commit-generation'].category, 'core', 'refreshed core manifest entries retain installer category metadata');
 
   await store.initGlobalStore();
   await store.populateSkills('all');
-  assert.equal(await fs.pathExists(path.join(store.STORE_PATH, 'skills', 'ai-avatar-video')), true, 'all store populate should copy optional skills');
+  assert.equal(await fs.pathExists(path.join(store.STORE_PATH, 'skills', 'ai-media')), true, 'all store populate should copy optional skills');
   await fs.ensureDir(path.join(store.STORE_PATH, 'skills', 'manual-store-skill'));
   await fs.writeFile(path.join(store.STORE_PATH, 'skills', 'manual-store-skill', 'SKILL.md'), 'manual store skill');
   await store.populateSkills('core');
-  assert.equal(await fs.pathExists(path.join(store.STORE_PATH, 'skills', 'ai-avatar-video')), false, 'store should prune deselected Takomi-owned optional skills');
+  assert.equal(await fs.pathExists(path.join(store.STORE_PATH, 'skills', 'ai-media')), false, 'store should prune deselected Takomi-owned optional skills');
   assert.equal(await fs.pathExists(path.join(store.STORE_PATH, 'skills', 'manual-store-skill')), true, 'store should preserve manual skills');
-  assert.equal(await fs.pathExists(path.join(store.STORE_PATH, 'skills', 'ai-sdk')), true, 'store core should include ai-sdk');
+  assert.equal(await fs.pathExists(path.join(store.STORE_PATH, 'skills', 'security-audit')), true, 'store core should include security-audit');
 
   await store.populateWorkflows('all');
   assert.equal(await fs.pathExists(path.join(store.STORE_PATH, 'workflows', 'agent_reset.md')), true, 'all workflow populate should copy optional workflows');
@@ -153,7 +151,7 @@ try {
     prune: true,
     returnDetails: true,
   });
-  assert.equal(await fs.pathExists(path.join(harnessTarget, 'ai-sdk')), true, 'harness sync should copy selected store skills');
+  assert.equal(await fs.pathExists(path.join(harnessTarget, 'security-audit')), true, 'harness sync should copy selected store skills');
   await fs.ensureDir(path.join(harnessTarget, 'manual-harness-skill'));
   await fs.writeFile(path.join(harnessTarget, 'manual-harness-skill', 'SKILL.md'), 'manual harness skill');
   await store.populateSkills(['takomi']);
@@ -163,7 +161,7 @@ try {
     prune: true,
     returnDetails: true,
   });
-  assert.equal(await fs.pathExists(path.join(harnessTarget, 'ai-sdk')), false, 'harness sync should prune deselected Takomi-owned skills');
+  assert.equal(await fs.pathExists(path.join(harnessTarget, 'security-audit')), false, 'harness sync should prune deselected Takomi-owned skills');
   assert.equal(await fs.pathExists(path.join(harnessTarget, 'manual-harness-skill')), true, 'harness sync should preserve manual skills');
   assert.equal(await fs.pathExists(path.join(harnessTarget, 'takomi')), true, 'harness sync should keep selected skills');
 

@@ -1,6 +1,9 @@
 ---
 name: git-commit-generation
-description: "Automatically generate meaningful git commit messages based on staged changes."
+description: Use when generating clear, conventional git commit messages based on staged changes or recent repository diffs.
+author: Kilo Code
+coauthored: J StaR Films / Takomi
+version: 2.0.0
 ---
 
 # Generate Commit Messages
