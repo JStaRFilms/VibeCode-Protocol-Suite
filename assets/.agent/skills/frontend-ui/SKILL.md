@@ -1,36 +1,26 @@
 ---
 name: frontend-ui
-displayName: Frontend & UI/UX Suite
-description: Use when designing web or mobile UI, applying frontend design principles, auditing accessibility and UX guidelines, using 21st.dev components, styling with UI/UX Pro Max, integrating Figma assets, building Expo native UI, or running Playwright webapp tests.
+description: Use when designing web/mobile UI, creating prototypes ('prototyping-variants' Logic demo/UI switch bar), applying UI/UX Pro Max, 21st.dev components, Stitch, or Figma.
+author: J StaR Films / Matt Pocock
+coauthored: J StaR Films / Takomi
 version: 2.0.0
-author: J StaR Films
-tags: [frontend, design, ui, ux, figma, components, tailwind, testing]
 ---
 
-# Frontend & UI/UX Suite
+# Frontend UI Suite
 
-This is the router for frontend development, interface design, component libraries, and visual quality assurance. Open and read the relevant sub-skill file for your task:
+Design systems, interactive component libraries, throwaway prototyping patterns, and responsive UI guidelines.
 
-## Design Systems & Principles
+## Sub-Skills
 
-| Area | Sub-Skill Path | Use When |
+| Sub-Skill | Purpose | Path |
 |---|---|---|
-| Frontend Design | `frontend-design/SKILL.md` | Crafting distinctive, intentional web UI |
-| Web Design Guidelines | `web-design-guidelines/SKILL.md` | Accessibility, contrast, layout, and UX audits |
-| UI/UX Pro Max | `ui-ux-pro-max/SKILL.md` | Comprehensive styles, palettes, fonts, and chart specs |
-| Native UI (Expo) | `building-native-ui/SKILL.md` | Building mobile apps with Expo Router and NativeWind |
-
-## Components & Visual Integration
-
-| Area | Sub-Skill Path | Use When |
-|---|---|---|
-| 21st.dev Components | `21st-dev-components/SKILL.md` | Building with curated React components from 21st.dev |
-| Component Analysis | `component-analysis/SKILL.md` | Analyzing React/TS components for quality and conventions |
-| Figma Integration | `figma/SKILL.md` | Importing Figma frames, design tokens, and assets |
-| Stitch UI | `stitch/SKILL.md` | Rapid UI prototyping and stitching component blocks |
-
-## Verification & Testing
-
-| Area | Sub-Skill Path | Use When |
-|---|---|---|
-| Webapp Testing | `webapp-testing/SKILL.md` | End-to-end testing with Playwright, screenshots, logs |
+| **`prototyping-variants`** | Two-branch throwaway prototyping: Logic Simulator HTML demo & in-app UI variant switch bar | [`prototyping-variants/SKILL.md`](prototyping-variants/SKILL.md) |
+| **`frontend-design`** | Foundational frontend design principles and typography | [`frontend-design/SKILL.md`](frontend-design/SKILL.md) |
+| **`ui-ux-pro-max`** | High-end visual styling, animations, and micro-interactions | [`ui-ux-pro-max/SKILL.md`](ui-ux-pro-max/SKILL.md) |
+| **`21st-dev-components`** | Modern UI component patterns from 21st.dev | [`21st-dev-components/SKILL.md`](21st-dev-components/SKILL.md) |
+| **`web-design-guidelines`** | Usability, UX consistency, and accessibility standards | [`web-design-guidelines/SKILL.md`](web-design-guidelines/SKILL.md) |
+| **`building-native-ui`** | React Native and Expo mobile UI development | [`building-native-ui/SKILL.md`](building-native-ui/SKILL.md) |
+| **`figma`** | Figma asset inspection and translation to code | [`figma/SKILL.md`](figma/SKILL.md) |
+| **`stitch`** | Component stitching and layout orchestration | [`stitch/SKILL.md`](stitch/SKILL.md) |
+| **`component-analysis`** | Auditing component composition and hierarchy | [`component-analysis/SKILL.md`](component-analysis/SKILL.md) |
+| **`webapp-testing`** | Playwright web application integration testing | [`webapp-testing/SKILL.md`](webapp-testing/SKILL.md) |

@@ -1,27 +1,22 @@
 ---
 name: office-docs
-displayName: Office Documents Suite
-description: Use when reading, extracting text/tables, creating, editing, converting, merging, splitting, or formatting PDF, Word (DOCX), PowerPoint (PPTX), Excel (XLSX), or school exam paper documents.
+description: Use when creating or editing office documents (PDF, Word DOCX, PowerPoint PPTX, Excel XLSX), or applying Diátaxis/STE technical writing standards ('technical-writing').
+author: J StaR Films / P-Stack
+coauthored: J StaR Films / Takomi
 version: 2.0.0
-author: J StaR Films
-tags: [pdf, docx, pptx, xlsx, exam, office, documents]
 ---
 
-# Office Documents Suite
+# Office Documents & Technical Writing Suite
 
-This is the router for office document processing, spreadsheet calculation, slide generation, and exam paper creation. Open and read the relevant sub-skill file for your document format:
+Document processing, file generation (PDF, DOCX, PPTX, XLSX), and formal technical writing standards.
 
-## Document Formats & Tools
+## Sub-Skills
 
-| Format | Sub-Skill Path | Use When |
+| Sub-Skill | Purpose | Path |
 |---|---|---|
-| PDF (`.pdf`) | `pdf/SKILL.md` | Reading, extracting text/tables, merging, splitting, OCR, forms, watermark |
-| Word (`.docx`) | `docx/SKILL.md` | Creating, editing, formatting, or parsing Word documents |
-| PowerPoint (`.pptx`) | `pptx/SKILL.md` | Creating decks, pitch decks, editing slides, extracting text |
-| Excel (`.xlsx`) | `xlsx/SKILL.md` | Reading spreadsheets, creating sheets, formulas, data tables |
-| Exam Papers | `exam-creator-skill/SKILL.md` | Authoring exam question papers and marking schemes |
-
-## Quick Rules
-
-- Prefer reading documents programmatically through the scripts and instructions in each sub-skill.
-- Keep output documents properly structured and formatted.
+| **`technical-writing`** | Diátaxis framework, Google Developer Style, and Simplified Technical English | [`technical-writing/SKILL.md`](technical-writing/SKILL.md) |
+| **`pdf`** | Reading, extracting, and creating PDF documents | [`pdf/SKILL.md`](pdf/SKILL.md) |
+| **`docx`** | Creating, formatting, and modifying Word documents | [`docx/SKILL.md`](docx/SKILL.md) |
+| **`pptx`** | Generating and editing PowerPoint presentations | [`pptx/SKILL.md`](pptx/SKILL.md) |
+| **`xlsx`** | Spreadsheets, formulas, data extraction, and styling | [`xlsx/SKILL.md`](xlsx/SKILL.md) |
+| **`exam-creator-skill`** | School and exam paper layout formatting | [`exam-creator-skill/SKILL.md`](exam-creator-skill/SKILL.md) |

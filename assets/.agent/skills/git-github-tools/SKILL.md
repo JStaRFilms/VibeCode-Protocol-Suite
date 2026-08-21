@@ -1,20 +1,21 @@
 ---
 name: git-github-tools
-displayName: Git & GitHub Automation Tools
-description: Use when managing GitHub issues, PRs, labels, setting up isolated git worktrees for parallel agent development, or automatically addressing PR review comments.
+description: Use when resolving merge conflicts ('resolving-merge-conflicts'), triaging issues/PRs ('issue-pr-triage' AGENT-BRIEF.md), managing worktrees, GitHub ops, or fixing PR comments.
+author: J StaR Films / Matt Pocock
+coauthored: J StaR Films / Takomi
 version: 2.0.0
-author: J StaR Films
-tags: [git, github, worktree, pr, automation]
 ---
 
-# Git & GitHub Automation Tools
+# Git & GitHub Tools Suite
 
-This is the router for Git operations, GitHub automation, worktree isolation, and PR feedback handling. Open and read the relevant sub-skill file for your task:
+Operations for git workflow management, merge conflict reconciliation, issue/PR triage state machines, and isolated worktrees.
 
-## Workflows & Tools
+## Sub-Skills
 
-| Area | Sub-Skill Path | Use When |
+| Sub-Skill | Purpose | Path |
 |---|---|---|
-| GitHub Ops | `github-ops/SKILL.md` | Automating GitHub issues, projects, labels via CLI |
-| Git Worktrees | `git-worktree/SKILL.md` | Setting up isolated worktrees for parallel agent development |
-| PR Comment Fix | `pr-comment-fix/SKILL.md` | Automating resolution of GitHub PR review comments |
+| **`resolving-merge-conflicts`** | 3-step intent reconciliation for in-progress git merge/rebase conflicts | [`resolving-merge-conflicts/SKILL.md`](resolving-merge-conflicts/SKILL.md) |
+| **`issue-pr-triage`** | State machine for issues and external PRs; writes durable `AGENT-BRIEF.md` contracts | [`issue-pr-triage/SKILL.md`](issue-pr-triage/SKILL.md) |
+| **`git-worktree`** | Creating and managing isolated git worktrees for parallel agent development | [`git-worktree/SKILL.md`](git-worktree/SKILL.md) |
+| **`github-ops`** | Managing GitHub issues, PRs, milestones, and labels | [`github-ops/SKILL.md`](github-ops/SKILL.md) |
+| **`pr-comment-fix`** | Automated resolution of PR review feedback and comments | [`pr-comment-fix/SKILL.md`](pr-comment-fix/SKILL.md) |

@@ -1,21 +1,24 @@
 ---
 name: web-dev-standards
-displayName: Web & App Development Standards
-description: Use when developing Next.js App Router applications, managing monorepos (Turborepo/pnpm workspaces), upgrading Expo SDKs, or configuring shared transactional email with Resend.
+description: Use when designing software architectures ('codebase-design' Deep Modules/Design-It-Twice), writing tests ('test-driven-development' mock boundaries), creating setup scripts ('interactive-wizard'), TypeScript standards, Next.js, Expo, or Monorepos.
+author: J StaR Films / Matt Pocock / P-Stack
+coauthored: J StaR Films / Takomi
 version: 2.0.0
-author: J StaR Films
-tags: [nextjs, expo, monorepo, resend, standards]
 ---
 
-# Web & App Development Standards
+# Web Development Standards Suite
 
-This is the router for modern web development, monorepo architecture, mobile SDK management, and email infrastructure. Open and read the relevant sub-skill file for your task:
+Architectural doctrines, testing boundaries, language standards, and framework guidelines.
 
-## Framework Standards & Architecture
+## Sub-Skills
 
-| Area | Sub-Skill Path | Use When |
+| Sub-Skill | Purpose | Path |
 |---|---|---|
-| Next.js Standards | `nextjs-standards/SKILL.md` | Next.js App Router guidelines, patterns, and verification |
-| Monorepos | `monorepo-management/SKILL.md` | Turborepo, Nx, and pnpm workspaces management |
-| Expo SDK Upgrades | `upgrading-expo/SKILL.md` | Upgrading Expo SDK versions and fixing native dependencies |
-| Shared Resend Email | `shared-resend-portfolio/SKILL.md` | Reusing one verified Resend domain across products |
+| **`codebase-design`** | Ousterhout's Deep Modules, `DESIGN-IT-TWICE.md` (3 parallel interface drafts), and seam placement | [`codebase-design/SKILL.md`](codebase-design/SKILL.md) |
+| **`test-driven-development`** | TDD red-green-refactor with strict mock boundaries (mock only external I/O) and observable behavior tests | [`test-driven-development/SKILL.md`](test-driven-development/SKILL.md) |
+| **`interactive-wizard`** | Generates delightful, progress-tracked Bash wizards (`template.sh`) for human-only setup steps and secrets | [`interactive-wizard/SKILL.md`](interactive-wizard/SKILL.md) |
+| **`typescript-standards`** | TypeScript best practices: discriminated unions, branded types, and boundary validation | [`typescript-standards/SKILL.md`](typescript-standards/SKILL.md) |
+| **`nextjs-standards`** | Next.js App Router patterns, Server Components, server actions, and caching | [`nextjs-standards/SKILL.md`](nextjs-standards/SKILL.md) |
+| **`upgrading-expo`** | Expo SDK upgrades and React Native configuration | [`upgrading-expo/SKILL.md`](upgrading-expo/SKILL.md) |
+| **`monorepo-management`** | Turborepo and pnpm workspace dependency and boundary management | [`monorepo-management/SKILL.md`](monorepo-management/SKILL.md) |
+| **`shared-resend-portfolio`** | Shared transactional email integration with Resend | [`shared-resend-portfolio/SKILL.md`](shared-resend-portfolio/SKILL.md) |

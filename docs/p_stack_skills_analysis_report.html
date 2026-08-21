@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P-Stack Skills Analysis & Architectural Integration Report</title>
+  <style>
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-card: #1a2234;
+      --bg-card-hover: #222d44;
+      --border-color: #2a364f;
+      --border-accent: #3b82f6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --accent-blue: #38bdf8;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-purple: #a855f7;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge-header {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-blue);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 900px;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .stat-card:hover {
+      border-color: var(--border-accent);
+      transform: translateY(-2px);
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Section Styling */
+    .section-card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+      margin: 1.5rem 0 0.75rem 0;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-muted);
+    }
+
+    strong {
+      color: #ffffff;
+    }
+
+    ul, ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1.25rem;
+      color: var(--text-muted);
+    }
+
+    li {
+      margin-bottom: 0.4rem;
+    }
+
+    /* Architecture Visual Callout */
+    .arch-callout {
+      background: rgba(17, 24, 39, 0.75);
+      border-left: 4px solid var(--accent-blue);
+      border-radius: 0.5rem;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+      border-top: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .arch-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .arch-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+
+    .arch-box.danger {
+      border-color: rgba(244, 63, 94, 0.4);
+    }
+
+    .arch-box.success {
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    /* Filter & Search Bar */
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      background: var(--bg-secondary);
+      padding: 1rem 1.25rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 260px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.6rem 1rem;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .filter-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .filter-btn {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn:hover {
+      color: #ffffff;
+      background: var(--bg-card-hover);
+    }
+
+    .filter-btn.active {
+      background: var(--accent-blue);
+      color: #000000;
+      border-color: var(--accent-blue);
+    }
+
+    /* Table Styles */
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      background: var(--bg-secondary);
+      margin-bottom: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background-color: var(--bg-card);
+      color: #ffffff;
+      font-weight: 700;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .skill-name-cell {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .badge-add {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-merge {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .badge-principle {
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--accent-purple);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .badge-adapt {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .badge-duplicate {
+      background: rgba(156, 163, 175, 0.15);
+      color: var(--text-muted);
+      border: 1px solid rgba(156, 163, 175, 0.3);
+    }
+
+    /* Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .skill-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+
+    .skill-card:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+      background: var(--bg-card-hover);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+      gap: 0.5rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: #ffffff;
+    }
+
+    .card-meta {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 0.75rem;
+      font-family: var(--font-mono);
+    }
+
+    .card-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      flex-grow: 1;
+    }
+
+    .card-footer {
+      border-top: 1px solid var(--border-color);
+      padding-top: 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .target-path {
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      word-break: break-all;
+    }
+
+    /* Flow Diagrams */
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      background: var(--bg-card);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .step-number {
+      background: var(--accent-blue);
+      color: #000;
+      font-weight: 800;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.85rem;
+    }
+
+    /* Code Block */
+    pre {
+      background: #0d1117;
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: #e6edf3;
+      margin: 1rem 0;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.85em;
+      color: var(--accent-blue);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 3rem;
+      border-top: 1px solid var(--border-color);
+      padding-top: 1.5rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="badge-header">Takomi &bull; Lean Unified Skills Architecture Analysis</div>
+    <h1>P-Stack Skills vs VibeCode/Takomi Ecosystem</h1>
+    <div class="subtitle">
+      A comprehensive evaluation of 44 P-Stack skills against our repository standards, token preservation rules, frontmatter protocols, and architectural suites.
+    </div>
+  </header>
+
+  <!-- Key Metrics Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--accent-blue);">44</div>
+      <div class="stat-label">Total P-Stack Skills Analyzed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--accent-green);">14</div>
+      <div class="stat-label">Definite Adds (New Capabilities)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--accent-cyan);">7</div>
+      <div class="stat-label">Merges & Upgrades to Existing</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--accent-purple);">21</div>
+      <div class="stat-label">Engineering Principles to Bundle</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--accent-amber);">2</div>
+      <div class="stat-label">Refactor / Existing Duplicates</div>
+    </div>
+  </div>
+
+  <!-- Executive Architectural Alignment -->
+  <div class="section-card">
+    <h2>1. Executive Summary & Lean Unified Architecture Fit</h2>
+    <p>
+      Our project operates under the <strong>Lean Unified Skills Architecture</strong> (<code>docs/features/Lean_Unified_Skills_Architecture.md</code>).
+      In agentic harnesses like Antigravity, Claude Code, and Windsurf, every top-level skill description is injected directly into system prompt context on every single turn.
+    </p>
+
+    <div class="arch-callout">
+      <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem;">Token Budget Protection Law:</div>
+      <p style="margin-bottom: 0.5rem;">
+        Importing all 44 P-Stack skills flat into the root skills directory would inject over <strong>7,500 additional tokens</strong> into every single agent turn, pushing the system past prompt limits and causing the harness to silently drop skills.
+      </p>
+      <div class="arch-grid">
+        <div class="arch-box danger">
+          <strong style="color: var(--accent-rose);">❌ Naive Flat Import (Broken)</strong>
+          <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+            <li>44 flat top-level directories discovered</li>
+            <li>+7,500 to +12,000 prompt tokens per turn</li>
+            <li>System context saturation & silent skill drops</li>
+            <li>No category grouping or routing</li>
+          </ul>
+        </div>
+        <div class="arch-box success">
+          <strong style="color: var(--accent-green);">✅ Lean Unified Import (Compliant)</strong>
+          <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+            <li>Bundle 21 principles into <strong>1 atomic suite</strong> (<code>engineering-principles/</code>)</li>
+            <li>Merge functional tools into existing suites (<code>agent-engineering</code>, <code>dev-workflows</code>, <code>web-dev-standards</code>)</li>
+            <li>Top-level prompt discovery count: <strong>+1 to +3 max</strong></li>
+            <li>Zero context bloat; sub-skills read on demand via <code>view_file</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3>AGENTS.md Compliance Standard</h3>
+    <p>
+      Per <code>AGENTS.md</code>, all imported skills must adhere to two hard requirements:
+    </p>
+    <ol>
+      <li><strong>Invocation Triggers:</strong> The description must be phrased as an invocation rule starting with <code>Use when [user wants to do X]...</code> (maximum 2 sentences).</li>
+      <li><strong>Frontmatter Provenance:</strong> Frontmatter must specify <code>author: P-Stack</code>, <code>coauthored: J StaR Films / Takomi</code>, and <code>version: X.X.X</code>.</li>
+    </ol>
+  </div>
+
+  <!-- Interactive Controls -->
+  <div class="control-bar">
+    <input type="text" id="skillSearch" class="search-input" placeholder="Search skills by name, trigger, category, or path..." oninput="filterSkills()">
+    <div class="filter-tabs">
+      <button class="filter-btn active" onclick="setFilter('all', this)">All (44)</button>
+      <button class="filter-btn" onclick="setFilter('Definite Add', this)">Definite Adds (14)</button>
+      <button class="filter-btn" onclick="setFilter('Merge & Upgrade', this)">Merges & Upgrades (7)</button>
+      <button class="filter-btn" onclick="setFilter('Umbrella Suite Bundle', this)">21 Principles Suite (21)</button>
+      <button class="filter-btn" onclick="setFilter('Refactor / Adapt', this)">Refactor / Duplicate (2)</button>
+    </div>
+  </div>
+
+  <!-- Master Skill Matrix Table -->
+  <div class="table-container">
+    <table id="skillsTable">
+      <thead>
+        <tr>
+          <th>Skill Name</th>
+          <th>Type / Focus</th>
+          <th>Action & Category</th>
+          <th>Proposed Target Location</th>
+          <th>Recommended Invocation Trigger</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr class="skill-row" data-category="Exact Duplicate" data-search="unslop utility / writing quality exact duplicate .agents/skills/unslop/skill.md cut ai tells from any writing. must always apply.">
+          <td class="skill-name-cell">unslop</td>
+          <td>Utility / Writing Quality</td>
+          <td><span class="badge badge-duplicate">Exact Duplicate</span></td>
+          <td class="target-path">.agents/skills/unslop/SKILL.md</td>
+          <td>Cut AI tells from any writing. Must always apply.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="why investigation / archaeology definite add assets/.agent/skills/dev-workflows/why/ or assets/.agent/skills/why/ use when investigating why code was built a specific way, uncovering design rationale, regressions, postmortems, or historical constraints.">
+          <td class="skill-name-cell">why</td>
+          <td>Investigation / Archaeology</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/dev-workflows/why/ or assets/.agent/skills/why/</td>
+          <td>Use when investigating why code was built a specific way, uncovering design rationale, regressions, postmortems, or historical constraints.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="how investigation / code walkthrough definite add assets/.agent/skills/dev-workflows/how/ or assets/.agent/skills/how/ use when tracing how a subsystem or runtime path works, doing pre-edit code walkthroughs, or establishing component ownership.">
+          <td class="skill-name-cell">how</td>
+          <td>Investigation / Code Walkthrough</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/dev-workflows/how/ or assets/.agent/skills/how/</td>
+          <td>Use when tracing how a subsystem or runtime path works, doing pre-edit code walkthroughs, or establishing component ownership.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="teach knowledge transfer / mentorship definite add assets/.agent/skills/dev-workflows/teach/ or assets/.agent/skills/teach/ use when explaining a complex subsystem or change to a human engineer in clear, plain language at their chosen pace.">
+          <td class="skill-name-cell">teach</td>
+          <td>Knowledge Transfer / Mentorship</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/dev-workflows/teach/ or assets/.agent/skills/teach/</td>
+          <td>Use when explaining a complex subsystem or change to a human engineer in clear, plain language at their chosen pace.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="blast-radius risk management / pre-flight safety definite add assets/.agent/skills/agent-engineering/blast-radius/skill.md use when assessing the ripple effects of a planned change across consumers, schemas, apis, and tests before making edits.">
+          <td class="skill-name-cell">blast-radius</td>
+          <td>Risk Management / Pre-flight Safety</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/blast-radius/SKILL.md</td>
+          <td>Use when assessing the ripple effects of a planned change across consumers, schemas, APIs, and tests before making edits.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="recall session continuity / machine migration definite add assets/.agent/skills/dev-workflows/recall/ or core use when resuming work after stepping away, switching machines, or reconstructing project context from history and state.">
+          <td class="skill-name-cell">recall</td>
+          <td>Session Continuity / Machine Migration</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/dev-workflows/recall/ or Core</td>
+          <td>Use when resuming work after stepping away, switching machines, or reconstructing project context from history and state.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="reflect self-improvement / meta-learning definite add assets/.agent/skills/agent-engineering/reflect/skill.md use when analyzing a completed session or run to extract operational lessons and update agent skills with concrete edits.">
+          <td class="skill-name-cell">reflect</td>
+          <td>Self-Improvement / Meta-Learning</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/reflect/SKILL.md</td>
+          <td>Use when analyzing a completed session or run to extract operational lessons and update agent skills with concrete edits.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="show-me-your-work auditability / decision logging definite add assets/.agent/skills/dev-workflows/show-me-your-work/skill.md use when running autonomous or multi-phase tasks that require an auditable decision trail for human review.">
+          <td class="skill-name-cell">show-me-your-work</td>
+          <td>Auditability / Decision Logging</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/dev-workflows/show-me-your-work/SKILL.md</td>
+          <td>Use when running autonomous or multi-phase tasks that require an auditable decision trail for human review.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="create-verification-skill meta-verification / test harness generator definite add assets/.agent/skills/agent-engineering/create-verification-skill/skill.md use when setting up a new project to generate a tailored, repo-specific verification skill that exercises the app like a real user.">
+          <td class="skill-name-cell">create-verification-skill</td>
+          <td>Meta-Verification / Test Harness Generator</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/create-verification-skill/SKILL.md</td>
+          <td>Use when setting up a new project to generate a tailored, repo-specific verification skill that exercises the app like a real user.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="maintain-verification-skill meta-verification / test auditor definite add assets/.agent/skills/agent-engineering/maintain-verification-skill/skill.md use when updating a project verification skill after changes to build commands, test suites, or deployment pipelines.">
+          <td class="skill-name-cell">maintain-verification-skill</td>
+          <td>Meta-Verification / Test Auditor</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/maintain-verification-skill/SKILL.md</td>
+          <td>Use when updating a project verification skill after changes to build commands, test suites, or deployment pipelines.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="figure-it-out diagnostic / autonomous problem solving definite add assets/.agent/skills/agent-recovery/figure-it-out/ or standalone use when standard debugging fails on complex migrations, mysterious runtime defects, or unmapped territory.">
+          <td class="skill-name-cell">figure-it-out</td>
+          <td>Diagnostic / Autonomous Problem Solving</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/agent-recovery/figure-it-out/ or standalone</td>
+          <td>Use when standard debugging fails on complex migrations, mysterious runtime defects, or unmapped territory.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="arena orchestration / competitive benchmarking definite add assets/.agent/skills/agent-engineering/arena/skill.md use when benchmarking multiple implementation approaches or prompt variations with blind judging and tournament scoring.">
+          <td class="skill-name-cell">arena</td>
+          <td>Orchestration / Competitive Benchmarking</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/arena/SKILL.md</td>
+          <td>Use when benchmarking multiple implementation approaches or prompt variations with blind judging and tournament scoring.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="automate-me productivity / automation synthesizer definite add assets/.agent/skills/agent-engineering/automate-me/skill.md use when converting manual commands or repeated workflow patterns into automated scripts, hooks, or agent skills.">
+          <td class="skill-name-cell">automate-me</td>
+          <td>Productivity / Automation Synthesizer</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/automate-me/SKILL.md</td>
+          <td>Use when converting manual commands or repeated workflow patterns into automated scripts, hooks, or agent skills.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="bro interaction style / fast peer mode definite add assets/.agent/skills/dev-workflows/bro/skill.md use when the user wants zero jargon, crisp developer shorthand, and high-speed execution.">
+          <td class="skill-name-cell">bro</td>
+          <td>Interaction Style / Fast Peer Mode</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/dev-workflows/bro/SKILL.md</td>
+          <td>Use when the user wants zero jargon, crisp developer shorthand, and high-speed execution.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Definite Add" data-search="poteto mode (poteto-mode) persona / minimal resource protocol definite add assets/.agent/skills/agent-engineering/poteto-mode/skill.md use when running under strict token budgets, resource-constrained environments, or small context windows.">
+          <td class="skill-name-cell">Poteto Mode (poteto-mode)</td>
+          <td>Persona / Minimal Resource Protocol</td>
+          <td><span class="badge badge-add">Definite Add</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/poteto-mode/SKILL.md</td>
+          <td>Use when running under strict token budgets, resource-constrained environments, or small context windows.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Merge & Upgrade" data-search="architect architecture / system design merge & upgrade assets/.agent/skills/agent-engineering/architect/skill.md use when designing new systems, evaluating architectural tradeoffs, planning major refactors, or authoring rfcs.">
+          <td class="skill-name-cell">architect</td>
+          <td>Architecture / System Design</td>
+          <td><span class="badge badge-merge">Merge & Upgrade</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/architect/SKILL.md</td>
+          <td>Use when designing new systems, evaluating architectural tradeoffs, planning major refactors, or authoring RFCs.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Merge & Upgrade" data-search="typescript-best-practices language standards / typescript merge & upgrade assets/.agent/skills/web-dev-standards/typescript-standards/skill.md use when writing or reviewing typescript code to enforce discriminated unions, branded types, and constructive modeling.">
+          <td class="skill-name-cell">typescript-best-practices</td>
+          <td>Language Standards / TypeScript</td>
+          <td><span class="badge badge-merge">Merge & Upgrade</span></td>
+          <td class="target-path">assets/.agent/skills/web-dev-standards/typescript-standards/SKILL.md</td>
+          <td>Use when writing or reviewing TypeScript code to enforce discriminated unions, branded types, and constructive modeling.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Merge & Upgrade" data-search="technical-writing documentation / writing standards merge & upgrade assets/.agent/skills/office-docs/technical-writing/skill.md use when authoring or reviewing documentation, rfcs, readmes, pr descriptions, or technical specifications.">
+          <td class="skill-name-cell">technical-writing</td>
+          <td>Documentation / Writing Standards</td>
+          <td><span class="badge badge-merge">Merge & Upgrade</span></td>
+          <td class="target-path">assets/.agent/skills/office-docs/technical-writing/SKILL.md</td>
+          <td>Use when authoring or reviewing documentation, RFCs, READMEs, PR descriptions, or technical specifications.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Merge & Upgrade" data-search="tdd testing / test-driven development merge & upgrade assets/.agent/skills/web-dev-standards/tdd-protocol/skill.md use when writing test-driven code, creating regression tests, or verifying bug fixes with minimal test targets.">
+          <td class="skill-name-cell">tdd</td>
+          <td>Testing / Test-Driven Development</td>
+          <td><span class="badge badge-merge">Merge & Upgrade</span></td>
+          <td class="target-path">assets/.agent/skills/web-dev-standards/tdd-protocol/SKILL.md</td>
+          <td>Use when writing test-driven code, creating regression tests, or verifying bug fixes with minimal test targets.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Merge & Upgrade" data-search="swarm subagent orchestration / map-reduce merge & upgrade assets/.agent/skills/agent-engineering/subagent-driven-development/skill.md use when fanning out n parallel workers across independent tasks, draining them, and synthesizing a single report.">
+          <td class="skill-name-cell">swarm</td>
+          <td>Subagent Orchestration / Map-Reduce</td>
+          <td><span class="badge badge-merge">Merge & Upgrade</span></td>
+          <td class="target-path">assets/.agent/skills/agent-engineering/subagent-driven-development/SKILL.md</td>
+          <td>Use when fanning out N parallel workers across independent tasks, draining them, and synthesizing a single report.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Merge & Upgrade" data-search="interrogate requirements discovery / stress testing merge & upgrade assets/.agent/skills/takomi/ or assets/.agent/skills/dev-workflows/interrogate/ use when stress-testing ambiguous feature requests, uncovering hidden constraints, or running adversarial reviews.">
+          <td class="skill-name-cell">interrogate</td>
+          <td>Requirements Discovery / Stress Testing</td>
+          <td><span class="badge badge-merge">Merge & Upgrade</span></td>
+          <td class="target-path">assets/.agent/skills/takomi/ or assets/.agent/skills/dev-workflows/interrogate/</td>
+          <td>Use when stress-testing ambiguous feature requests, uncovering hidden constraints, or running adversarial reviews.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Merge & Upgrade" data-search="no-comments code hygiene / simplification merge & upgrade assets/.agent/skills/web-dev-standards/code-hygiene/skill.md use when auditing code comments to eliminate noisy, restating explanations while preserving critical intent.">
+          <td class="skill-name-cell">no-comments</td>
+          <td>Code Hygiene / Simplification</td>
+          <td><span class="badge badge-merge">Merge & Upgrade</span></td>
+          <td class="target-path">assets/.agent/skills/web-dev-standards/code-hygiene/SKILL.md</td>
+          <td>Use when auditing code comments to eliminate noisy, restating explanations while preserving critical intent.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Refactor / Adapt" data-search="setup-pstack configuration / model router refactor / adapt assets/.agent/skills/takomi/setup-models/ or cli script use when configuring model assignments per role, detecting available providers, and setting role defaults.">
+          <td class="skill-name-cell">setup-pstack</td>
+          <td>Configuration / Model Router</td>
+          <td><span class="badge badge-adapt">Refactor / Adapt</span></td>
+          <td class="target-path">assets/.agent/skills/takomi/setup-models/ or CLI script</td>
+          <td>Use when configuring model assignments per role, detecting available providers, and setting role defaults.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-boundary-discipline core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/boundary-discipline/skill.md apply when wiring validation, error handling, or framework adapters. concentrate guards at system boundaries (cli, config, network, external apis); trust internal types and keep business logic in pure functions.">
+          <td class="skill-name-cell">principle-boundary-discipline</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/boundary-discipline/SKILL.md</td>
+          <td>Apply when wiring validation, error handling, or framework adapters. Concentrate guards at system boundaries (CLI, config, network, external APIs); trust internal types and keep business logic in pure functions.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-build-the-lever core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/build-the-lever/skill.md apply to any non-trivial work, not just bulk work: edits, migrations, analyses, checks. build the tool that does it or proves it (codemod, script, generator, or a skill your subagents follow) instead of working by hand. the tool is the artifact a reviewer can rerun.">
+          <td class="skill-name-cell">principle-build-the-lever</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/build-the-lever/SKILL.md</td>
+          <td>Apply to any non-trivial work, not just bulk work: edits, migrations, analyses, checks. Build the tool that does it or proves it (codemod, script, generator, or a skill your subagents follow) instead of working by hand. The tool is the artifact a reviewer can rerun.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-encode-lessons-in-structure core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/encode-lessons-in-structure/skill.md apply when you catch yourself writing the same instruction a second time, or notice a recurring correction. encode the rule as a lint, metadata flag, runtime check, or script instead of more text.">
+          <td class="skill-name-cell">principle-encode-lessons-in-structure</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/encode-lessons-in-structure/SKILL.md</td>
+          <td>Apply when you catch yourself writing the same instruction a second time, or notice a recurring correction. Encode the rule as a lint, metadata flag, runtime check, or script instead of more text.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-exhaust-the-design-space core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/exhaust-the-design-space/skill.md apply when facing a novel ui interaction or architectural decision with no precedent in the codebase. build 2-3 competing prototypes and compare side by side before committing.">
+          <td class="skill-name-cell">principle-exhaust-the-design-space</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/exhaust-the-design-space/SKILL.md</td>
+          <td>Apply when facing a novel UI interaction or architectural decision with no precedent in the codebase. Build 2-3 competing prototypes and compare side by side before committing.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-experience-first core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/experience-first/skill.md apply when product, ux, or feature-scope tradeoffs come up. choose user delight over implementation convenience; ship fewer polished features over more rough ones.">
+          <td class="skill-name-cell">principle-experience-first</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/experience-first/SKILL.md</td>
+          <td>Apply when product, UX, or feature-scope tradeoffs come up. Choose user delight over implementation convenience; ship fewer polished features over more rough ones.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-fix-root-causes core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/fix-root-causes/skill.md apply when debugging. trace each symptom to its root cause and fix it there; reproduce first, ask why until you reach it, resist nil-check guards that silence crashes.">
+          <td class="skill-name-cell">principle-fix-root-causes</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/fix-root-causes/SKILL.md</td>
+          <td>Apply when debugging. Trace each symptom to its root cause and fix it there; reproduce first, ask why until you reach it, resist nil-check guards that silence crashes.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-foundational-thinking core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/foundational-thinking/skill.md apply before writing logic: choosing core types and data structures, sequencing scaffold-vs-feature work, asking what concurrent actors share. get the data structures right so downstream code becomes obvious.">
+          <td class="skill-name-cell">principle-foundational-thinking</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/foundational-thinking/SKILL.md</td>
+          <td>Apply before writing logic: choosing core types and data structures, sequencing scaffold-vs-feature work, asking what concurrent actors share. Get the data structures right so downstream code becomes obvious.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-guard-the-context-window core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/guard-the-context-window/skill.md apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. route bulk to subagents; keep summaries in the main thread, not raw payloads.">
+          <td class="skill-name-cell">principle-guard-the-context-window</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/guard-the-context-window/SKILL.md</td>
+          <td>Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to subagents; keep summaries in the main thread, not raw payloads.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-laziness-protocol core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/laziness-protocol/skill.md apply when refactoring, evaluating diff size, or tempted to add abstractions, layers, or signal threading. bias toward deletion and the smallest change that solves the problem.">
+          <td class="skill-name-cell">principle-laziness-protocol</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/laziness-protocol/SKILL.md</td>
+          <td>Apply when refactoring, evaluating diff size, or tempted to add abstractions, layers, or signal threading. Bias toward deletion and the smallest change that solves the problem.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-make-operations-idempotent core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/make-operations-idempotent/skill.md apply when designing commands, lifecycle steps, or processing loops that run amid crashes, restarts, and retries. converge to the same end state regardless of partial prior runs.">
+          <td class="skill-name-cell">principle-make-operations-idempotent</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/make-operations-idempotent/SKILL.md</td>
+          <td>Apply when designing commands, lifecycle steps, or processing loops that run amid crashes, restarts, and retries. Converge to the same end state regardless of partial prior runs.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-migrate-callers-then-delete-legacy-apis core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/migrate-callers-then-delete-legacy-apis/skill.md apply when introducing a new internal api while old callers still exist. migrate callers and delete the old api in the same wave instead of preserving compatibility layers.">
+          <td class="skill-name-cell">principle-migrate-callers-then-delete-legacy-apis</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/migrate-callers-then-delete-legacy-apis/SKILL.md</td>
+          <td>Apply when introducing a new internal API while old callers still exist. Migrate callers and delete the old API in the same wave instead of preserving compatibility layers.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-minimize-reader-load core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/minimize-reader-load/skill.md apply when reviewing or shaping code that's hard to trace. count layers between question and answer, and hidden state in the reader's head; collapse one-caller wrappers and shrink mutable scope.">
+          <td class="skill-name-cell">principle-minimize-reader-load</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/minimize-reader-load/SKILL.md</td>
+          <td>Apply when reviewing or shaping code that's hard to trace. Count layers between question and answer, and hidden state in the reader's head; collapse one-caller wrappers and shrink mutable scope.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-model-the-domain core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/model-the-domain/skill.md apply when writing stateful logic, or when code branches a lot or repeats a shape assumption across files. encode the domain in a structure instead of scattered conditionals.">
+          <td class="skill-name-cell">principle-model-the-domain</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/model-the-domain/SKILL.md</td>
+          <td>Apply when writing stateful logic, or when code branches a lot or repeats a shape assumption across files. Encode the domain in a structure instead of scattered conditionals.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-never-block-on-the-human core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/never-block-on-the-human/skill.md apply when tempted to ask 'should i do x?' on reversible work. proceed, present the result, let the human course-correct after the fact; reserve confirmation for irreversible actions.">
+          <td class="skill-name-cell">principle-never-block-on-the-human</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/never-block-on-the-human/SKILL.md</td>
+          <td>Apply when tempted to ask 'should I do X?' on reversible work. Proceed, present the result, let the human course-correct after the fact; reserve confirmation for irreversible actions.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-outcome-oriented-execution core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/outcome-oriented-execution/skill.md apply during planned rewrites and migrations with explicit phase boundaries. converge on the target architecture; don't preserve smooth intermediate states with throwaway compatibility code.">
+          <td class="skill-name-cell">principle-outcome-oriented-execution</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/outcome-oriented-execution/SKILL.md</td>
+          <td>Apply during planned rewrites and migrations with explicit phase boundaries. Converge on the target architecture; don't preserve smooth intermediate states with throwaway compatibility code.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-prove-it-works core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/prove-it-works/skill.md apply after completing a task, before declaring done. verify against the real artifact (run the feature, read the actual value, inspect the diff), not a proxy, self-report, or 'it compiles.'">
+          <td class="skill-name-cell">principle-prove-it-works</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/prove-it-works/SKILL.md</td>
+          <td>Apply after completing a task, before declaring done. Verify against the real artifact (run the feature, read the actual value, inspect the diff), not a proxy, self-report, or 'it compiles.'</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-redesign-from-first-principles core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/redesign-from-first-principles/skill.md apply when integrating a new requirement into an existing design. redesign as if the requirement had been a foundational assumption from day one, instead of bolting it on.">
+          <td class="skill-name-cell">principle-redesign-from-first-principles</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/redesign-from-first-principles/SKILL.md</td>
+          <td>Apply when integrating a new requirement into an existing design. Redesign as if the requirement had been a foundational assumption from day one, instead of bolting it on.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-separate-before-serializing-shared-state core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/separate-before-serializing-shared-state/skill.md apply when concurrent actors might write to the same file, branch, key, or state object. eliminate the sharing first; serialize structurally only when one shared writer is a real invariant.">
+          <td class="skill-name-cell">principle-separate-before-serializing-shared-state</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/separate-before-serializing-shared-state/SKILL.md</td>
+          <td>Apply when concurrent actors might write to the same file, branch, key, or state object. Eliminate the sharing first; serialize structurally only when one shared writer is a real invariant.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-sequence-verifiable-units core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/sequence-verifiable-units/skill.md apply to multi-step work (sweeps, migrations, runs of similar edits) and to how you stack commits and prs. break work into small units that each end in a verifiable state, check each before the next, and order delivery so the sequence proves itself to a reviewer.">
+          <td class="skill-name-cell">principle-sequence-verifiable-units</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/sequence-verifiable-units/SKILL.md</td>
+          <td>Apply to multi-step work (sweeps, migrations, runs of similar edits) and to how you stack commits and PRs. Break work into small units that each end in a verifiable state, check each before the next, and order delivery so the sequence proves itself to a reviewer.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-subtract-before-you-add core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/subtract-before-you-add/skill.md apply when sequencing an addition, refactor, or rewrite. remove dead weight, redundant validators, and stub references first, then build on the simpler base.">
+          <td class="skill-name-cell">principle-subtract-before-you-add</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/subtract-before-you-add/SKILL.md</td>
+          <td>Apply when sequencing an addition, refactor, or rewrite. Remove dead weight, redundant validators, and stub references first, then build on the simpler base.</td>
+        </tr>
+        
+        <tr class="skill-row" data-category="Umbrella Suite Bundle" data-search="principle-type-system-discipline core engineering principle umbrella suite bundle assets/.agent/skills/engineering-principles/type-system-discipline/skill.md apply when designing types, reviewing a function signature, or writing code in any statically-typed language. make illegal states unrepresentable, brand semantic primitives, parse external data at boundaries, refuse to lie to the compiler, exhaust variants, derive from authoritative schemas.">
+          <td class="skill-name-cell">principle-type-system-discipline</td>
+          <td>Core Engineering Principle</td>
+          <td><span class="badge badge-principle">Umbrella Suite Bundle</span></td>
+          <td class="target-path">assets/.agent/skills/engineering-principles/type-system-discipline/SKILL.md</td>
+          <td>Apply when designing types, reviewing a function signature, or writing code in any statically-typed language. Make illegal states unrepresentable, brand semantic primitives, parse external data at boundaries, refuse to lie to the compiler, exhaust variants, derive from authoritative schemas.</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Deep Dive Analysis Sections -->
+
+  <!-- 1. Definite Adds -->
+  <div class="section-card">
+    <h2>2. Definite Adds (High-Value Standalone Capabilities)</h2>
+    <p>
+      These 14 skills fill genuine functional voids in our current architecture. They introduce specialized protocols for historical code archaeology, runtime tracing, autonomous debugging, meta-verification generation, and competitive benchmarking.
+    </p>
+
+    <div class="cards-grid">
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">why</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when investigating why code was built a specific way, uncovering design rationale, regressions, postmortems, or historical constraints.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Discovers available MCP servers at runtime and queries 7 evidence categories in parallel: source control history, issue tracker, long-form docs, real-time chat, infrastructure metrics, error tracking, and analytics warehouse.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/dev-workflows/why/ or assets/.agent/skills/why/</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">how</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when tracing how a subsystem or runtime path works, doing pre-edit code walkthroughs, or establishing component ownership.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Traces execution mechanics, dataflow, and invariants across files and dependencies with cited code references without modifying code.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/dev-workflows/how/ or assets/.agent/skills/how/</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">teach</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when explaining a complex subsystem or change to a human engineer in clear, plain language at their chosen pace.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Orchestrates how and why sub-skills in parallel, synthesizing findings into a plain explanation without fluff or quizzes.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/dev-workflows/teach/ or assets/.agent/skills/teach/</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">blast-radius</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when assessing the ripple effects of a planned change across consumers, schemas, APIs, and tests before making edits.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Maps transitive dependencies, downstream call sites, schema mutation impacts, and test coverage gaps before edits begin.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/blast-radius/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">recall</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when resuming work after stepping away, switching machines, or reconstructing project context from history and state.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Reads git log, active tasks, session transcripts, and uncommitted diffs to hand back a concise brief on exactly where work left off.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/dev-workflows/recall/ or Core</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">reflect</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when analyzing a completed session or run to extract operational lessons and update agent skills with concrete edits.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Spawns 3 parallel review subagents over the session transcript to identify failures, workflow friction, and prompt improvements, routing each finding to a skill edit.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/reflect/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">show-me-your-work</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when running autonomous or multi-phase tasks that require an auditable decision trail for human review.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Maintains a structured TSV decision log recording timestamp, action taken, rationale, evidence, risk, and outcome.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/dev-workflows/show-me-your-work/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">create-verification-skill</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when setting up a new project to generate a tailored, repo-specific verification skill that exercises the app like a real user.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Inspects project configuration, test runners, build scripts, and entrypoints to generate a dedicated verify skill tailored to the repository.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/create-verification-skill/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">maintain-verification-skill</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when updating a project verification skill after changes to build commands, test suites, or deployment pipelines.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Runs a consistency pass across codebase changes and verification scripts to keep verification steps accurate.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/maintain-verification-skill/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">figure-it-out</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when standard debugging fails on complex migrations, mysterious runtime defects, or unmapped territory.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Structured diagnostic protocol that forms testable hypotheses, uses minimal runtime probes, and avoids thrashing.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/agent-recovery/figure-it-out/ or standalone</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">arena</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when benchmarking multiple implementation approaches or prompt variations with blind judging and tournament scoring.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Fans out candidate implementations in parallel, then uses an independent evaluator to blind-score against strict criteria.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/arena/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">automate-me</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when converting manual commands or repeated workflow patterns into automated scripts, hooks, or agent skills.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Scans recent terminal activity, shell history, and editing sequences to generate reusable automation artifacts.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/automate-me/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">bro</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when the user wants zero jargon, crisp developer shorthand, and high-speed execution.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> A fast peer-developer communication style that strips formal pleasantries and communicates directly in code diffs and concrete facts.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/dev-workflows/bro/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">Poteto Mode (poteto-mode)</span>
+            <span class="badge badge-add">Definite Add</span>
+          </div>
+          <div class="card-meta">Author: P-Stack &bull; v1.0.0</div>
+          <div class="card-desc">
+            <p><strong>Trigger:</strong> Use when running under strict token budgets, resource-constrained environments, or small context windows.</p>
+            <p style="margin-top: 0.5rem;"><strong>Core Mechanics:</strong> Ultra-compact execution protocol: minimizes tool output sizes, uses minimal diffs, and strips decorative formatting.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Destination:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/poteto-mode/SKILL.md</div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- 2. Merges & Upgrades -->
+  <div class="section-card">
+    <h2>3. Candidates for Merging & Upgrading Existing Project Skills</h2>
+    <p>
+      These 7 skills directly overlap with existing areas in our codebase, but provide significant reference catalogs, templates, or disciplined protocols that will radically improve our current suites.
+    </p>
+
+    <div class="cards-grid">
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">architect</span>
+            <span class="badge badge-merge">Merge & Upgrade</span>
+          </div>
+          <div class="card-meta">Action: Create agent-engineering/architect</div>
+          <div class="card-desc">
+            <p><strong>Synthesis Plan:</strong> Combines with existing Takomi Design phase and avoid-feature-creep to provide deep design rigor without bloating top-level prompt.</p>
+            <p style="margin-top: 0.5rem;"><strong>Upgraded Capability:</strong> Full architectural framework with RFC templates, ADR generation, tradeoff matrices, and anti-pattern catalogs.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Location:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/architect/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">typescript-best-practices</span>
+            <span class="badge badge-merge">Merge & Upgrade</span>
+          </div>
+          <div class="card-meta">Action: Add as web-dev-standards/typescript-standards</div>
+          <div class="card-desc">
+            <p><strong>Synthesis Plan:</strong> Augments our global TypeScript engineering rules with comprehensive pattern and anti-pattern reference catalogs.</p>
+            <p style="margin-top: 0.5rem;"><strong>Upgraded Capability:</strong> Concrete rules for type-system discipline: illegal states unrepresentable, branded primitives, schema boundary parsing with Zod.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Location:</div>
+          <div class="target-path">assets/.agent/skills/web-dev-standards/typescript-standards/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">technical-writing</span>
+            <span class="badge badge-merge">Merge & Upgrade</span>
+          </div>
+          <div class="card-meta">Action: Add as office-docs/technical-writing</div>
+          <div class="card-desc">
+            <p><strong>Synthesis Plan:</strong> Pairs with unslop and crafting-effective-readmes to establish an industry-grade technical writing pipeline.</p>
+            <p style="margin-top: 0.5rem;"><strong>Upgraded Capability:</strong> 4-layer documentation standard: Diátaxis framework (tutorials, how-to, reference, explanation), Google Developer Style, and STE rules.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Location:</div>
+          <div class="target-path">assets/.agent/skills/office-docs/technical-writing/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">tdd</span>
+            <span class="badge badge-merge">Merge & Upgrade</span>
+          </div>
+          <div class="card-meta">Action: Add as web-dev-standards/tdd-protocol</div>
+          <div class="card-desc">
+            <p><strong>Synthesis Plan:</strong> Harmonizes with webapp-testing and verification skills to standardize testing protocols.</p>
+            <p style="margin-top: 0.5rem;"><strong>Upgraded Capability:</strong> Rigorous red-green-refactor loop that writes failing test first, confirms failure, applies minimal diff, and verifies pass.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Location:</div>
+          <div class="target-path">assets/.agent/skills/web-dev-standards/tdd-protocol/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">swarm</span>
+            <span class="badge badge-merge">Merge & Upgrade</span>
+          </div>
+          <div class="card-meta">Action: Incorporate into agent-engineering/subagent-driven-development</div>
+          <div class="card-desc">
+            <p><strong>Synthesis Plan:</strong> Enhances subagent-driven-development with fan-out worker drainage patterns.</p>
+            <p style="margin-top: 0.5rem;"><strong>Upgraded Capability:</strong> Map-reduce subagent pattern for wide searches, multi-file sweeps, and parallel exploration.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Location:</div>
+          <div class="target-path">assets/.agent/skills/agent-engineering/subagent-driven-development/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">interrogate</span>
+            <span class="badge badge-merge">Merge & Upgrade</span>
+          </div>
+          <div class="card-meta">Action: Incorporate into Takomi or standalone dev-workflows</div>
+          <div class="card-desc">
+            <p><strong>Synthesis Plan:</strong> Integrates with Takomi Genesis phase and slash command /grill-me.</p>
+            <p style="margin-top: 0.5rem;"><strong>Upgraded Capability:</strong> Adversarial requirements extraction protocol that challenges assumptions and probes failure modes before implementation.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Location:</div>
+          <div class="target-path">assets/.agent/skills/takomi/ or assets/.agent/skills/dev-workflows/interrogate/</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">no-comments</span>
+            <span class="badge badge-merge">Merge & Upgrade</span>
+          </div>
+          <div class="card-meta">Action: Add as sub-skill in web-dev-standards</div>
+          <div class="card-desc">
+            <p><strong>Synthesis Plan:</strong> Aligns directly with our global engineering rule on code comments.</p>
+            <p style="margin-top: 0.5rem;"><strong>Upgraded Capability:</strong> Enforces self-documenting code by removing comments that restate the code, ensuring only load-bearing comments remain.</p>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Target Location:</div>
+          <div class="target-path">assets/.agent/skills/web-dev-standards/code-hygiene/SKILL.md</div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- 3. The 21 Principles Architecture -->
+  <div class="section-card">
+    <h2>4. The 21 Principles Suite: Packaging & Router Architecture</h2>
+    <p>
+      P-Stack includes 21 atomic engineering principles. Each principle is a tightly-written markdown guideline targeting specific failure modes (e.g. boundary validation, state serialization, idempotent operations, laziness, root cause fixes).
+    </p>
+
+    <div class="arch-callout">
+      <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem;">The Engineering Principles Atomic Umbrella Suite:</div>
+      <p>
+        Rather than polluting the root discovery catalog with 21 separate skills, we package them as a single top-level suite: <code>assets/.agent/skills/engineering-principles/</code>.
+        The top-level <code>SKILL.md</code> acts as an intelligent router index, allowing the agent to view any specific principle on demand via <code>view_file</code>.
+      </p>
+      <pre><code>assets/.agent/skills/engineering-principles/
+├── SKILL.md (Router & Quick Index of all 21 Principles)
+├── boundary-discipline/SKILL.md
+├── build-the-lever/SKILL.md
+├── encode-lessons-in-structure/SKILL.md
+├── exhaust-the-design-space/SKILL.md
+├── experience-first/SKILL.md
+├── fix-root-causes/SKILL.md
+├── foundational-thinking/SKILL.md
+├── guard-the-context-window/SKILL.md
+├── laziness-protocol/SKILL.md
+├── make-operations-idempotent/SKILL.md
+├── migrate-callers-then-delete-legacy-apis/SKILL.md
+├── minimize-reader-load/SKILL.md
+├── model-the-domain/SKILL.md
+├── never-block-on-the-human/SKILL.md
+├── outcome-oriented-execution/SKILL.md
+├── prove-it-works/SKILL.md
+├── redesign-from-first-principles/SKILL.md
+├── separate-before-serializing-shared-state/SKILL.md
+├── sequence-verifiable-units/SKILL.md
+├── subtract-before-you-add/SKILL.md
+└── type-system-discipline/SKILL.md</code></pre>
+    </div>
+
+    <h3>Catalog of the 21 Principles</h3>
+    <div class="cards-grid">
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">boundary-discipline</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-boundary-discipline &bull; 1615 bytes</div>
+          <div class="card-desc">
+            Apply when wiring validation, error handling, or framework adapters. Concentrate guards at system boundaries (CLI, config, network, external APIs); trust internal types and keep business logic in pure functions.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/boundary-discipline/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">build-the-lever</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-build-the-lever &bull; 2301 bytes</div>
+          <div class="card-desc">
+            Apply to any non-trivial work, not just bulk work: edits, migrations, analyses, checks. Build the tool that does it or proves it (codemod, script, generator, or a skill your subagents follow) instead of working by hand. The tool is the artifact a reviewer can rerun.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/build-the-lever/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">encode-lessons-in-structure</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-encode-lessons-in-structure &bull; 1946 bytes</div>
+          <div class="card-desc">
+            Apply when you catch yourself writing the same instruction a second time, or notice a recurring correction. Encode the rule as a lint, metadata flag, runtime check, or script instead of more text.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/encode-lessons-in-structure/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">exhaust-the-design-space</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-exhaust-the-design-space &bull; 878 bytes</div>
+          <div class="card-desc">
+            Apply when facing a novel UI interaction or architectural decision with no precedent in the codebase. Build 2-3 competing prototypes and compare side by side before committing.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/exhaust-the-design-space/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">experience-first</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-experience-first &bull; 1055 bytes</div>
+          <div class="card-desc">
+            Apply when product, UX, or feature-scope tradeoffs come up. Choose user delight over implementation convenience; ship fewer polished features over more rough ones.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/experience-first/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">fix-root-causes</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-fix-root-causes &bull; 1110 bytes</div>
+          <div class="card-desc">
+            Apply when debugging. Trace each symptom to its root cause and fix it there; reproduce first, ask why until you reach it, resist nil-check guards that silence crashes.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/fix-root-causes/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">foundational-thinking</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-foundational-thinking &bull; 1477 bytes</div>
+          <div class="card-desc">
+            Apply before writing logic: choosing core types and data structures, sequencing scaffold-vs-feature work, asking what concurrent actors share. Get the data structures right so downstream code becomes obvious.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/foundational-thinking/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">guard-the-context-window</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-guard-the-context-window &bull; 882 bytes</div>
+          <div class="card-desc">
+            Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to subagents; keep summaries in the main thread, not raw payloads.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/guard-the-context-window/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">laziness-protocol</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-laziness-protocol &bull; 1253 bytes</div>
+          <div class="card-desc">
+            Apply when refactoring, evaluating diff size, or tempted to add abstractions, layers, or signal threading. Bias toward deletion and the smallest change that solves the problem.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/laziness-protocol/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">make-operations-idempotent</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-make-operations-idempotent &bull; 1112 bytes</div>
+          <div class="card-desc">
+            Apply when designing commands, lifecycle steps, or processing loops that run amid crashes, restarts, and retries. Converge to the same end state regardless of partial prior runs.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/make-operations-idempotent/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">migrate-callers-then-delete-legacy-apis</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-migrate-callers-then-delete-legacy-apis &bull; 867 bytes</div>
+          <div class="card-desc">
+            Apply when introducing a new internal API while old callers still exist. Migrate callers and delete the old API in the same wave instead of preserving compatibility layers.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/migrate-callers-then-delete-legacy-apis/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">minimize-reader-load</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-minimize-reader-load &bull; 1811 bytes</div>
+          <div class="card-desc">
+            Apply when reviewing or shaping code that's hard to trace. Count layers between question and answer, and hidden state in the reader's head; collapse one-caller wrappers and shrink mutable scope.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/minimize-reader-load/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">model-the-domain</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-model-the-domain &bull; 1863 bytes</div>
+          <div class="card-desc">
+            Apply when writing stateful logic, or when code branches a lot or repeats a shape assumption across files. Encode the domain in a structure instead of scattered conditionals.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/model-the-domain/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">never-block-on-the-human</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-never-block-on-the-human &bull; 1315 bytes</div>
+          <div class="card-desc">
+            Apply when tempted to ask 'should I do X?' on reversible work. Proceed, present the result, let the human course-correct after the fact; reserve confirmation for irreversible actions.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/never-block-on-the-human/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">outcome-oriented-execution</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-outcome-oriented-execution &bull; 842 bytes</div>
+          <div class="card-desc">
+            Apply during planned rewrites and migrations with explicit phase boundaries. Converge on the target architecture; don't preserve smooth intermediate states with throwaway compatibility code.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/outcome-oriented-execution/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">prove-it-works</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-prove-it-works &bull; 1790 bytes</div>
+          <div class="card-desc">
+            Apply after completing a task, before declaring done. Verify against the real artifact (run the feature, read the actual value, inspect the diff), not a proxy, self-report, or 'it compiles.'
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/prove-it-works/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">redesign-from-first-principles</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-redesign-from-first-principles &bull; 668 bytes</div>
+          <div class="card-desc">
+            Apply when integrating a new requirement into an existing design. Redesign as if the requirement had been a foundational assumption from day one, instead of bolting it on.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/redesign-from-first-principles/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">separate-before-serializing-shared-state</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-separate-before-serializing-shared-state &bull; 1328 bytes</div>
+          <div class="card-desc">
+            Apply when concurrent actors might write to the same file, branch, key, or state object. Eliminate the sharing first; serialize structurally only when one shared writer is a real invariant.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/separate-before-serializing-shared-state/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">sequence-verifiable-units</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-sequence-verifiable-units &bull; 1928 bytes</div>
+          <div class="card-desc">
+            Apply to multi-step work (sweeps, migrations, runs of similar edits) and to how you stack commits and PRs. Break work into small units that each end in a verifiable state, check each before the next, and order delivery so the sequence proves itself to a reviewer.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/sequence-verifiable-units/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">subtract-before-you-add</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-subtract-before-you-add &bull; 1083 bytes</div>
+          <div class="card-desc">
+            Apply when sequencing an addition, refactor, or rewrite. Remove dead weight, redundant validators, and stub references first, then build on the simpler base.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/subtract-before-you-add/SKILL.md</div>
+        </div>
+      </div>
+      
+      <div class="skill-card">
+        <div>
+          <div class="card-header">
+            <span class="card-title">type-system-discipline</span>
+            <span class="badge badge-principle">Principle</span>
+          </div>
+          <div class="card-meta">Full: principle-type-system-discipline &bull; 4709 bytes</div>
+          <div class="card-desc">
+            Apply when designing types, reviewing a function signature, or writing code in any statically-typed language. Make illegal states unrepresentable, brand semantic primitives, parse external data at boundaries, refuse to lie to the compiler, exhaust variants, derive from authoritative schemas.
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="target-path">engineering-principles/type-system-discipline/SKILL.md</div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- 4. Key Strategic Workflows & Flows to Consider -->
+  <div class="section-card">
+    <h2>5. Key Workflows & Ecosystem Flows to Adopt</h2>
+    <p>
+      Several P-Stack skills represent multi-step systemic workflows that substantially level up Takomi's agentic lifecycle:
+    </p>
+
+    <div class="flow-step">
+      <div class="step-number">1</div>
+      <div>
+        <strong style="color: #fff; font-size: 1rem;">The 7-Evidence MCP Archaeology Flow (<code>why</code> + <code>how</code> + <code>teach</code>)</strong>
+        <p style="margin-top: 0.35rem;">
+          When an engineer asks why a system is built a certain way or why a regression happened, <code>why</code> queries up to 7 evidence categories in parallel (git blame, issue trackers, documentation, chat logs, metrics, error trackers, analytics). Combined with <code>how</code> (runtime mechanics) and <code>teach</code> (plain explanation synthesis), this gives Takomi superhuman context onboarding.
+        </p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-number">2</div>
+      <div>
+        <strong style="color: #fff; font-size: 1rem;">The Self-Generating Verification Loop (<code>create-verification-skill</code> + <code>maintain-verification-skill</code>)</strong>
+        <p style="margin-top: 0.35rem;">
+          Instead of relying on generic test guesses, when an agent lands in any repo, it runs <code>create-verification-skill</code> to generate a tailor-made, repo-specific <code>verify</code> harness that exercises the exact local commands, dev servers, and test runners. When pipelines change, <code>maintain-verification-skill</code> updates it automatically.
+        </p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-number">3</div>
+      <div>
+        <strong style="color: #fff; font-size: 1rem;">The Continuous Reflection & Skill-Evolution Loop (<code>reflect</code>)</strong>
+        <p style="margin-top: 0.35rem;">
+          After major coding sessions or failed tasks, running <code>reflect</code> spawns 3 review subagents to audit the transcript. It identifies friction, tool misuse, or missed edge cases, and directly proposes or applies patches to the corresponding skill markdown files. The skill ecosystem becomes self-healing and self-improving.
+        </p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-number">4</div>
+      <div>
+        <strong style="color: #fff; font-size: 1rem;">The Reviewable Autonomous Decision Trail (<code>show-me-your-work</code>)</strong>
+        <p style="margin-top: 0.35rem;">
+          During long autonomous runs or overnight executions, the agent maintains a structured TSV decision log (timestamp, action, rationale, evidence, risk, outcome). When a human engineer reviews the PR or wakes up, they can instantly audit every choice without wading through massive transcript logs.
+        </p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-number">5</div>
+      <div>
+        <strong style="color: #fff; font-size: 1rem;">The Blind-Judged Competitive Tournament (<code>arena</code>)</strong>
+        <p style="margin-top: 0.35rem;">
+          When designing a critical algorithm or refactoring complex logic, <code>arena</code> spawns N parallel candidate implementations, hides the author/model identities, and spawns an independent judge agent to score each approach against explicit criteria before picking a winner or grafting the best parts together.
+        </p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-number">6</div>
+      <div>
+        <strong style="color: #fff; font-size: 1rem;">Instant Machine Migration & Context Reconstruction (<code>recall</code>)</strong>
+        <p style="margin-top: 0.35rem;">
+          Fulfills the core personal goal stated in <code>AGENTS.md</code>: when moving to a new computer or resuming after a weekend, <code>recall</code> synthesizes uncommitted state, git commits, open tasks, and recent transcripts into a 30-second context briefing.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Deprecations & Streamlining -->
+  <div class="section-card">
+    <h2>6. Depreciation & Streamlining Recommendations</h2>
+    <p>
+      To keep the repository clean, maintainable, and aligned with our simplification pass principle ("What can I delete here and still be correct?"):
+    </p>
+    <ul>
+      <li><strong>Deprecate Loose Plugin Skills in Root:</strong> Consolidate scattered skills in <code>plugins/takomi-codex</code>, <code>plugins/takomi-flow</code>, and <code>claude_code_frontend_design_skill</code> into their canonical umbrella suites (<code>dev-workflows</code> and <code>frontend-ui</code>).</li>
+      <li><strong>Clean Up <code>assets/Legacy</code>:</strong> Move or prune obsolete pre-Takomi prompt wrappers in <code>assets/Legacy</code> to prevent developer confusion during new computer migrations.</li>
+      <li><strong>Refactor <code>setup-pstack</code> into <code>setup-takomi-models</code>:</strong> Strip the p-stack branding and integrate the model auto-detection and role configuration into the Takomi CLI harness.</li>
+      <li><strong>Standardize Frontmatter Metadata:</strong> Ensure all incoming skills have uniform frontmatter with <code>author: P-Stack</code>, <code>coauthored: J StaR Films / Takomi</code>, and <code>version: 1.0.0</code> or <code>2.0.0</code>.</li>
+    </ul>
+  </div>
+
+  <!-- 6. Step-by-Step Implementation Roadmap -->
+  <div class="section-card">
+    <h2>7. Actionable Implementation Roadmap</h2>
+    <div style="margin-top: 1rem;">
+      <div class="flow-step">
+        <div class="step-number" style="background: var(--accent-green);">1</div>
+        <div>
+          <strong style="color: #fff;">Phase 1: Ingest Definite Adds into Dedicated Suites</strong>
+          <p style="margin-top: 0.25rem;">
+            Copy <code>why</code>, <code>how</code>, <code>teach</code>, <code>blast-radius</code>, <code>recall</code>, <code>reflect</code>, <code>show-me-your-work</code>, <code>create-verification-skill</code>, <code>maintain-verification-skill</code>, <code>figure-it-out</code>, <code>arena</code>, <code>automate-me</code>, <code>bro</code>, and <code>poteto-mode</code> into their target suites with compliant frontmatter.
+          </p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-number" style="background: var(--accent-purple);">2</div>
+        <div>
+          <strong style="color: #fff;">Phase 2: Assemble the <code>engineering-principles</code> Atomic Umbrella Suite</strong>
+          <p style="margin-top: 0.25rem;">
+            Create <code>assets/.agent/skills/engineering-principles/</code> with a router <code>SKILL.md</code> that catalogs all 21 principles and links to each sub-skill directory.
+          </p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-number" style="background: var(--accent-cyan);">3</div>
+        <div>
+          <strong style="color: #fff;">Phase 3: Merge & Upgrade Existing Overlaps</strong>
+          <p style="margin-top: 0.25rem;">
+            Merge <code>architect</code> into <code>agent-engineering/architect</code>, <code>typescript-best-practices</code> into <code>web-dev-standards/typescript-standards</code>, <code>technical-writing</code> into <code>office-docs/technical-writing</code>, <code>tdd</code> into <code>web-dev-standards/tdd-protocol</code>, and <code>swarm</code> into <code>agent-engineering/subagent-driven-development</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-number" style="background: var(--accent-blue);">4</div>
+        <div>
+          <strong style="color: #fff;">Phase 4: Update Documentation & Canonical Categories</strong>
+          <p style="margin-top: 0.25rem;">
+            Update <code>docs/features/Lean_Unified_Skills_Architecture.md</code> and <code>skill-categories.js</code> to recognize the new <code>engineering-principles</code> suite and registered standalone tools.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Generated by Antigravity AI &bull; VibeCode / Takomi Architecture Suite &bull; 2026-08-20
+  </footer>
+
+</div>
+
+<script>
+  let activeFilter = 'all';
+
+  function setFilter(category, btn) {
+    activeFilter = category;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterSkills();
+  }
+
+  function filterSkills() {
+    const query = document.getElementById('skillSearch').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.skill-row');
+    
+    rows.forEach(row => {
+      const cat = row.getAttribute('data-category');
+      const searchData = row.getAttribute('data-search');
+      
+      const matchesCategory = (activeFilter === 'all' || cat === activeFilter);
+      const matchesSearch = (!query || searchData.includes(query));
+      
+      if (matchesCategory && matchesSearch) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
