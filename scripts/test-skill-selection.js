@@ -40,6 +40,8 @@ try {
   const core = await catalog.getValidCoreSkills();
   assert.deepEqual(core, [
     'takomi',
+    'grill-me',
+    'code-review',
     'sync-docs',
     'security-audit',
     'agent-recovery',
