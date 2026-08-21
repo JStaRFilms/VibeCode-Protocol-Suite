@@ -52,10 +52,11 @@ function checkDir(dir) {
           }
         }
 
-        // Validate markdown relative links in SKILL.md
+        // Validate markdown relative links in SKILL.md (ignoring code fences)
+        const contentForLinks = content.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]+`/g, '');
         const linkRegex = /\[.*?\]\((?!https?:\/\/)(?!file:\/\/)(?!#)(.*?)\)/g;
         let match;
-        while ((match = linkRegex.exec(content)) !== null) {
+        while ((match = linkRegex.exec(contentForLinks)) !== null) {
           const rawTarget = match[1].split('#')[0]; // strip anchor
           if (rawTarget) {
             const resolved = path.resolve(fullPath, rawTarget);

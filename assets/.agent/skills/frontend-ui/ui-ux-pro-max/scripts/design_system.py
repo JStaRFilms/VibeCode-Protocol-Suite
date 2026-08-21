@@ -13,9 +13,16 @@ Usage:
     result = generate_design_system("SaaS dashboard", "My Project", persist=True, page="dashboard")
 """
 
+import sys
 import csv
 import json
 import os
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from datetime import datetime
 from pathlib import Path
 from core import search, DATA_DIR

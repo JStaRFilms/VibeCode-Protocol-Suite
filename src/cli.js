@@ -27,7 +27,6 @@ import {
   detectHarnesses,
   printHarnessStatus,
   syncToAllHarnesses,
-  syncToHarness,
 } from './harness.js';
 import {
   STORE_PATH,
@@ -121,20 +120,10 @@ async function init() {
       name: 'skillMode',
       message: 'How should we install Skills?',
       choices: [
-        { title: 'Install Core Skills (Recommended)', value: 'core' },
-        { title: 'Install All Skills', value: 'all' },
-        { title: 'Select Specific Skills', value: 'custom' }
+        { title: 'Install Core Skills (Recommended)', value: 'core', description: `8 essentials (${formatCoreSkillsSummary()})` },
+        { title: 'Install All Skills', value: 'all', description: 'Install every bundled skill' },
+        { title: 'Select Specific Skills', value: 'custom', description: 'Interactive category tree selection' }
       ]
-    },
-    {
-      type: (prev, values) => values.skillMode === 'custom' ? 'multiselect' : null,
-      name: 'selectedSkills',
-      message: 'Select skills to install:',
-      choices: async () => {
-        const skills = await getSkills();
-        return skills.map(s => ({ title: s, value: s }));
-      },
-      hint: '- Space to select. Return to submit'
     },
     // Destination
     {
@@ -145,7 +134,7 @@ async function init() {
     }
   ]);
 
-  if (!response.components) return; // User cancelled
+  if (!response.components || !response.path) return; // User cancelled
 
   const destRoot = path.resolve(process.cwd(), response.path);
   console.log(pc.dim(`\nSpawning resources into: ${destRoot}...\n`));
@@ -193,14 +182,20 @@ async function init() {
 
       // Handle Skills
       if (response.skillMode === 'core') {
-        console.log(pc.green('✔ Downloading Core Skills...'));
-        await copySpecificSkills(CORE_SKILLS, skillsDest);
+        console.log(pc.green('✔ Installing Core Skills...'));
+        const core = await getValidCoreSkills();
+        await copySpecificSkills(core, skillsDest);
       } else if (response.skillMode === 'all') {
-        console.log(pc.green('✔ Downloading all skills...'));
+        console.log(pc.green('✔ Installing all skills...'));
         await copyAllSkills(skillsDest);
-      } else if (response.skillMode === 'custom' && response.selectedSkills) {
-        console.log(pc.green(`✔ Downloading ${response.selectedSkills.length} specific skills...`));
-        await copySpecificSkills(response.selectedSkills, skillsDest);
+      } else if (response.skillMode === 'custom') {
+        const selectedSkills = await promptCustomSkillSelection([], { selectAllForNewCategories: true, title: 'Workspace Custom Skills Selection' });
+        if (!selectedSkills || selectedSkills.length === 0) {
+          console.log(pc.yellow('  No skills selected; skipping skills folder.'));
+        } else {
+          console.log(pc.green(`✔ Installing ${selectedSkills.length} specific skills...`));
+          await copySpecificSkills(selectedSkills, skillsDest);
+        }
       }
 
       // Copy .agent/README.md if it exists
@@ -748,20 +743,10 @@ async function install(target) {
       choices: [
         ...(hasExistingStoreSkills ? [{ title: 'Leave As Is (Recommended)', value: 'leave-as-is', description: `Keep ${existingStoreOwnedSkills.length} Takomi-managed store skill${existingStoreOwnedSkills.length === 1 ? '' : 's'} unchanged.` }] : []),
         ...(hasExistingStoreSkills ? [{ title: 'Present Custom', value: 'present-custom', description: 'Review current Takomi-managed store skills and adjust selections.' }] : []),
-        { title: 'Core (Recommended defaults)', value: 'core', description: 'takomi, sync-docs, ai-sdk, git-commit-generation...' },
+        { title: 'Core (Recommended defaults)', value: 'core', description: `8 essentials (${formatCoreSkillsSummary()})` },
         { title: `All (${(await getSkills()).length} skills)`, value: 'all' },
         { title: 'Custom selection', value: 'custom' },
       ],
-    },
-    {
-      type: null,
-      name: 'selectedSkills',
-      message: 'Select skills:',
-      choices: async () => {
-        const skills = await getSkills();
-        return skills.map(s => ({ title: s, value: s }));
-      },
-      hint: '- Space to select. Return to submit',
     },
     // Workflow pack selection
     {

@@ -56,6 +56,8 @@ try {
   assert.equal(catalog.getSkillCategory('office-docs'), 'office-docs', 'office-docs must use the office-docs category');
   assert.equal(catalog.getSkillCategory('convex'), 'convex', 'convex must use the convex category');
   assert.equal(catalog.getSkillCategory('agent-engineering'), 'agent-engineering', 'agent-engineering must use the agent-engineering category');
+  assert.equal(catalog.getSkillCategory('code-intelligence'), 'code-intelligence', 'code-intelligence must use the code-intelligence category');
+  assert.equal(catalog.getSkillCategory('engineering-principles'), 'principles', 'engineering-principles must use the principles category');
   assert.equal(catalog.getSkillCategory('not-a-bundled-skill'), undefined, 'unknown skill names must not receive guessed categories');
 
   const allSkills = await catalog.listBundledSkillNames();
