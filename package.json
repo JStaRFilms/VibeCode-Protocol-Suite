@@ -1,7 +1,7 @@
 {
   "name": "takomi",
   "version": "2.5.13",
-  "description": "🎯 Stop wrestling with AI. Start building with purpose. The artisan's toolkit for agent workflows, Codex skills, and original Takomi capabilities like 21st.dev integration.",
+  "description": "\ud83c\udfaf Stop wrestling with AI. Start building with purpose. The artisan's toolkit for agent workflows, Codex skills, and original Takomi capabilities like 21st.dev integration.",
   "type": "module",
   "bin": {
     "takomi": "bin/takomi.js"
@@ -84,7 +84,7 @@
       "protobufjs": "7.6.3",
       "@protobufjs/utf8": "1.1.1",
       "ws": "8.21.0",
-      "brace-expansion": "5.0.6"
+      "brace-expansion": "5.0.9"
     }
   },
   "bugs": {
