@@ -24,13 +24,13 @@ This isn't prompt engineering. This is **orchestrated development** — a battle
 
 ## Features
 
-- **🧠 95+ Skills** — Specialized capabilities from security audits to AI video generation, installed on demand
-- **🔄 Universal IDE Sync** — Install once, sync to Antigravity, Claude Code, Codex, Cursor, Kilo Code, Pi, and Windsurf
-- **🏗️ Full Project Lifecycle** — From genesis (planning) through design, build, and finalize — with verification gates at every step
-- **🎭 Specialized Agent Modes** — Orchestrator, Architect, Coder, Debugger, Reviewer — each with purpose-built workflows
-- **📦 Codex-Native Skills** — Use natural language (`use takomi genesis`) — no slash commands required
-- **🔌 Pi Harness Integration** — First-class Pi support with context management, model routing, and optional feature packs
-- **🌐 Global Skills Router** — One `~/.takomi/` store, synced to every IDE via symlinks or copy
+- **🧠 160+ Skills Across 31 Suites** - Specialized capabilities from WebGL creative development to CommonKADS expert systems, AI video, and security audits, installed on demand
+- **🔄 Universal IDE Sync** - Install once, sync to Antigravity, Claude Code, Codex, Cursor, Kilo Code, Pi, and Windsurf
+- **🏗️ Full Project Lifecycle** - From genesis (planning) through design, build, and finalize, with verification gates at every step
+- **🎭 Specialized Agent Modes** - Orchestrator, Architect, Coder, Debugger, Reviewer, each with purpose-built workflows
+- **📦 Codex-Native Skills** - Use natural language (`use takomi genesis`), no slash commands required
+- **🔌 Pi Harness Integration** - First-class Pi support with context management, model routing, and optional feature packs
+- **🌐 Global Skills Router** - One `~/.takomi/` store, synced to every IDE via symlinks or copy
 
 ---
 
@@ -73,7 +73,7 @@ takomi setup pi-features   # Optional Pi packages (Interview, Todo, Browser QA, 
 
 Add the Takomi marketplace to Codex and browse plugins directly from the Codex UI:
 
-**Add the marketplace source** — In Codex, go to **Plugins → Add plugin marketplace** and enter:
+**Add the marketplace source** - In Codex, go to **Plugins → Add plugin marketplace** and enter:
 
 | Field | Value |
 |-------|-------|
@@ -85,7 +85,7 @@ Add the Takomi marketplace to Codex and browse plugins directly from the Codex U
 
 Once added, search for "TakomiFlow" or "takomi-codex" inside the Codex plugin browser and install.
 
-You can also use Takomi skills with natural language — no slash commands needed:
+You can also use Takomi skills with natural language, no slash commands needed:
 
 ```text
 use takomi
@@ -147,20 +147,20 @@ See [TakomiFlow Onboarding](docs/takomi-flow-onboarding.md) and [TakomiFlow Publ
 
 ## Skill Ecosystem
 
-Think of skills as specialized team members you can summon on demand. Takomi ships **95+ skills** organized by category.
+Think of skills as specialized team members you can summon on demand. Takomi ships **160+ skills across 31 curated suites** organized by category.
 
 ### Core Skills (Default Install)
 
 ```
-takomi                 ai-sdk                 sync-docs
-code-review            security-audit         optimize-agent-context
-agent-recovery         avoid-feature-creep    git-commit-generation
+takomi                 grill-me               sync-docs
+code-review            security-audit         avoid-feature-creep
+agent-recovery         git-commit-generation
 ```
 
 ### Install More Skills
 
 ```bash
-# Interactive browser — pick what you need
+# Interactive browser - pick what you need
 takomi setup skills
 
 # Or via the external skills CLI
@@ -170,25 +170,27 @@ npx -y skills add https://github.com/JStaRFilms/VibeCode-Protocol-Suite
 <details>
 <summary><strong>📚 Full skill categories</strong></summary>
 
-**Developer / Frameworks** — `ai-sdk`, `nextjs-standards`, `context7`, `monorepo-management`, `upgrading-expo`, `github-ops`, `git-worktree`, `git-commit-generation`, `pr-comment-fix`, `jules`, `gemini`, `anti-gravity`
+**Frontend / UI** - `frontend-ui` (`creative-web-development` WebGL/Three.js/GLSL/GSAP, `prototyping-variants`, `frontend-design`, `ui-ux-pro-max`, `21st-dev-components`, `web-design-guidelines`, `building-native-ui`, `figma`, `stitch`, `component-analysis`, `webapp-testing`)
 
-**Security / Review** — `security-audit`, `audit-website`, `code-review`, `jstar-reviewer`, `convex-security-audit`, `convex-security-check`
+**Agent Engineering & Prompting** - `agent-engineering` (`skill-curator`, `skill-creator`, `source-to-skill`, `expert-system-engineer` CommonKADS/MYCIN, `domain-modeling`, `conversation-to-spec`, `spawn-task`, `to-questionnaire`, `arena`, `automate-me`, `reflect`, `create-verification-skill`, `maintain-verification-skill`, `subagent-driven-development`, `prompt-engineering`, `optimize-agent-context`, `writing-for-agents`, `crafting-effective-readmes`)
 
-**Convex** — `convex`, `convex-agents`, `convex-best-practices`, `convex-component-authoring`, `convex-cron-jobs`, `convex-file-storage`, `convex-functions`, `convex-http-actions`, `convex-migrations`, `convex-realtime`, `convex-schema-validator`, `convex-security-audit`, `convex-security-check`
+**Code Intelligence & Comprehension** - `code-intelligence` (`why` decision archaeology, `how` runtime traces, `blast-radius`, `diagnosing-bugs`, `teach`, `show-me-your-work`)
 
-**Frontend / UI** — `frontend-design`, `web-design-guidelines`, `building-native-ui`, `ui-ux-pro-max`, `component-analysis`, `21st-dev-components`, `stitch`, `webapp-testing`, `figma`
+**Engineering Principles** - `engineering-principles` (21 foundational discipline principles: `boundary-discipline`, `build-the-lever`, `model-the-domain`, `type-system-discipline`, `guard-the-context-window`, `prove-it-works`, `subtract-before-you-add`, and more)
 
-**Docs / Office / Extraction** — `pdf`, `docx`, `pptx`, `xlsx`, `high-fidelity-extraction`, `crafting-effective-readmes`, `exam-creator-skill`
+**Developer / Frameworks** - `web-dev-standards` (`nextjs-standards`, `typescript-standards`, `test-driven-development`, `codebase-design`, `interactive-wizard`, `monorepo-management`, `upgrading-expo`, `shared-resend-portfolio`), `ai-sdk`, `git-github-tools` (`github-ops`, `git-worktree`, `issue-pr-triage`, `pr-comment-fix`, `resolving-merge-conflicts`), `context7`, `jules`, `anti-gravity`, `wait-what`, `bro`, `poteto-mode`
 
-**Marketing / SEO / Copy** — `copywriting`, `marketing-ideas`, `pricing-strategy`, `programmatic-seo`, `seo-ready`, `social-content`, `twitter-automation`, `google-trends`, `domain-name-brainstormer`, `global-brand-namer`, `youtube-pipeline`
+**Security & Web Audits** - `security-audit`, `audit-website`
 
-**AI Media / Content Creation** — `ai-avatar-video`, `ai-marketing-videos`, `ai-podcast-creation`, `ai-product-photography`, `ai-social-media-content`, `ai-voice-cloning`, `takomi-flow`
+**Convex Suite** - `convex` (`convex-agents`, `convex-best-practices`, `convex-component-authoring`, `convex-cron-jobs`, `convex-file-storage`, `convex-functions`, `convex-http-actions`, `convex-migrations`, `convex-realtime`, `convex-schema-validator`, `convex-security-audit`, `convex-security-check`)
 
-**Creative / Video / Art** — `algorithmic-art`, `blender-mcp-scene-director`, `takomi-flow`, `remotion`, `remotion-real-ui-video`, `youtube-pipeline`, `ai-avatar-video`, `ai-marketing-videos`, `photo-book-builder`, `hyperframes`, `general-video`, `motion-graphics`
+**Video / Motion / Art** - `hyperframes` (19 video creation and animation sub-skills), `remotion` (`remotion`, `remotion-real-ui-video`), `zack-d-films-production-suite`, `algorithmic-art`
 
-**HyperFrames** — `hyperframes`, `hyperframes-core`, `hyperframes-keyframes`, `hyperframes-animation`, `hyperframes-creative`, `hyperframes-media`, `hyperframes-registry`, `hyperframes-cli`, `remotion-to-hyperframes`, `media-use`, `embedded-captions`, `faceless-explainer`, `general-video`, `motion-graphics`, `music-to-video`, `pr-to-video`, `product-launch-video`, `slideshow`, `talking-head-recut`, `website-to-video`
+**AI Media / Content Creation** - `ai-media` (`ai-avatar-video`, `ai-marketing-videos`, `ai-podcast-creation`, `ai-product-photography`, `ai-social-media-content`, `ai-voice-cloning`, `photo-book-builder`, `google-flow`)
 
-**Skill Building / Prompting / Orchestration** — `skill-creator`, `prompt-engineering`, `subagent-driven-development`, `spawn-task`
+**Marketing / SEO / Growth** - `marketing-growth` (`copywriting`, `marketing-ideas`, `pricing-strategy`, `programmatic-seo`, `seo-ready`, `social-content`, `twitter-automation`, `google-trends`, `domain-name-brainstormer`, `global-brand-namer`, `youtube-pipeline`)
+
+**Docs / Office / Extraction** - `office-docs` (`pdf`, `docx`, `pptx`, `xlsx`, `technical-writing`), `high-fidelity-extraction`
 
 </details>
 
