@@ -351,6 +351,6 @@ Takomi is licensed under the [ISC License](LICENSE). Feel free to use, modify, a
 ---
 
 <div align="center">
-  <p><strong>Built with ❤️ by artisans who code with the flow</strong></p>
-  <p><em>Transform AI from a tool into a true development partner</em></p>
+  <p><strong>Less chatting with bots. More shipping code.</strong></p>
+  <p><em>Engineered with ❤️ by J StaR Films Studios for developers who take craftsmanship seriously.</em></p>
 </div>
