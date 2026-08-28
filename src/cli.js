@@ -426,6 +426,64 @@ function printSyncFailures(failures) {
   process.exitCode = 1;
 }
 
+async function syncGlobalStoreAndLinkedHarnesses(selection = null) {
+  if (!await isStoreInitialized()) {
+    return { syncedHarnesses: 0, storeSkillsCount: 0 };
+  }
+
+  const manifest = await getManifest();
+  const storeSkills = path.join(STORE_PATH, 'skills');
+  await fs.ensureDir(storeSkills);
+
+  const existingStoreOwnedSkills = Object.keys(manifest.bundledOwned?.skills || {});
+  let skillMode = selection?.selectedSkills || (selection?.mode && selection.mode !== 'leave-as-is' ? selection.mode : null);
+  if (!skillMode && existingStoreOwnedSkills.length > 0) {
+    skillMode = existingStoreOwnedSkills;
+  }
+  if (!skillMode && manifest.lastSkillPopulate?.mode) {
+    skillMode = manifest.lastSkillPopulate.mode;
+  }
+
+  let copiedSkills = [];
+  if (skillMode) {
+    copiedSkills = await populateSkills(skillMode);
+  }
+
+  const existingStoreOwnedWorkflows = Object.keys(manifest.bundledOwned?.workflows || {});
+  if (existingStoreOwnedWorkflows.length > 0) {
+    await populateWorkflows(existingStoreOwnedWorkflows);
+  } else if (manifest.lastWorkflowPopulate?.mode) {
+    await populateWorkflows(manifest.lastWorkflowPopulate.mode);
+  }
+
+  if (manifest.linkedHarnesses && manifest.linkedHarnesses.length > 0) {
+    const detected = detectHarnesses();
+    const linked = detected.filter(h => manifest.linkedHarnesses.includes(h.id));
+    if (linked.length > 0) {
+      console.log(pc.cyan(`\n📡 Syncing refreshed store to ${linked.length} linked IDE(s)...\n`));
+      const envSyncMode = process.env.TAKOMI_HARNESS_SYNC_MODE;
+      const syncMode = normalizeHarnessSyncMode(envSyncMode || manifest.syncMode || 'copy');
+      const syncSummary = await syncToAllHarnesses(linked, STORE_PATH, {
+        useOwnership: true,
+        owned: manifest.harnessOwned,
+        linkMode: syncMode,
+      });
+      const syncFailures = collectSyncFailures(syncSummary);
+      manifest.harnessOwned = manifest.harnessOwned || {};
+      for (const harness of linked) {
+        manifest.harnessOwned[harness.id] = syncSummary[harness.id]?.owned || manifest.harnessOwned[harness.id] || {};
+      }
+      await writeManifest(manifest);
+      printSyncFailures(syncFailures);
+      const successfulCount = linked.length - syncFailures.length;
+      console.log(pc.green(`✔ Synced to ${successfulCount}/${linked.length} connected IDE(s).`));
+      return { syncedHarnesses: successfulCount, storeSkillsCount: copiedSkills.length };
+    }
+  }
+
+  return { syncedHarnesses: 0, storeSkillsCount: copiedSkills.length };
+}
+
 async function installSkillsTarget() {
   console.log(pc.magenta('🧰 Takomi Skills Install\n'));
   try {
@@ -437,14 +495,21 @@ async function installSkillsTarget() {
         targetRoot: SKILLS_ROOT,
         ownedCount: selection.ownedCount || (await getInstalledTakomiSkillNames()).length,
       });
-      console.log(pc.dim('\nGlobal skills were not changed.\n'));
+      const storeSyncResult = await syncGlobalStoreAndLinkedHarnesses(null);
+      if (!storeSyncResult.syncedHarnesses) {
+        console.log(pc.dim('\nGlobal skills were not changed.\n'));
+      }
       return;
     }
 
     const result = await installBundledSkills(program.version(), selection);
     const validation = await validateSkillsInstall(selection.selectedSkills);
     printSkillsInstallSummary(result, validation);
-    console.log(pc.dim('\nShared skills target is ready. For per-harness global paths, run "takomi setup" or "takomi sync".\n'));
+
+    const storeSyncResult = await syncGlobalStoreAndLinkedHarnesses(selection);
+    if (!storeSyncResult.syncedHarnesses) {
+      console.log(pc.dim('\nShared skills target is ready. For per-harness global paths, run "takomi setup" or "takomi sync".\n'));
+    }
   } catch (error) {
     console.log(pc.red('\nSkills install failed.'));
     console.log(pc.dim(String(error?.message || error)));
@@ -573,11 +638,20 @@ async function syncSkillsTarget() {
         targetRoot: SKILLS_ROOT,
         ownedCount: selection.ownedCount || (await getInstalledTakomiSkillNames()).length,
       });
+      const storeSyncResult = await syncGlobalStoreAndLinkedHarnesses(null);
+      if (!storeSyncResult.syncedHarnesses) {
+        console.log(pc.dim('\nGlobal skills were not changed.\n'));
+      }
       return;
     }
     const result = await installBundledSkills(program.version(), selection);
     const validation = await validateSkillsInstall(selection.selectedSkills);
     printSkillsInstallSummary(result, validation);
+
+    const storeSyncResult = await syncGlobalStoreAndLinkedHarnesses(selection);
+    if (!storeSyncResult.syncedHarnesses) {
+      console.log(pc.dim('\nShared skills target is ready. For per-harness global paths, run "takomi setup" or "takomi sync".\n'));
+    }
   } catch (error) {
     console.log(pc.red('\nSkills sync failed.'));
     console.log(pc.dim(String(error?.message || error)));
