@@ -1,195 +1,58 @@
 ---
 name: git-commit-generation
-description: "Automatically generate meaningful git commit messages based on staged changes."
+description: Use when generating clear, conventional git commit messages based on staged changes or recent repository diffs.
+author: Kilo Code
+coauthored: J StaR Films / Takomi
+version: 2.0.0
 ---
 
-# Generate Commit Messages
+# Git Commit Generation
 
-> [!NOTE]
-> This skill is based on the **Kilo Code** Git Commit Generation feature.
-> **Attribution**: Originally from the [Kilo Code Repository](https://github.com/Kilo-Org/kilocode/blob/main/packages/kilo-docs/pages/code-with-ai/features/git-commit-generation.md).
+Generate clear, conventional git commit messages based on staged changes or recent repository diffs.
 
-Generate descriptive commit messages automatically based on your staged git changes. Kilo Code analyzes your staged files and creates conventional commit messages that follow best practices.
+---
 
-{% callout type="info" %}
-This feature only analyzes **staged changes**. Make sure to stage your files using `git add` or via `VS Code` interface before generating commit messages.
-{% /callout %}
+## 1. Workflow
 
-## How It Works
+1. **Inspect Staged Diffs**:
+   ```bash
+   git status
+   git diff --staged
+   ```
+   If no changes are staged, inspect unstaged changes with `git diff` and suggest staging relevant files first.
 
-The git commit message generator:
+2. **Analyze Scope & Purpose**:
+   - Determine the primary type of change (e.g. `feat`, `fix`, `refactor`, `docs`, `test`, `chore`).
+   - Identify the affected scope or module (e.g. `cli`, `harness`, `skills`, `auth`).
+   - Isolate independent changes: if staged files span multiple distinct concerns, suggest splitting into separate commits.
 
-- Analyzes only your **staged changes** (not unstaged or untracked files)
-- Uses AI to understand the context and purpose of your changes
-- Creates descriptive commit messages that explain what was changed and why following the [Conventional Commits](https://www.conventionalcommits.org/) (by default, customizable)
+3. **Format Conventional Commit Message**:
+   Structure the message using the standard Conventional Commits format:
 
-## Using the Feature
+   ```
+   <type>(<scope>): <imperative summary in present tense>
 
-### Generating a Commit Message
+   - Bulleted details explaining what changed and why
+   - Key implementation decisions or removed legacy patterns
+   ```
 
-1. Stage your changes using `git add` or the VS Code git interface
-2. In the VS Code Source Control panel, look for the `Kilo Code` logo next to the commit message field)
-3. Click the logo to generate a commit message
+---
 
-The generated message will appear in the commit message field, ready for you to review and modify if needed.
+## 2. Commit Types
 
-{% image src="/docs/img/git-commit-generation/git-commit-1.png" alt="Generated commit message example" width="600" /%}
+| Type | When to Use | Example |
+| :--- | :--- | :--- |
+| `feat` | New feature, capability, or user-facing addition | `feat(skills): add code-intelligence umbrella suite` |
+| `fix` | Bug fix, error resolution, or regression patch | `fix(cli): resolve timeout flakiness on windows` |
+| `refactor` | Code refactoring without changing behavior | `refactor(store): unify skill materialization logic` |
+| `docs` | Documentation, guides, or specification updates | `docs(architecture): sync lean unified taxonomy` |
+| `test` | Adding, updating, or fixing tests | `test(lifecycle): verify heartbeat animation frames` |
+| `chore` | Maintenance, dependencies, or build config | `chore(deps): bump pi-subagents to 0.31.0` |
 
-### Conventional Commit Format
+---
 
-By default, generated messages follow the Conventional Commits specification:
+## 3. Best Practices
 
-```
-<type>(<scope>): <description>
-
-<body>
-```
-
-Common types include:
-
-- `feat`: New features
-- `fix`: Bug fixes
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
-
-## Configuration
-
-{% tabs %}
-{% tab label="VSCode" %}
-
-The extension provides the same **SCM button** in the VS Code Source Control panel. Clicking it generates a commit message using the CLI backend's commit message generation API.
-
-Configuration is handled through the extension's settings or the shared `kilo.jsonc` config file.
-
-Customize the commit prompt from **Settings > Commit Message**. Kilo saves this prompt to the current project's config so each repository can follow its own commit conventions without changing your global settings.
-
-You can also set it directly in the project config:
-
-```json
-{
-  "commit_message": {
-    "prompt": "Write concise conventional commits with the package scope when possible."
-  }
-}
-```
-
-{% callout type="info" %}
-Git commit message generation is a **VS Code extension feature**. It is not available in the CLI/TUI.
-{% /callout %}
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-### Customizing the Commit Template
-
-You can customize how commit messages are generated by modifying the prompt template:
-
-1. Open Settings by clicking the gear icon {% codicon name="gear" /%} → `Prompts`
-2. Find the "Commit Message Generation" section
-3. Edit the `Prompt` template to match your project's conventions
-
-{% image src="/docs/img/git-commit-generation/git-commit-2.png" alt="Commit message generation settings" width="600" /%}
-
-The default template creates conventional commit messages, but you can modify it to:
-
-- Use different commit message formats
-- Include specific information relevant to your project
-- Follow your team's commit message conventions
-- Add custom instructions for the AI
-
-### API Configuration
-
-You can configure which API profile to use for commit message generation:
-
-1. In the `Prompts` settings, scroll to "API Configuration"
-2. Select a specific profile or use the currently selected one
-
-{% callout type="tip" %}
-Consider creating a dedicated [API configuration profile](/docs/ai-providers) with a faster, more cost-effective model specifically for commit message generation.
-{% /callout %}
-
-{% /tab %}
-{% /tabs %}
-
-## Best Practices
-
-### Staging Strategy
-
-- Stage related changes together for more coherent commit messages
-- Avoid staging unrelated changes in a single commit
-- Use `git add -p` for partial file staging when needed
-
-### Message Review
-
-- Always review generated messages before committing
-- Edit messages to add context the AI might have missed
-- Ensure the message accurately describes the changes
-
-### Custom Templates
-
-- Tailor the prompt template to your project's needs
-- Include project-specific terminology or conventions
-- Add instructions for handling specific types of changes
-
-## Example Generated Messages
-
-Here are examples of messages the feature might generate:
-
-```
-feat(auth): add OAuth2 integration with Google
-
-Implement Google OAuth2 authentication flow including:
-- OAuth2 client configuration
-- User profile retrieval
-- Token refresh mechanism
-```
-
-```
-fix(api): resolve race condition in user data fetching
-
-Add proper error handling and retry logic to prevent
-concurrent requests from causing data inconsistency
-```
-
-```
-docs(readme): update installation instructions
-
-Add missing dependency requirements and clarify
-setup steps for new contributors
-```
-
-## Troubleshooting
-
-### No Staged Changes
-
-If the button doesn't appear or generation fails, ensure you have staged changes:
-
-```bash
-git add <files>
-# or stage all changes
-git add .
-```
-
-### Poor Message Quality
-
-If generated messages aren't helpful:
-
-- Review your staging strategy - don't stage unrelated changes together
-- Customize the prompt template with more specific instructions
-- Try a different AI model through API configuration
-
-### Integration Issues
-
-The feature integrates with VS Code's built-in git functionality. If you encounter issues:
-
-- Ensure your repository is properly initialized
-- Check that VS Code can access your git repository
-- Verify git is installed and accessible from VS Code
-
-## Related Features
-
-- [API Configuration Profiles](/docs/ai-providers) - Use different models for commit generation
-- [Settings Management](/docs/getting-started/settings) - Manage all your Kilo Code preferences
+- **Imperative Mood**: Write the header as a command (e.g. `feat(cli): add category tree` instead of `added category tree`).
+- **Explain the Why**: The body explains non-obvious reasoning and motivation, not merely a recap of file diffs.
+- **Breaking Changes**: Highlight breaking changes clearly with `BREAKING CHANGE:` in the footer or an exclamation mark after the type/scope (e.g. `feat(api)!: update payload structure`).

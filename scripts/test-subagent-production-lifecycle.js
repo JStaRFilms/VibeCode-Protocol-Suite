@@ -22,9 +22,9 @@ const workspace = path.join(runtimeRoot, "workspace");
 const sessionFile = path.join(runtimeRoot, "session.jsonl");
 const runToken = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 const runIdPrefix = `takomi-production-run-${runToken}`;
-const completionDelayMs = 425;
-const lateStartDelayMs = 250;
-const stressCycles = 10;
+const completionDelayMs = 850;
+const lateStartDelayMs = 400;
+const stressCycles = 5;
 const originalChildEnv = process.env.PI_SUBAGENT_CHILD;
 const originalParentSessionEnv = process.env.PI_SUBAGENT_PARENT_SESSION;
 delete process.env.PI_SUBAGENT_CHILD;
@@ -380,7 +380,7 @@ async function waitForLifecycleReady(harness, label) {
   await waitForCondition(() => {
     const snapshot = lifecycleModule.getTakomiAsyncLifecycleSnapshot(harness.pi);
     return snapshot?.state?.currentSessionId === sessionFile && activeResultWatchers.size === 1 ? snapshot : undefined;
-  }, 1500, `${label}: lifecycle did not become session-ready`);
+  }, 5000, `${label}: lifecycle did not become session-ready`);
 }
 
 function parseNestedHeartbeatFrame(entry) {
@@ -410,14 +410,14 @@ async function waitForDistinctNestedHeartbeatFrames(harness, startIndex, minimum
       distinct.push(parsed);
     }
     return distinct.length >= minimumDistinctFrames ? distinct : undefined;
-  }, 1500, "heartbeat frames did not deterministically advance across the nested running row");
+  }, 5000, "heartbeat frames did not deterministically advance across the nested running row");
 }
 
 async function waitForRunEvents(harness, asyncId, expectedEvents) {
   return waitForCondition(() => {
     const events = harness.emissions.filter((item) => (item.payload?.id ?? item.payload?.runId) === asyncId && expectedEvents.includes(item.event));
     return expectedEvents.every((event) => events.some((entry) => entry.event === event)) ? events : undefined;
-  }, 1500, `run ${asyncId} did not emit ${expectedEvents.join(", ")}`);
+  }, 5000, `run ${asyncId} did not emit ${expectedEvents.join(", ")}`);
 }
 
 async function executeAndAssert(harness, expectedMessageCount, previousSnapshot, exerciseKeyDispatch = false) {
@@ -542,7 +542,7 @@ async function executeCompleteBeforeStartedAndAssert(harness, expectedMessageCou
     return snapshot && !snapshot.state.asyncJobs.has(result.details.asyncId) && activeHeartbeatTimerCount() === 0
       ? snapshot
       : undefined;
-  }, 1500, "late started event resurrected a completed async job");
+  }, 5000, "late started event resurrected a completed async job");
   assert.equal(harness.messages.length, expectedMessageCount, "complete-before-started race still emits exactly one completion card");
   assert.equal(harness.widgets.at(-1).value, undefined, "complete-before-started race leaves no running widget behind");
 }

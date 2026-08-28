@@ -1,13 +1,28 @@
 ---
-name: remotion-best-practices
-description: Best practices and domain knowledge for building videos programmatically with Remotion (videos in React/TypeScript, rendered to MP4). Use whenever writing or editing Remotion code — scaffolding a video project, animating with interpolate/spring over useCurrentFrame(), sequencing scenes and transitions, captions/subtitles, audio, GIFs/Lottie/3D, charts, visual effects, dynamic duration via calculateMetadata, or rendering. Consult before reaching for a Remotion API, since its components and props evolve (e.g. @remotion/media).
+name: remotion
+displayName: Remotion React Video Suite
+description: Use when building videos programmatically in React/TypeScript with Remotion, scaffolding video projects, animating with interpolate/spring, sequencing scenes, or recording real web UI into video compositions.
+version: 2.0.0
+author: Remotion
+coauthored: J StaR Films / Takomi
 metadata:
-  tags: remotion, video, react, animation, composition
+  tags: remotion, video, react, animation, composition, ui
+---
+
+# Remotion React Video Suite
+
+This is the router for programmatic video development with React and Remotion.
+
+## Sub-Modules & Capabilities
+
+- **Core Remotion Patterns**: See best practices below for layout, sequencing, interpolation, and rendering.
+- **Real UI to Video**: Read `remotion-real-ui-video/SKILL.md` for capturing and rendering real interactive web UI components into video.
+
 ---
 
 ## When to use
 
-Use this skill whenever you are dealing with Remotion code to obtain the domain-specific knowledge.
+Use this skill whenever dealing with Remotion code, React video compositions, or programmatic canvas rendering.
 
 ## New project setup
 

@@ -1,6 +1,8 @@
 ---
 name: security-audit
-description: Perform a meticulous deep code audit covering Security, Logic, Completeness, and Quality. Includes vibe-coding-specific guardrails for supply chain attacks, auth, rate limiting, and RLS.
+description: Use when auditing code for security vulnerabilities, verifying auth/payment boundaries, scanning for secret leaks, or doing pre-deployment sanity checks.
+author: J StaR Films
+version: 2.0.0
 ---
 
 # Security Audit Skill

@@ -53,159 +53,30 @@ Skills Installation
 Important: `Core Skills` must not silently delete previously installed Takomi-owned skills unless the user confirms the removal plan.
 
 ## Recommended Core Skills
-Proposed default set:
+The 6 essential, always-active core skills:
 
-- `takomi` — unified Takomi workflow/router skill. Required for natural-language Takomi workflow behavior in non-native harnesses.
-- `sync-docs` — keeps project docs aligned after implementation work.
-- `code-review` — general review capability.
-- `security-audit` — baseline security review.
-- `optimize-agent-context` — context hygiene and prompt/context efficiency.
-- `agent-recovery` — recovery/reset guidance.
-- `avoid-feature-creep` — scope discipline.
-- `ai-sdk` — developer AI feature support; user wants this as default.
-- `git-commit-generation` — commit-message workflow; user wants this as default.
+- `takomi` (author: J StaR Films) — unified Takomi workflow/router skill.
+- `sync-docs` (author: J StaR Films) — keeps project docs aligned after implementation work.
+- `security-audit` (author: J StaR Films) — baseline security review and auth/payment boundary checks.
+- `agent-recovery` (author: J StaR Films) — recovery and reset guidance when an agent is stuck.
+- `avoid-feature-creep` (author: J StaR Films) — scope discipline and anti-bloat principles.
+- `git-commit-generation` (author: Kilo Code, coauthored: J StaR Films / Takomi) — conventional commit message generation.
 
-Needs review:
-- `spawn-task` — likely optional because Takomi already includes `vibe-spawnTask.md` inside the `takomi` skill/workflows.
-- `subagent-driven-development` — likely overlaps with Takomi orchestration/subagent workflow and should be optional or merged with the orchestration category.
+## Custom Page & Atomic Umbrella Packages
+Custom opens a dedicated category browser with color-coded categories. Multi-skill ecosystems are grouped into atomic umbrella packages to minimize system prompt token usage.
 
-## Custom Page
-Custom opens a dedicated category browser, not a giant flat list.
+### 10 Canonical Categories
+1. **Core / Recommended** (`core`): The 6 core skills listed above.
+2. **Developer / Frameworks** (`dev-workflows`): `web-dev-standards` (atomic umbrella: Next.js, Expo, monorepos, Resend), `ai-sdk`, `git-github-tools` (atomic umbrella: GitHub ops, worktrees, PR fixes), `context7`, `jules`, `anti-gravity`.
+3. **Security & Web Audits** (`security`): `security-audit`, `audit-website`.
+4. **Frontend / UI** (`frontend`): `frontend-ui` (atomic umbrella: frontend design, guidelines, UI/UX Pro Max, Expo UI, 21st.dev, Figma, testing).
+5. **Convex Suite** (`convex`): `convex` (atomic umbrella: 12 backend sub-skills).
+6. **Video / Motion / Art** (`video-motion`): `hyperframes` (atomic umbrella: 19 video sub-skills), `remotion` (atomic umbrella: 2 sub-skills), `zack-d-films-production-suite`, `algorithmic-art`.
+7. **AI Media / Content Creation** (`ai-media`): `ai-media` (atomic umbrella: Flow, avatars, marketing video, voice, podcast, photos).
+8. **Marketing / SEO / Growth** (`marketing-seo`): `marketing-growth` (atomic umbrella: copywriting, SEO, pricing, social, naming, trends, YouTube).
+9. **Docs / Office / Extraction** (`office-docs`): `office-docs` (atomic umbrella: PDF, DOCX, PPTX, XLSX, exams), `high-fidelity-extraction`.
+10. **Agent Engineering & Prompting** (`agent-engineering`): `agent-engineering` (atomic umbrella: prompt engineering, context optimization, skill creator, SDD, task spawning, READMEs).
 
-Controls target:
-- Space: select/deselect category or skill
-- Right arrow: expand category
-- Left arrow: collapse category
-- Enter: continue
-- Back/Escape: previous page
-
-Visual behavior:
-- Color-coded categories.
-- Selected category labels appear in brackets, e.g. `[Core / Recommended]`, `[Security / Review]`, `[Convex]`.
-- Expanded category shows skill names and descriptions.
-- If the terminal is not an interactive TTY, the installer falls back to category and per-category multiselect prompts.
-
-## Proposed Categories
-### Core / Recommended
-Core skills listed above.
-
-### Developer / Frameworks
-- `ai-sdk`
-- `nextjs-standards`
-- `monorepo-management`
-- `upgrading-expo`
-- `github-ops`
-- `git-worktree`
-- `git-commit-generation`
-- `pr-comment-fix`
-- `jules`
-- `gemini`
-- `anti-gravity`
-
-### Security / Review
-- `security-audit`
-- `audit-website`
-- `code-review`
-- `jstar-reviewer`
-- `convex-security-audit`
-- `convex-security-check`
-
-### Convex
-- `convex`
-- `convex-agents`
-- `convex-best-practices`
-- `convex-component-authoring`
-- `convex-cron-jobs`
-- `convex-file-storage`
-- `convex-functions`
-- `convex-http-actions`
-- `convex-migrations`
-- `convex-realtime`
-- `convex-schema-validator`
-- `convex-security-audit`
-- `convex-security-check`
-
-### Frontend / UI
-- `frontend-design`
-- `web-design-guidelines`
-- `building-native-ui`
-- `ui-ux-pro-max`
-- `component-analysis`
-- `21st-dev-components`
-- `stitch`
-- `webapp-testing`
-- `figma`
-
-### Docs / Office / Extraction
-- `pdf`
-- `docx`
-- `pptx`
-- `xlsx`
-- `high-fidelity-extraction`
-- `crafting-effective-readmes`
-- `exam-creator-skill`
-
-### Marketing / SEO / Copy
-- `copywriting`
-- `marketing-ideas`
-- `pricing-strategy`
-- `programmatic-seo`
-- `seo-ready`
-- `social-content`
-- `twitter-automation`
-- `google-trends`
-- `domain-name-brainstormer`
-- `global-brand-namer`
-- `youtube-pipeline`
-
-### AI Media / Content Creation
-Optional and not default:
-- `ai-avatar-video`
-- `ai-marketing-videos`
-- `ai-podcast-creation`
-- `ai-product-photography`
-- `ai-social-media-content`
-- `ai-voice-cloning`
-
-### Creative / Video / Art
-- `algorithmic-art`
-- `blender-mcp-scene-director`
-- `remotion`
-- `remotion-real-ui-video`
-- `youtube-pipeline`
-- `ai-avatar-video`
-- `ai-marketing-videos`
-- `hyperframes`
-- `general-video`
-- `motion-graphics`
-
-### HyperFrames
-- `hyperframes`
-- `hyperframes-core`
-- `hyperframes-keyframes`
-- `hyperframes-animation`
-- `hyperframes-creative`
-- `hyperframes-media`
-- `hyperframes-registry`
-- `hyperframes-cli`
-- `remotion-to-hyperframes`
-- `media-use`
-- `embedded-captions`
-- `faceless-explainer`
-- `general-video`
-- `motion-graphics`
-- `music-to-video`
-- `pr-to-video`
-- `product-launch-video`
-- `slideshow`
-- `talking-head-recut`
-- `website-to-video`
-
-### Skill Building / Prompting / Orchestration
-- `skill-creator`
-- `prompt-engineering`
-- `subagent-driven-development`
-- `spawn-task` if retained
 
 ## Deletion / Cleanup Policy
 Recommended approach: include cleanup, but make it explicit and safe.

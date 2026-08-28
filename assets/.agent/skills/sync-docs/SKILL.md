@@ -1,6 +1,8 @@
 ---
 name: sync-docs
-description: Update feature documentation after code changes. Keep docs in sync with implementation.
+description: Use after writing code, implementing features, or fixing bugs to update feature documentation in docs/features/ and keep project documentation in sync.
+author: J StaR Films
+version: 2.0.0
 ---
 
 # Sync Docs Skill

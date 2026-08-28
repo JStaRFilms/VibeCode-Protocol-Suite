@@ -1,6 +1,8 @@
 ---
 name: agent-recovery
-description: Recovery protocols when agent is stuck—escalate to new agent, migrate context to new session, or reset mid-conversation.
+description: Use when an agent is stuck in loops, repeating errors, losing context, or needs session migration, state reset, or subagent escalation.
+author: J StaR Films
+version: 2.0.0
 ---
 
 # Agent Recovery Skill

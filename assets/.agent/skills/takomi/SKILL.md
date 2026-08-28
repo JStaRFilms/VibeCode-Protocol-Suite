@@ -1,6 +1,8 @@
 ---
 name: takomi
-description: Unified Takomi protocol skill for Codex. Routes natural-language requests to built-in workflow playbooks in this skill folder (no slash commands required).
+description: Use when coordinating multi-stage work, initializing Takomi workflows (genesis, design, build, review, finalize), or navigating agent lifecycle states.
+author: J StaR Films
+version: 2.0.0
 ---
 
 # Takomi (Unified Skill)
