@@ -1,6 +1,6 @@
 ---
 name: expert-system-engineer
-description: Use when engineering rule-based expert systems, CommonKADS knowledge models, inference engines, certainty factors, or structured knowledge elicitation workflows.
+description: Use when engineering knowledge-based expert systems using CommonKADS methodology, MYCIN/EMYCIN rule patterns, certainty factors, or backward-chaining inference engines.
 author: J StaR Films / Takomi
 coauthored: J StaR Films / Takomi
 version: 1.0.0

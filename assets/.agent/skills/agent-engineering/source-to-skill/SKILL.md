@@ -1,6 +1,6 @@
 ---
 name: source-to-skill
-description: Use when extracting methodology from raw sources (transcripts, docs, PDFs, books) and compiling them into operational agent skills.
+description: Use when compiling raw knowledge sources (transcripts, docs, PDFs, books, video notes) into structured, operational agent skills.
 author: J StaR Films / Takomi
 coauthored: J StaR Films / Takomi
 version: 1.0.0
