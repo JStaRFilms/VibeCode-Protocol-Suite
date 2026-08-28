@@ -1,9 +1,9 @@
 ---
 name: agent-engineering
-description: Use when engineering LLM prompts, writing agent docs ('writing-for-agents'), modeling domain vocabulary ('domain-modeling' CONTEXT.md/ADRs), creating specs ('conversation-to-spec'), spawning task DAGs ('spawn-task'), running code tournaments ('arena'), or managing subagents.
+description: Use when engineering LLM prompts, compiling skills from sources ('source-to-skill'), engineering expert systems ('expert-system-engineer' CommonKADS/rules), writing agent docs ('writing-for-agents'), modeling domain vocabulary ('domain-modeling' CONTEXT.md/ADRs), creating specs ('conversation-to-spec'), curating/importing skills ('skill-curator'), spawning task DAGs ('spawn-task'), running code tournaments ('arena'), or managing subagents.
 author: J StaR Films / Matt Pocock / P-Stack
 coauthored: J StaR Films / Takomi
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Agent Engineering Suite
@@ -18,6 +18,10 @@ Comprehensive suite for prompt engineering, agent steering rules, domain diction
 | Sub-Skill | Purpose | Path |
 |---|---|---|
 | **`writing-for-agents`** | Core rules for writing skills, AGENTS.md, context pointers, and router mechanics | [`writing-for-agents/SKILL.md`](writing-for-agents/SKILL.md) |
+| **`skill-curator`** | Intake, standardize, classify, and wire new skills into the ecosystem | [`skill-curator/SKILL.md`](skill-curator/SKILL.md) |
+| **`skill-creator`** | Scaffolding new agent skills following repository conventions | [`skill-creator/SKILL.md`](skill-creator/SKILL.md) |
+| **`source-to-skill`** | Distill raw sources (docs, books, transcripts, PDFs) into operational agent skills | [`source-to-skill/SKILL.md`](source-to-skill/SKILL.md) |
+| **`expert-system-engineer`** | Engineer CommonKADS knowledge models, MYCIN rule systems, and inference engines | [`expert-system-engineer/SKILL.md`](expert-system-engineer/SKILL.md) |
 | **`domain-modeling`** | Generates `CONTEXT.md` ubiquitous language glossary with `_Avoid_` anti-synonyms and ADRs | [`domain-modeling/SKILL.md`](domain-modeling/SKILL.md) |
 | **`conversation-to-spec`** | Synthesizes chat discussions into formal technical specifications | [`conversation-to-spec/SKILL.md`](conversation-to-spec/SKILL.md) |
 | **`spawn-task`** | Decomposes specs into tracer-bullet vertical slice task packets with blocking DAGs | [`spawn-task/SKILL.md`](spawn-task/SKILL.md) |
@@ -29,6 +33,5 @@ Comprehensive suite for prompt engineering, agent steering rules, domain diction
 | **`maintain-verification-skill`** | Audits and updates project verification harnesses as code evolves | [`maintain-verification-skill/SKILL.md`](maintain-verification-skill/SKILL.md) |
 | **`subagent-driven-development`** | Parallel subagent orchestration and implementation task loops | [`subagent-driven-development/SKILL.md`](subagent-driven-development/SKILL.md) |
 | **`prompt-engineering`** | Advanced prompting patterns, meta-prompts, and eval harnesses | [`prompt-engineering/SKILL.md`](prompt-engineering/SKILL.md) |
-| **`skill-creator`** | Scaffolding new agent skills following repository conventions | [`skill-creator/SKILL.md`](skill-creator/SKILL.md) |
 | **`optimize-agent-context`** | Optimizing context windows and rule files | [`optimize-agent-context/SKILL.md`](optimize-agent-context/SKILL.md) |
 | **`crafting-effective-readmes`** | Writing structured repository documentation | [`crafting-effective-readmes/SKILL.md`](crafting-effective-readmes/SKILL.md) |
