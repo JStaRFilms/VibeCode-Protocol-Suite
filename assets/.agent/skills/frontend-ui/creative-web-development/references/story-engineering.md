@@ -1,225 +1,124 @@
-# Story Engineering & Narrative Architecture
+# Story Engineering for Evidence-Rich Experiences
 
-An authoritative reference guide for establishing non-generic, cinematic narrative backbones for creative digital experiences before writing shaders, WebGL scenes, or typography timelines. Consult during **Phase 0 (Story Engineering & Creative Direction)**.
+Use this workflow for case studies, project histories, launches, retrospectives, research journeys, and other material containing real events, decisions, proof, change, or discovery.
 
----
+Do not use it as the default structure for a sparse greenfield brief. When no factual sequence exists, return to [creative-direction.md](creative-direction.md).
 
-## 1. Core Philosophy & Ground Rules
+## 1. Pass the Applicability Gate
 
-1. **Narrative Brain Before Engineering Brain**: Never start by asking *"what sections should the website have?"* That produces generic layout clichés (`Hero → About → Process → Projects → Contact`) with WebGL sprinkled on top. Instead, ask:
-   - *"What actually happened here?"* (Factual Archaeology)
-   - *"What is the central contradiction or paradox?"* (Narrative Tension)
-   - *"What does the visitor need to discover next?"* (Question-Answer Relay)
-2. **Discover, Do Not Invent**: The drama already exists in the real sequence of events, failed experiments, scale, and breakthroughs. Extract it.
-3. **Protect the Reveal**: Gate the final climax or breakthrough artifact. Never spoil the destination in the opening beat.
-4. **Questions Create Forward Motion**: Move visitors forward through escalating curiosity, not passive reading.
+Story engineering is appropriate when the source material provides at least one of these:
 
----
+- A meaningful before-and-after change.
+- A sequence of decisions, attempts, failures, or discoveries.
+- Evidence that can accumulate toward a conclusion.
+- A result whose significance depends on how it was reached.
+- A visitor question best answered through progressive disclosure.
 
-## 2. The 6-Stage Narrative Extraction Pipeline
+Choose a utility, editorial, product, or spatial structure when chronology would merely delay information.
 
-```
-Factual Archaeology → Transformation → Contradiction → Question-Answer Relay → Emotional Texture → Interface Script
-```
+### Completion Gate
 
-### Stage 1: Factual Archaeology ("What actually happened?")
-Extract the raw, unpolished sequence of real events from the project's milestones, research notes, and experiments.
-- Strip away marketing jargon and map the chronological milestones (the itch, the digging, the gathering, the synthesis, the breakdown, the turning point, the result).
-- Isolate the raw numbers (e.g., *45 sources, 752 pages, 44 skills, 5 AI candidates, 1 winner*). Numbers are dramatic story objects.
+- [ ] Narrative structure materially improves understanding or emotional impact.
+- [ ] The source contains enough evidence to support the proposed arc.
 
-### Stage 2: The Core Transformation
-Reduce the entire journey to a single three-part arc:
-$$\text{BEFORE (Status Quo)} \longrightarrow \text{CHANGE (The Catalyst / Experiment)} \longrightarrow \text{AFTER (New Reality)}$$
-- **Before**: *"AI keeps generating generic, cookie-cutter creative websites."*
-- **Change**: *"What if we teach an AI the underlying knowledge engineering and physics required for creative craft?"*
-- **After**: *"A synthesized expert skill generates an award-winning creative digital experience."*
+## 2. Build the Evidence Ledger
 
-### Stage 3: Contradiction & The Driving Question
-Locate the central paradox or friction where expectations collide with the experiment:
-- **Contradiction**: *"We used AI to escape AI-looking design."*
-- **The Driving Question**: *"Can a machine learn taste?"* (Notice: questions create forward motion; statements end it).
+Extract and classify:
 
-### Stage 4: The Question-Answer Relay (The Narrative Rail)
-Structure every shot/chapter so that **every answer immediately creates the next question**:
-- **Beat 1**: Answers: *"Why do AI sites feel empty?"* $\rightarrow$ Creates: *"What are the underlying systems?"*
-- **Beat 2**: Answers: *"It's physics, shaders, typography."* $\rightarrow$ Creates: *"Where do we get the expertise?"*
-- **Beat 3**: Answers: *"Knowledge engineering (750 pages)."* $\rightarrow$ Creates: *"Can we synthesize it?"*
-- **Beat 4**: Answers: *"Five AI models competed in an arena."* $\rightarrow$ Creates: *"Did the winner survive reality?"*
-- **Beat 5**: Answers: *"It broke under load—so we engineered a strict performance harness."* $\rightarrow$ Creates: *"What did it produce?"*
-- **Beat 6 (CLIMAX / REVEAL)**: Answers: *"VOID/FORM."* $\rightarrow$ Creates: *"What will you teach it next?"*
-
-### Stage 5: Emotional Texture & Visual Metaphors
-Prevent information fatigue by deliberately modulating emotional registers across beats and physicalizing abstract ideas.
-
-### Stage 6: Narrative-to-Interface Translation
-Map the finalized narrative rail into interaction, 3D scenes, shaders, and scroll intervals while strictly **protecting the climax/reveal**.
-
----
-
-## 3. Contradiction Archetypes
-
-Look for these recurring tensions in technical and creative projects:
-
-| Contradiction Archetype | Core Tension | Driving Question Example |
+| Evidence type | Examples | Rule |
 |---|---|---|
-| **The Inverted Tool** | Using the very technology causing a problem to solve it. | *"Can we use AI to escape AI-looking aesthetics?"* |
-| **The Anachronism** | Combining ancient/historical rigor with futuristic machinery. | *"What happens when 1970s medical expert systems drive modern WebGL shaders?"* |
-| **The Discipline Paradox** | Imposing hyper-strict rules to achieve total artistic freedom. | *"Does extreme constraint produce wilder creativity?"* |
-| **The Scale Inversion** | Squeezing massive complexity into a single, microscopic artifact. | *"How do 750 pages of theory become a single fluid interaction?"* |
-| **The Ghost in the Rig** | Giving mathematical determinism an organic, living soul. | *"Where does math end and feeling begin?"* |
+| **Event** | Decision, experiment, setback, turning point | Preserve chronology and causality. |
+| **Artifact** | Prototype, document, image, output, product | Identify what can be shown. |
+| **Claim** | Outcome, performance, significance | Require supplied or verifiable support. |
+| **Metric** | Count, duration, scale, comparison | Use only when accurate and meaningful. |
+| **Unknown** | Missing date, cause, result, quotation | Keep visible; do not dramatize into a fact. |
 
----
+Separate what happened from the interpretation placed on it. Do not invent milestones, crises, competitions, scale, or breakthroughs to complete a preferred arc.
 
-## 4. Emotional Modulation Palette
+### Completion Gate
 
-Ensure adjacent shots/beats alternate in emotional frequency:
+- [ ] Every narrative claim maps to supplied evidence or a labeled interpretation.
+- [ ] Unknowns remain explicit.
 
-```
-[ WONDER ] (The philosophical hook)
-   │
-   ▼ (shifts from open curiosity to deep focus)
-[ TECHNICAL CURIOSITY / DECONSTRUCTION ] (Deconstruction of mechanics)
-   │
-   ▼ (shifts from mechanics to massive volume)
-[ SCALE & MONUMENTAL WEIGHT ] (Raw volume of data / research)
-   │
-   ▼ (shifts from heavy data to competitive tension)
-[ SUSPENSE / THE TRIAL ] (The arena / tournament)
-   │
-   ▼ (shifts from tension to honesty)
-[ VULNERABILITY / BREAKDOWN ] (The bug / runtime failure)
-   │
-   ▼ (shifts from failure to triumphant release)
-[ EXPLOSION / THE REVEAL ] (The climax: VOID/FORM)
-   │
-   ▼ (shifts from spectacle to forward-looking mystery)
-[ MYSTERY & HORIZON ] (The open future)
-```
+## 3. Find the Narrative Engine
 
----
+Identify the strongest source of forward motion:
 
-## 5. Visual Metaphors & Data Physicalization
+- **Transformation**: A state meaningfully changes.
+- **Investigation**: Evidence resolves a question.
+- **Trial**: A method or object faces a real test.
+- **Construction**: Separate parts become a functioning whole.
+- **Reframing**: Familiar material gains a new interpretation.
+- **Consequence**: A decision changes what becomes possible.
 
-Translate conceptual actions and data into physical, spatial phenomena:
+State the engine in one sentence. Add a contradiction or driving question only when supported by the evidence; do not manufacture paradox for dramatic tone.
 
-| Abstract Concept | Cliché Representation | Physicalized Visual Metaphor |
-|---|---|---|
-| **Knowledge Synthesis** | Intersecting circles or flowchart | Hundreds of floating geometric fragments hovering in low gravity, converging under magnetic pull, colliding, and fusing into a glowing monolithic artifact. |
-| **Document Ingestion** | PDF icon with checkmark | 45 physical textured parchment sheets dropping into a cascading stack, scanning lines radiating through the layers, dissolving into pure kinetic light particles. |
-| **Model Tournament / Arena** | Side-by-side comparison table | Multiple distinct crystalline engines orbiting a central ring, firing inference beams, colliding until the dominant frequency absorbs the others. |
-| **Rule Extraction** | Code snippet in a box | A raw, noisy audio waveform or complex point cloud being filtered through crystal lenses until only pure, sharp geometric vectors remain. |
-| **A Bug / System Breakdown** | Red error modal | The sleek 3D environment fractures; chromatic aberration spikes, textures glitch into wireframe, lighting goes cold amber before self-healing. |
-| **Certainty Propagation** | Progress bar | Ink or bioluminescent fluid branching through a delicate glass vascular network, illuminating valid pathways and freezing dead ends. |
+### Completion Gate
 
----
+- [ ] The engine describes real movement in the material.
+- [ ] The opening question or tension can be answered honestly.
 
-## 6. Numbers as Dramatic Story Objects
+## 4. Choose the Narrative Shape
 
-Numbers are not mere data points; they are dramatic markers of scale, human effort, and machine computation.
+Select the least elaborate structure that makes the evidence compelling:
 
-### Formatting Rules for Dramatic Metrics
-1. **Isolate the Number**: Never bury a monumental metric inside a paragraph. Give it dedicated spatial presence.
-2. **High-Contrast Hierarchy**: The numeral should be monumental; the label should be hyper-restrained and uppercase.
-3. **Sequential Escalation**: Build momentum by cascading metrics from raw input to refined output:
+- **Chronological**: Cause and sequence matter.
+- **Question and evidence**: Understanding grows through investigation.
+- **Problem, attempts, resolution**: Genuine failed approaches shape the result.
+- **Artifact-first reconstruction**: Begin with an intriguing result, then explain how it came to exist.
+- **Parallel comparison**: Two approaches, eras, or systems illuminate each other.
+- **Thematic chapters**: Chronology is weak but recurring ideas are strong.
 
-```text
-    45  SOURCES
-     │
-     ▼
-   752  PAGES
-     │
-     ▼
-    44  SKILLS
-     │
-     ▼
-     5  CANDIDATES
-     │
-     ▼
-     1  WINNER
-```
+Protect a reveal only when early disclosure would genuinely weaken discovery. Products, services, prices, locations, and primary actions should not be hidden merely to imitate cinema.
 
----
+### Completion Gate
 
-## 7. Complete Worked Case Study: The VOID/FORM Narrative Architecture
+- [ ] The chosen shape follows the evidence rather than a universal beat sheet.
+- [ ] Essential visitor information remains available when needed.
 
-**Project**: Engineering an AI Skill from Knowledge Engineering to generate award-winning creative websites.
+## 5. Construct the Narrative Rail
 
----
+For each beat, define:
 
-### Phase 0 Translation: Scene-by-Scene Interface Script
+1. Evidence introduced.
+2. Question answered.
+3. New understanding or tension created.
+4. Emotional register earned by the material.
+5. Artifact, image, quotation, or data that can carry the beat.
+6. Information deliberately withheld and the reason.
 
-```markdown
-### Scene 1: The Provocation (0% - 15% Scroll)
-- **Narrative Goal**: Establish the core tension and hook the visitor.
-- **Question Answered**: None (Opening beat).
-- **New Question Created**: *"What causes AI design to feel so hollow?"*
-- **Emotional Register**: `WONDER`
-- **Visual Metaphor**: A vast, dark void with a single kinetic typography question floating in space: "CAN A MACHINE LEARN TASTE?" A faint, distorted wireframe of a generic website dissolves into dust.
-- **Copy**:
-  Headline: Can a machine learn taste?
-  Body: Most generative design copies surface aesthetics. We wanted to know what happens when you teach an AI the underlying physics of craft.
+Every beat must either advance understanding, change emotional context, or enable visitor action. Merge or remove dead-end beats.
 
----
+Vary emotional intensity according to the source. Do not force every story through wonder, scale, suspense, breakdown, explosion, and mystery.
 
-### Scene 2: The Deconstruction (15% - 30% Scroll)
-- **Narrative Goal**: Reveal that creative web development is not magic, but systems.
-- **Question Answered**: AI copies surfaces because it lacks underlying mechanics.
-- **New Question Created**: *"Where do you find the knowledge to formalize creative craft?"*
-- **Emotional Register**: `TECHNICAL CURIOSITY`
-- **Visual Metaphor**: The dark void reveals 4 dissecting glass planes: Shaders, Fluid Dynamics, Particle Physics, Kinetic Typography. Interactive mouse movement bends the light passing through each plane.
-- **Copy**:
-  Headline: It wasn't magic. It was physics.
-  Body: We deconstructed award-winning creative sites into four mathematical layers: compute shaders, kinetic typography, force fields, and spatial rhythm.
+### Completion Gate
 
----
+- [ ] Every beat changes what the visitor knows, feels, or can do.
+- [ ] Pacing contains contrast without fabricated drama.
+- [ ] The conclusion answers the opening engine.
 
-### Scene 3: The Gathering of Heavy Knowledge (30% - 45% Scroll)
-- **Narrative Goal**: Show the staggering scale of research and historical rigor.
-- **Question Answered**: We found the methodology in 1970s–2000s Knowledge Engineering.
-- **New Question Created**: *"How do you combine 44 disparate skill modules into one coherent brain?"*
-- **Emotional Register**: `SCALE & MONUMENTAL WEIGHT`
-- **Visual Metaphor**: 45 textured translucent sheets fall through 3D space in cascading sequence. High-impact monumental numbers lock onto the screen as they pass.
-- **Copy**:
-  Numbers Display:
-    45 DOCUMENTS
-    752 PAGES
-    44 SKILLS
-  Body: We synthesized foundational knowledge engineering from MYCIN and CommonKADS with modern creative shaders. 752 pages of formal methodology compressed into procedural agent capabilities.
+## 6. Translate Evidence into Interface
 
----
+For each beat, specify only the interface behavior the story requires:
 
-### Scene 4: The Crucible & Tournament (45% - 65% Scroll)
-- **Narrative Goal**: Showcase the competitive synthesis and vulnerability of failure.
-- **Question Answered**: We pit 5 independent AI candidates against each other in an arena.
-- **New Question Created**: *"Did the winning skill survive real implementation?"*
-- **Emotional Register**: `SUSPENSE` into `VULNERABILITY`
-- **Visual Metaphor**: Five glowing crystalline nodes orbit in high-speed collision. Sudden glitch state: chromatic aberration spikes and the environment shudders (The Breakdown), before converging into a single stabilized obsidian prism.
-- **Copy**:
-  Headline: Five machines. One arena.
-  Body: Five models competed to synthesize the knowledge. The winning architecture broke under real WebGL load—forcing us to engineer a strict performance harness to achieve 60fps determinism.
+| Element | Decision |
+|---|---|
+| **Narrative purpose** | Evidence, question, and change in understanding |
+| **Content** | Exact facts, artifacts, quotations, and copy requirements |
+| **Composition** | Hierarchy, density, scale, and relationship to adjacent beats |
+| **Visual metaphor** | Optional physicalization grounded in the source |
+| **Interaction** | Visitor action that reveals, compares, or manipulates evidence |
+| **Transition** | How one state creates the next |
+| **Utility** | Navigation, context, and primary actions that remain available |
 
----
+A visual metaphor should clarify the material, not replace it. Prefer the real artifact when it is already visually or emotionally strong.
 
-### Scene 5: The Climax / Reveal (VOID/FORM) (65% - 85% Scroll)
-- **Narrative Goal**: Reveal the final breakthrough artifact.
-- **Question Answered**: Yes—the skill produced VOID/FORM.
-- **New Question Created**: *"What does this prove for the future of creative tools?"*
-- **Emotional Register**: `EXPLOSION`
-- **Visual Metaphor**: The obsidian prism detonates outward into a fully interactive, reactive WebGL audio-visual canvas (`VOID/FORM`). The visitor can now directly control the physics simulation.
-- **Copy**:
-  Headline: VOID / FORM
-  Subtitle: The first autonomous creative experience engineered entirely from formal knowledge compilation.
-  [Launch Interactive Artifact]
+Use cinematic shots only when time-based choreography is essential. Otherwise use an editorial or utility-led interface with narrative sequencing.
 
----
+## Final Gate
 
-### Scene 6: The Horizon (85% - 100% Scroll)
-- **Narrative Goal**: Leave the visitor with a forward-looking mystery.
-- **Question Answered**: Machines can learn craft when grounded in formal knowledge.
-- **New Question Created**: *"What will you teach it next?"*
-- **Emotional Register**: `MYSTERY / HORIZON`
-- **Visual Metaphor**: The WebGL environment gently settles into an infinite grid stretching into the dawn horizon.
-- **Copy**:
-  Headline: Beyond the Surface.
-  Body: Creative engineering is no longer limited by what an AI remembers—only by what we teach it to model.
-```
+- [ ] The story can be traced back to real evidence.
+- [ ] No invented milestone or metric closes a structural gap.
+- [ ] Narrative shape fits this material rather than the previous project.
+- [ ] Interactions reveal or deepen evidence instead of decorating it.
+- [ ] The final interface preserves essential visitor utility and accessibility.

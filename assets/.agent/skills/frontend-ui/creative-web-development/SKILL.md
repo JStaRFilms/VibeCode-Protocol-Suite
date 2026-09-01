@@ -1,293 +1,200 @@
 ---
 name: creative-web-development
-description: Use when engineering high-end creative web experiences using Three.js/R3F, GLSL shaders, Canvas 2D particle physics, GSAP ScrollTrigger, Lenis, or hybrid Blender frame scrubbing.
+description: Use when originating, planning, building, or auditing distinctive creative web experiences. Routes sparse briefs through concept selection before choosing motion, Canvas, WebGL, 3D, or implementation architecture.
 author: J StaR Films / Takomi
 coauthored: J StaR Films / Takomi
-version: 2.0.0
+version: 3.2.0
 ---
 
-# Creative Web Development: Master Operational Framework
+# Creative Web Development
 
-An authoritative engineering methodology for constructing interactive, GPU-accelerated digital experiences where user input drives unified visual computation pipelines across the DOM, Canvas 2D, Three.js, and GLSL shaders.
+Create experiences with a clear visual idea and carefully selected technology that makes that idea possible.
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                              INPUT-TO-COMPUTATION ENGINE                               │
-├────────────────────────────┬─────────────────────────────┬─────────────────────────────┤
-│        INPUT STAGE         │  STATE & INTERPOLATION      │ COMPUTATION & RENDER STAGE  │
-│  - Pointer (Coords, Vel)   │  - Damping & Spring Physics │  - DOM 3D & Mask Clipping   │
-│  - Wheel / Touch (Lenis)   │  - Virtual Playhead (GSAP)  │  - Canvas 2D Pixel Buffers  │
-│  - Viewport (Scroll, SVH)  │  - GPU Uniforms (uMouse)    │  - Three.js / R3F Meshes    │
-│  - Central RAF Ticker      │  - Projection Matrix (FOV)  │  - GLSL Vertex / Fragment   │
-└────────────────────────────┴─────────────────────────────┴─────────────────────────────┘
-```
+Treat creative direction and creative engineering as separate decisions. Establish what the experience means, how it should feel, and what visitors need before selecting implementation techniques.
 
-For canonical domain terminology and anti-synonyms, see [references/terminology.md](references/terminology.md).  
-For complete end-to-end production recipes, see [references/examples.md](references/examples.md).
+## Route the Request
 
----
+Classify the request before producing a plan or changing code.
 
-## Master Decision Matrix & Technology Router
+| Request state | Route |
+|---|---|
+| Sparse brief; the user wants ideas, a direction, or a plan | Read [references/creative-direction.md](references/creative-direction.md), then [references/concept-evaluation.md](references/concept-evaluation.md). |
+| Evidence-rich history, case study, launch story, or project retrospective | Read [references/story-engineering.md](references/story-engineering.md), then [references/concept-evaluation.md](references/concept-evaluation.md). |
+| The user already supplied a governing concept or detailed art direction | Preserve it and continue at **Experience Architecture**. |
+| The user asks for one technique, implementation, or bug fix | Route directly to the relevant technical reference. Do not redesign the experience. |
+| The user asks for a creative audit | Read [references/concept-evaluation.md](references/concept-evaluation.md); add [references/performance-and-profiling.md](references/performance-and-profiling.md) only when implementation exists. |
 
-Match the experience goal to its specialized reference blueprint:
+## Reference Loading Contract
 
-| Experience Goal | Primary Tech Stack | Reference Architecture |
-|---|---|---|
-| **Story Engineering & Narrative Rails** | Contradictions & Q&A Relays | [references/story-engineering.md](references/story-engineering.md) |
-| **Domain Glossary & Anti-Synonyms** | Canonical Terminology | [references/terminology.md](references/terminology.md) |
-| **Kinetic Typography & Staggers** | GSAP 3, SplitText, 3D CSS | [references/motion-and-scroll.md](references/motion-and-scroll.md) |
-| **Synchronized Smooth Scroll** | Lenis, ScrollTrigger, Pinning | [references/motion-and-scroll.md](references/motion-and-scroll.md) |
-| **Sand/Dust Text & Particle Physics** | Canvas 2D, ImageData, Springs | [references/canvas-and-particles.md](references/canvas-and-particles.md) |
-| **Interactive 3D Product Viewports** | Three.js, R3F, DRACO GLTF | [references/threejs-and-r3f.md](references/threejs-and-r3f.md) |
-| **GPU Distortion & Noise Shaders** | WebGL, GLSL, Simplex/FBM/Curl | [references/shaders-and-glsl.md](references/shaders-and-glsl.md) |
-| **Hybrid Baked Video + WebGL** | Blender Cycles, Canvas Scrub | [references/hybrid-3d-cinematics.md](references/hybrid-3d-cinematics.md) |
-| **Performance & Memory Audits** | DPR Clamping, InstancedMesh | [references/performance-and-profiling.md](references/performance-and-profiling.md) |
-| **End-to-End Production Recipes** | HTML/JS/CSS Blueprints | [references/examples.md](references/examples.md) |
+The router selects references; selection makes reading them mandatory. Do not substitute prior knowledge, remembered APIs, summaries, implementation examples, or the main skill for the current reference files.
 
----
+1. Build a **Reference Manifest** listing every capability the task requires and the reference that governs it.
+2. Read every selected reference completely before making detailed decisions or writing code.
+3. Record a compact **Reference Receipt** with the file path and at least one non-obvious constraint from that file that changes the plan or implementation.
+4. If a new capability enters scope, pause that part of the work, add its reference to the manifest, and read it before continuing.
+5. Read [references/performance-and-profiling.md](references/performance-and-profiling.md) whenever the solution includes an animation loop, smooth-scroll orchestration, Canvas, WebGL, shaders, frame sequences, or persistent media.
+6. Read each domain reference before consulting [references/examples.md](references/examples.md). Recipes illustrate implementation after a decision; they do not replace domain instructions.
 
----
+For integrated work, load every participating domain reference. A shader-driven Three.js scrollytelling experience, for example, requires the motion, Three.js, shader, and performance references—not whichever file the agent already knows best.
 
-## Phase 0: Story Engineering, Creative Direction & Bespoke Storyboarding
+Keep the receipt brief, but make it observable in the plan, working notes, or progress update. Never claim a reference was loaded unless the complete current file was read.
 
-Before authoring code or visual layouts, run the **Story Engineering Brain** to extract the core narrative, tension, and visual metaphors. Do not default to generic section clichés (`Hero → About → Process → Contact`).
+A receipt proves that a reference was consulted, not that the finished work complies with it. Treat every recorded constraint as binding through the final response. Before delivery, run the **Constraint Audit** in Phase 5 and revise contradictions instead of merely reporting them.
 
-For detailed narrative extraction workflows, see [references/story-engineering.md](references/story-engineering.md).
+### Reference Gate
 
-### 1. Execute the 6-Stage Narrative Extraction Pipeline
-1. **Factual Archaeology**: Extract what actually happened from project milestones, research, and data. Identify dramatic scale numbers (e.g. *45 sources, 752 pages, 44 skills, 1 winner*).
-2. **Core Transformation**: Define the three-part arc: $\text{BEFORE (Status Quo)} \to \text{CHANGE (Catalyst)} \to \text{AFTER (New Reality)}$.
-3. **Contradiction & Driving Question**: Find the core tension (e.g. *"We used AI to escape AI-looking design"*) and formulate the single forward-motion Driving Question (*"Can a machine learn taste?"*).
-4. **Question-Answer Relay**: Chain narrative beats so every shot answers one question and immediately creates the next.
-5. **Emotional Modulation & Visual Metaphors**: Alternate emotional registers (`WONDER` $\to$ `TECHNICAL CURIOSITY` $\to$ `SCALE` $\to$ `SUSPENSE` $\to$ `VULNERABILITY` $\to$ `EXPLOSION` $\to$ `MYSTERY`) and translate abstract code concepts into physical 3D phenomena.
-6. **Protect the Reveal**: Strictly gate the climax or final breakthrough artifact—never spoil the destination in the opening shot.
+- [ ] Manifest covers every requested capability.
+- [ ] Every selected reference was read completely.
+- [ ] Receipt records an applied constraint from each selected reference.
+- [ ] No detailed plan or implementation relies on an unread routed reference.
 
-### 2. Enforce Anti-Trope Color Palettes
-- **Banned Tropes**: Generic "AI purple / neon violet" glows, dark-mode obsidian clichés, and gradient-bordered glass cards.
-- **Mandated Direction**: Ground the aesthetic in physical materials with 4–6 named hex tokens (e.g., Titanium Slate `#0F1113`, Chalk Bone `#EDE8DE`, Precision Safety Orange `#FF4800`, Matte Carbon `#0D0E10`, Terracotta `#C86432`, Raw Platinum `#E5E9EC`).
+Do not force every request through cinematic scrollytelling. Utility sites, editorial compositions, product demonstrations, spatial experiences, and narrative case studies require different structures.
 
-### 3. Author the Bespoke Multi-Shot Storyboard (4 to 10+ Shots)
-Formulate the experience as a **bespoke sequence of 4 to 10+ cinematic shots** where normalized scroll progress ($0\% \to 100\%$) drives a continuous virtual playhead ($t = 0.0s \to 10.0s+$).
+## Deliverable Boundary
 
-For every shot, define the 4 synchronized tracks:
-1. **Camera Track** (Focal vector, dolly zoom, 3D tilt, or lateral tracking)
-2. **Subject Action** (Resting, deconstructing, morphing, or assembling)
-3. **Typography Track** (Mask reveals, SplitText staggers, or spatial drift)
-4. **Interactive & Sound Trigger** (Cursor force fields, acoustic ticks, or harmonic sweeps)
+Lock the stopping point before selecting references.
 
-### Exemplar Storyboard Matrix (Adapt to Subject Matter):
+For a concept, direction, or plan-only request:
 
-| Scroll Interval | Shot Role (Exemplar) | Camera / Focal Vector | Subject / Mechanism Action | Typography & Motion Track | Interactive & Sound Trigger |
-|---|---|---|---|---|---|
-| **$0\% - 15\%$** | **Shot 1: The Inciting Question** | Fixed wide view; subtle mouse parallax | Hero object in resting state with ambient float | Split-mask Driving Question reveal | Sand/dust particle dispersion on hover; subtle tick |
-| **$15\% - 30\%$** | **Shot 2: The Deconstruction** | Dolly zoom into internal geometry | Core surface unlatches; optical refraction shifts | Eyebrow caption staggers along normal vector | Cursor proximity magnetizes nearby components |
-| **$30\% - 45\%$** | **Shot 3: The Gathering / Scale** | Macro 3D perspective tilt (`rotateX`, `translateZ`)| 3D document cascade / scale metrics lock in | Monumental numbers with line-by-line stagger | Scroll-pinned layer separation; mechanical click |
-| **$45\% - 60\%$** | **Shot 4: The Crucible / Trial** | Top-down perpendicular scan | Competing crystalline nodes collide / glitch state | Dynamic telemetry readouts scrub across view | Audio frequency sweep modulated by velocity |
-| **$60\% - 75\%$** | **Shot 5: Spatial Deep-Dive** | 90° lateral pan into horizontal track | Multi-module exploration across spatial cards | Horizontal scrub with dynamic velocity skew | Card hover magnifiers & resonant chimes |
-| **$75\% - 85\%$** | **Shot 6: Diagnostic Analysis** | 3D wireframe / LIDAR cross-section | Surface toggles to holographic topology scan | Monospace readouts typewrite across view | Highpass acoustic blips |
-| **$85\% - 100\%$** | **Shot 7+: Climax & Reveal (VOID/FORM)** | Center stage convergence; aperture wipe | Full interactive WebGL breakthrough canvas docks | Hero thesis statement re-converges | Aperture shutter flash; harmonic chord |
+- Load only the routed concept, story, or evaluation references. Do not load technical domain references merely to make the plan sound complete.
+- Stop after **Experience Architecture**. Do not provide frameworks, dependencies, rendering architecture, implementation recipes, API or telemetry designs, shader or animation formulas, performance budgets, code-level timings, or build phases.
+- Describe motion as an experiential rule and technology as an unresolved implementation question. Technical translation begins only when the user requests or approves implementation.
+
+Loading technical references or appending an implementation blueprint does not demonstrate ambition in a plan-only task; it violates the request contract.
+
+### Boundary Gate
+
+- [ ] Selected references match the requested deliverable.
+- [ ] The response stops at the locked phase.
+- [ ] No later section quietly expands into implementation.
+
+## Phase 0: Establish the Request Contract
+
+1. Determine the requested deliverable: concept, plan, build, focused implementation, or audit.
+2. Separate supplied facts from assumptions and unknowns. Preserve unknowns instead of inventing business claims, metrics, addresses, prices, services, awards, APIs, or live data.
+3. Identify the visitor's primary jobs and the information that must remain immediately usable.
+4. Record hard constraints: brand assets, content, accessibility, platform, performance, schedule, and available media.
+
+When the user asks for a plan only, stop after **Experience Architecture**. Return creative decisions and rationale without code, dependency lists, shader formulas, or implementation scaffolding.
+
+Create a compact **Fact Trace** for operational details that appear in the proposed experience. Each business name, address, price, schedule, metric, service, amenity, policy, award, historical claim, integration, and live-data capability must be one of:
+
+- **Known**: supplied or verified, with its source identified.
+- **Provisional**: necessary to explain the design and marked as provisional at the point of use.
+- **Unknown**: retained as a content requirement or placeholder, never presented as an actual feature or customer-facing claim.
+
+Examples may illustrate an interaction only when visibly labelled as examples. A truth-ledger disclaimer at the beginning does not authorize invented specifics later in the plan.
 
 ### Completion Gate
-- [ ] Story Engineering completed: Core transformation, contradiction, driving question, and Q&A relay defined.
-- [ ] Climax/reveal is protected until the designated final shot.
-- [ ] Bespoke storyboard is authored for the specific topic (4 to 10+ shots) defining all 4 synchronized tracks.
-- [ ] Color palette uses material-grounded tokens with zero generic AI purple gradients.
-- [ ] Single signature interaction (e.g. sand dust typography or liquid distortion) is explicitly chosen.
 
----
+- [ ] Deliverable and stopping point are explicit.
+- [ ] Facts, assumptions, and unknowns are distinguishable.
+- [ ] Every operational detail in the proposed experience is traceable and labelled at its point of use.
+- [ ] Visitor jobs and non-negotiable utility are identified.
 
-## Phase 1: Viewport Scaffolding, High-DPI Foundation & 3D Layer Stratification
+## Phase 1: Establish the Governing Concept
 
-Establish the spatial layout, viewport coordinate containers, and High-DPI rendering baselines.
+For a sparse brief, execute the divergence and selection method in [references/creative-direction.md](references/creative-direction.md). Evaluate candidates with [references/concept-evaluation.md](references/concept-evaluation.md).
 
-1. **Enforce Design Restraint & Signature Interaction**:
-   - Scope the experience to one primary **signature interaction** (e.g., kinetic sand text or liquid fluid distortion) paired with purposeful secondary micro-interactions.
-2. **Configure Viewport Coordinate Containers**:
-   - Use `100svh` heights on full-screen containers to eliminate mobile address-bar resize jumps.
-   - Establish semantic stacking strata: Base Media (`z-index: 1`), Canvas/WebGL (`z-index: 10`), DOM UI/Typography (`z-index: 20`), Navigation (`z-index: 100`).
-3. **Configure Color Management & DPR Ceiling**:
-   - Clamp rendering resolution: `const dpr = Math.min(window.devicePixelRatio || 1, 2.0);`.
-   - Enforce `THREE.SRGBColorSpace` and `THREE.ACESFilmicToneMapping` on WebGL renderers.
+For an evidence-rich story, use [references/story-engineering.md](references/story-engineering.md). Apply its narrative methods only when the material contains real events, proof, change, or discovery.
+
+If the user supplied a concept, test it for domain truth, ownability, coherence, utility, and interaction necessity before extending it. Strengthen weak links without replacing the user's direction.
+
+Ambition means a stronger governing idea, more meaningful relationships between elements, and a more resolved experience. It does not mean maximizing effects, libraries, scenes, particles, or technical terminology.
 
 ### Completion Gate
-- [ ] Primary signature interaction is selected and scoped.
-- [ ] Viewport containers use mobile-safe `100svh` units with explicit `z-index` stacking.
-- [ ] Device pixel ratio is strictly clamped to $\le 2.0$.
 
----
+- [ ] One governing concept is stated in a single memorable sentence.
+- [ ] The concept arises from the subject rather than a reusable creative-web trope.
+- [ ] The signature interaction expresses the concept and supports the visitor's journey.
+- [ ] Factual claims remain supplied, verified, or explicitly provisional.
 
-## Phase 2: Kinetic Typography & DOM Interaction Systems
+## Phase 2: Design the Experience Architecture
 
-Deconstruct static text into dynamic, accessible visual objects using character splitting and overflow clip bounds.
+Choose the structure that best serves the concept and visitor jobs:
 
-1. **Synchronize Font Ingestion**:
-   - Defer text measurement and splitting until font glyphs are loaded:
-     ```javascript
-     document.fonts.ready.then(() => initializeTypography());
-     ```
-2. **Decompose Text into Masked Hierarchies**:
-   - Split typography targeting only the animated hierarchy (`type: 'lines,words,chars'`) with `smartWrap: true` and `autoSplit: true`.
-   - Apply outer container masks (`.line-mask { overflow: hidden; display: block; }`) and inner character reveals (`.char { display: inline-block; }`).
-3. **Enforce Dual-DOM Accessibility**:
-   - Apply `aria-label` with the raw text string to the parent element and tag child split spans with `aria-hidden="true"`, or provide an intact `<h1 class="sr-only">`.
-   - For detailed configuration and internationalization, see [references/motion-and-scroll.md](references/motion-and-scroll.md).
+- **Utility journey** for fast decisions, visits, bookings, purchases, or contact.
+- **Editorial composition** for interpretation, browsing, and typographic hierarchy.
+- **Narrative progression** for evidence-rich transformations and case studies.
+- **Product demonstration** for mechanisms, benefits, comparison, and conversion.
+- **Spatial exploration** when navigation through an environment is essential to the premise.
+- **Hybrid structure** when utility must remain immediately available around an expressive core.
 
-### Completion Gate
-- [ ] Text splitting executes strictly after `document.fonts.ready` resolves.
-- [ ] Split elements contain overflow masks without layout-breaking line wraps.
-- [ ] Screen readers access intact semantic markup without spelling individual letters.
+Define:
 
----
-
-## Phase 3: Synchronized Smooth Scroll & Unified Virtual Playhead
-
-Synchronize virtual scroll physics with GSAP ScrollTrigger timelines through a single master clock.
-
-1. **Unify the Animation Ticker (Lenis + GSAP)**:
-   - Forward Lenis scroll events to `ScrollTrigger.update`, drive Lenis through `gsap.ticker`, and enforce `lagSmoothing(0)`:
-     ```javascript
-     const lenis = new Lenis({ duration: 1.2, smoothWheel: true });
-     lenis.on('scroll', ScrollTrigger.update);
-     gsap.ticker.add((time) => lenis.raf(time * 1000));
-     gsap.ticker.lagSmoothing(0);
-     ```
-2. **Calculate Pin Buffers & Scrub Intervals**:
-   - Establish pinned scrollytelling tracks: `pin: true`, `pinSpacing: true`, `scrub: 1`, `end: () => "+=" + (window.innerHeight * N)`.
-   - Allocate a 10% rest buffer zone ($p \in [0.90, 1.00]$) so visual sequences settle before unpinning.
-   - Partition progress using `gsap.utils.clamp` and `gsap.utils.mapRange`.
-   - For horizontal scroll tracks and multi-page shutter transitions, see [references/motion-and-scroll.md](references/motion-and-scroll.md).
+1. Content hierarchy and persistent utility.
+2. Composition, typography, imagery, material, and color rules.
+3. A motion law describing how the visual world behaves.
+4. One signature interaction and only the secondary interactions required to support it.
+5. Desktop, touch, keyboard, reduced-motion, and low-capability expressions of the same concept.
+6. The sequence of states or sections. Use cinematic shots only when a continuous time-based journey materially strengthens the idea.
 
 ### Completion Gate
-- [ ] Lenis and ScrollTrigger run on a unified ticker with `lagSmoothing(0)`.
-- [ ] Pinned scroll tracks contain a 10% resting buffer before releasing.
-- [ ] Responsive `gsap.matchMedia()` degrades multi-turn 3D pins into clean vertical flow on mobile.
 
----
+- [ ] Structure follows visitor needs and concept rather than a default page template.
+- [ ] Visual, motion, interaction, and content decisions express the same premise.
+- [ ] Mobile and accessibility preserve the concept instead of merely removing effects.
+- [ ] The plan states what will remain deliberately simple.
 
-## Phase 4: Canvas 2D & Particle Physics Decomposition
+## Phase 3: Translate the Concept into Technology
 
-Convert rasterized typography or image buffers into interactive particle fields with immutable anchor memory and cursor force repulsion.
+Enter this phase only when implementation is requested or approved. Choose the smallest technical system capable of realizing the concept.
 
-1. **Configure High-DPI 2D Canvas**:
-   - Scale internal buffer dimensions: `canvas.width = width * dpr; canvas.height = height * dpr; ctx.scale(dpr, dpr);`.
-2. **Extract Pixel Buffers & 1D-to-2D Stride Mapping**:
-   - Render typography to an offscreen buffer and extract raw bytes via `ctx.getImageData(0, 0, width, height)`.
-   - Compute 1D stride index: $\text{index} = (y \times 4 \times \text{width}) + (x \times 4)$.
-   - Calculate perceived photometric luminance (ITU-R BT.601):
-     $$\text{Luminance} = \frac{\sqrt{0.299 \cdot R^2 + 0.587 \cdot G^2 + 0.114 \cdot B^2}}{100}$$
-3. **Instantiate Anchored Particles & Spring Physics**:
-   - For $\text{alpha} > 128$, instantiate particles storing dynamic state $(x, y, v_x, v_y)$ and immutable anchors $(\text{baseX}, \text{baseY})$.
-   - On cursor proximity ($\text{dist} < \text{radius}$), apply directional repulsion:
-     $$\vec{F}_{\text{repulsion}} = -\left(\frac{\vec{\Delta}}{\text{dist}}\right) \cdot \left(\frac{\text{radius} - \text{dist}}{\text{radius}}\right) \cdot \text{density}$$
-   - On departure, pull particle toward anchor via Hooke's Law damping: $x_{t+1} = x_t + (\text{baseX} - x_t) \cdot k$.
-   - For constellation lines ($O(N^2/2)$) and vector flow fields, see [references/canvas-and-particles.md](references/canvas-and-particles.md).
+| Required behavior | Consult |
+|---|---|
+| Canonical creative-development vocabulary | [references/terminology.md](references/terminology.md) |
+| Kinetic typography, GSAP, Lenis, ScrollTrigger, page transitions | [references/motion-and-scroll.md](references/motion-and-scroll.md) |
+| Canvas typography, particles, force fields, pixel buffers | [references/canvas-and-particles.md](references/canvas-and-particles.md) |
+| Three.js, React Three Fiber, GLTF, cameras, lighting | [references/threejs-and-r3f.md](references/threejs-and-r3f.md) |
+| GLSL distortion, displacement, procedural noise | [references/shaders-and-glsl.md](references/shaders-and-glsl.md) |
+| Baked frame sequences and hybrid 3D cinematics | [references/hybrid-3d-cinematics.md](references/hybrid-3d-cinematics.md) |
+| Runtime budgets, degradation, teardown, profiling | [references/performance-and-profiling.md](references/performance-and-profiling.md) |
+| Complete implementation recipes | [references/examples.md](references/examples.md), after architecture is chosen |
 
-### Completion Gate
-- [ ] 1D buffer stride correctly indexes contiguous RGBA byte data.
-- [ ] Particles scatter under cursor proximity and reconstruct typography via anchor memory.
-- [ ] Constellation proximity checks use upper-triangular indexing ($j = i + 1$).
-
----
-
-## Phase 5: Three.js & React Three Fiber (R3F) Viewport Integration
-
-Construct 3D viewport scenes, ingest DRACO-compressed GLTF assets, configure studio lighting, and synchronize camera vectors with scroll.
-
-1. **Initialize WebGLRenderer & Screen Projection**:
-   - Match camera FOV to viewport height: $\text{FOV} = 2 \cdot \arctan\left(\frac{\text{height}}{2 \cdot \text{distance}}\right) \cdot \left(\frac{180}{\pi}\right)$ (1 Three.js unit = 1 CSS pixel at $Z=0$).
-2. **Ingest & Normalize DRACO Assets**:
-   - Load `.glb` assets via `GLTFLoader` with `DRACOLoader`.
-   - Compute spatial bounding box (`new THREE.Box3().setFromObject(model)`) to auto-center origin at $(0,0,0)$ and scale responsively.
-3. **Establish Studio Lighting Rig**:
-   - Position directional key light (soft shadow maps), ambient fill, rim highlights, and HDR environment reflection maps.
-4. **Bind Scroll Rotation via Axis-Angle Math**:
-   - Update rotation incrementally via `model.rotateOnAxis(axis, delta)` to prevent gimbal lock.
-   - Use on-demand dirty rendering (`viewer.setDirty()`) during idle to conserve battery.
-   - For R3F declarative hooks and `@react-three/drei` components, see [references/threejs-and-r3f.md](references/threejs-and-r3f.md).
+Prefer semantic DOM and CSS for content and layout. Add Canvas or WebGL only where the concept requires continuous visual computation, spatial rendering, or pixel-level behavior. Do not load implementation examples during concept generation; examples are engineering references, not art direction.
 
 ### Completion Gate
-- [ ] 3D models are DRACO-compressed and auto-centered at origin.
-- [ ] Model rotations execute smoothly without Euler angle flipping.
-- [ ] WebGL canvas properly releases pointer events when not in inspection mode.
 
----
+- [ ] Every selected technology has a concept-linked responsibility.
+- [ ] Simpler alternatives were considered before adding GPU or scroll orchestration.
+- [ ] Content and primary actions remain available without the enhanced rendering layer.
 
-## Phase 6: Custom GPU Shaders & GLSL Visual Computation
+## Phase 4: Build a Coordinated System
 
-Deploy hardware-accelerated vertex displacement, fragment distortion, and mouse-velocity force fields in GLSL.
+1. Establish semantic content, responsive layout, and accessible controls first.
+2. Model user input as state that drives the chosen visual behavior instead of accumulating disconnected event-triggered effects.
+3. Coordinate DOM, Canvas, WebGL, and sound through the minimum number of clocks and state owners.
+4. Implement the signature interaction before secondary motion. Remove secondary effects that weaken its prominence.
+5. Add capability-aware fallbacks and teardown alongside each enhanced system.
 
-1. **Pass Uniforms & Correct Aspect Ratio**:
-   - Feed uniforms: `uTime`, `uMouse`, `uVelocity`, `uResolution`, `uTexture`.
-   - Normalize coordinates: `vec2 st = (gl_FragCoord.xy - 0.5 * uResolution.xy) / min(uResolution.x, uResolution.y);`.
-2. **Implement Vertex Wave Displacement**:
-   - Displace vertices dynamically along normals based on distance to mouse and procedural noise.
-3. **Implement Fragment Fluid Distortion & RGB Chromatic Aberration**:
-   - Distort UVs using 4-octave Fractional Brownian Motion (FBM) and Gaussian cursor falloff.
-   - Stagger Red, Green, and Blue texture samples along displacement vectors:
-     $$\text{Sample} = \text{vec4}(T(\text{uv} + \vec{d} \cdot 1.3).r, T(\text{uv} + \vec{d}).g, T(\text{uv} + \vec{d} \cdot 0.7).b, 1.0)$$
-   - For Simplex noise, FBM, and Curl noise kernels, see [references/shaders-and-glsl.md](references/shaders-and-glsl.md).
+Use only the technical references required by the selected architecture.
 
 ### Completion Gate
-- [ ] Shaders compile without warnings or runtime WebGL errors.
-- [ ] UV aspect ratio preservation prevents texture distortion on resize.
-- [ ] Velocity decays smoothly to zero when pointer stops moving.
 
----
+- [ ] The signature interaction works and communicates the governing concept.
+- [ ] Animation systems share explicit timing and state ownership.
+- [ ] Keyboard, touch, reduced-motion, and low-capability paths remain complete.
 
-## Phase 7: Hybrid 3D Cinematics & Asset Baking (ORYZO / Superlocal Paradigm)
+## Phase 5: Verify Concept and Implementation
 
-Combine pre-rendered ray-traced frame sequences on Canvas 2D with synchronized real-time WebGL meshes and 3D perspective DOM overlays.
+Run the evaluation in [references/concept-evaluation.md](references/concept-evaluation.md) against the finished plan or experience. When implementation exists, also run the relevant checks in [references/performance-and-profiling.md](references/performance-and-profiling.md).
 
-1. **Bake & Batch-Export Frame Sequences**:
-   - Render offline camera paths in Blender Cycles/Eevee and export numbered WebP/JPEG frames (`frame_0001.webp` to `frame_NNNN.webp`, $1920 \times 1080$, quality 80–85%).
-2. **Scrub Image Sequence on Canvas 2D**:
-   - Preload all frames into an in-memory `Image[]` array before activating scroll. Never scrub native `<video>` tags on scroll.
-   - Paint active frame using context-level `object-fit: cover` aspect ratio math.
-3. **Orchestrate Real-Time WebGL & 3D Perspective DOM**:
-   - Position Three.js canvas and 3D DOM container (`perspective: 1000px; transform-style: preserve-3d;`) directly above the background canvas.
-   - Scrub child elements along `translateZ` and `rotateY` synchronized to the master ScrollTrigger playhead.
-   - For complete frame scrubber classes and DOM depth recipes, see [references/hybrid-3d-cinematics.md](references/hybrid-3d-cinematics.md).
+Before delivering any output, run a compact **Constraint Audit**:
 
-### Completion Gate
-- [ ] Image frames preloaded into memory array before scroll scrubbing begins.
-- [ ] Canvas frame painting maintains `object-fit: cover` without aspect warping.
-- [ ] Real-time WebGL overlay and 3D DOM layers align with baked frame trajectory.
+1. Revisit every Reference Receipt constraint and locate the decision that applies it.
+2. Compare the final work with the deliverable boundary and Fact Trace.
+3. Treat any contradiction, unlabelled operational claim, or scope expansion as a failure to revise—not a caveat to disclose.
+4. Re-read a governing reference when the audit exposes uncertainty; do not rely on the earlier receipt.
 
----
+For a plan, record the audit result briefly: reference compliance, factual integrity, and boundary compliance. Do not call the plan compliant while listing unresolved violations.
 
-## Phase 8: Performance Budgeting, Memory Teardown & Graceful Degradation
-
-Audit runtime GPU/CPU metrics, enforce draw call budgets, prevent garbage collection spikes, and adapt to mobile devices.
-
-1. **Enforce Render & Resource Budgets**:
-   - Restrict rendering resolution: `Math.min(window.devicePixelRatio, 2.0)`.
-   - Maintain WebGL draw calls $< 50$ on mobile, $< 100$ on desktop via `THREE.InstancedMesh`.
-   - Zero heap allocations inside animation loops: pre-allocate all scratch vectors/matrices outside RAF.
-2. **Implement Graceful Mobile Degradation**:
-   - Detect mobile viewports: increase particle stride (75% particle reduction), disable real-time shadow maps, and omit heavy post-processing passes.
-   - Respect `prefers-reduced-motion: reduce` by replacing spatial travel with simple fades.
-3. **Execute Comprehensive Teardown**:
-   - On component unmount / route transition, call `cancelAnimationFrame`, `lenis.destroy()`, `ScrollTrigger.killAll()`, and recursively dispose geometries, materials, textures, and WebGL contexts.
-   - For memory profiling guides and deallocation checklists, see [references/performance-and-profiling.md](references/performance-and-profiling.md).
+Delete effects, abstractions, and technologies that do not strengthen meaning, usability, or execution quality.
 
 ### Completion Gate
-- [ ] Zero memory leaks verified across route changes and window resizes.
-- [ ] No object allocations (`new THREE.Vector3`) occur inside active RAF loops.
-- [ ] Constant 60 FPS verified across desktop and mobile test profiles.
 
----
-
-## Phase 9: End-to-End Production Verification & Synthesis
-
-Validate the integrated experience against verified production recipes and browser environments.
-
-1. **Execute Working Code Recipes**:
-   - Verify implementations against tested recipes in [references/examples.md](references/examples.md).
-2. **Audit Production Checklist**:
-   - Verify 60/120 FPS performance across desktop and mobile devices.
-   - Confirm all ScrollTrigger debug markers are removed in production builds.
-   - Verify semantic accessibility tags and intact screen-reader fallbacks.
-
-### Completion Gate
-- [ ] All 9 sequential implementation phases pass their respective completion gates.
-- [ ] Experience runs at steady 60 FPS without memory leaks or dropped frames.
+- [ ] The experience is recognizable from its governing idea, not merely its effects.
+- [ ] Replacing the subject with another noun would break the concept.
+- [ ] Important visitor tasks remain fast and obvious.
+- [ ] Every receipt constraint remains observable in the finished work.
+- [ ] Operational claims pass the Fact Trace and the deliverable remains inside its locked boundary.
+- [ ] Relevant accessibility, performance, and resource-lifecycle checks pass.
