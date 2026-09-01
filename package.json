@@ -1,6 +1,6 @@
 {
   "name": "takomi",
-  "version": "2.5.14",
+  "version": "2.5.15",
   "description": "🎯 Stop wrestling with AI. Start building with purpose. The artisan's toolkit for agent workflows, Codex skills, and original Takomi capabilities like 21st.dev integration.",
   "type": "module",
   "bin": {
