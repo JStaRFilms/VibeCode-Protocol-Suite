@@ -257,6 +257,20 @@ const [takomiExtension, lifecycleModule, nativeExtension] = await Promise.all([
   import(nativeExtensionUrl),
 ]);
 
+const inaccessibleTempFixture = path.join(runtimeRoot, "inaccessible-temp-fixture");
+await fs.mkdir(inaccessibleTempFixture);
+await fs.writeFile(path.join(inaccessibleTempFixture, "stale-result.json"), "stale");
+let tempProbeAttempts = 0;
+lifecycleModule.ensureAccessibleDir(inaccessibleTempFixture, (candidate) => {
+  tempProbeAttempts += 1;
+  if (tempProbeAttempts === 1) throw new Error("simulated ACL-denied write");
+  fsSync.writeFileSync(path.join(candidate, "probe"), "ok");
+  fsSync.rmSync(path.join(candidate, "probe"));
+});
+assert.equal(tempProbeAttempts, 2);
+assert.equal((await fs.stat(inaccessibleTempFixture)).isDirectory(), true);
+assert.deepEqual(await fs.readdir(inaccessibleTempFixture), []);
+
 const identityTheme = new Proxy({}, {
   get: (_target, key) => key === "bold" ? (value) => value : (_color, value) => value,
 });

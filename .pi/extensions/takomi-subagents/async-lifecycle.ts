@@ -190,6 +190,35 @@ function lifecycleMatchesNativeSlot(record: LifecycleRecord, nativeSlot: unknown
     : nativeSlot === record.nativeCleanupIdentity;
 }
 
+function probeWritableDir(dirPath: string): void {
+  const probePath = path.join(dirPath, `.takomi-write-probe-${process.pid}-${Date.now()}`);
+  const descriptor = fs.openSync(probePath, "wx");
+  fs.closeSync(descriptor);
+  fs.rmSync(probePath, { force: true });
+}
+
+export function ensureAccessibleDir(
+  dirPath: string,
+  probe: (candidate: string) => void = probeWritableDir,
+): void {
+  try {
+    fs.mkdirSync(dirPath, { recursive: true });
+    probe(dirPath);
+    return;
+  } catch {
+    // Windows can leave temp directories with unusable ACLs after sleep or an
+    // interrupted process. These directories only contain disposable run IPC.
+  }
+  try {
+    fs.rmSync(dirPath, { recursive: true, force: true });
+  } catch {
+    // The final mkdir/probe below reports the original unusable state if
+    // Windows still has the directory locked.
+  }
+  fs.mkdirSync(dirPath, { recursive: true });
+  probe(dirPath);
+}
+
 async function createLifecycleRecord(pi: ExtensionAPI): Promise<LifecycleRecord> {
   const internals = await loadPiSubagentsInternals();
   // Ownership must be sampled after the only asynchronous initialization step;
@@ -204,8 +233,8 @@ async function createLifecycleRecord(pi: ExtensionAPI): Promise<LifecycleRecord>
     : undefined;
 
   if (ownership === "takomi") {
-    fs.mkdirSync(internals.RESULTS_DIR, { recursive: true });
-    fs.mkdirSync(internals.ASYNC_DIR, { recursive: true });
+    ensureAccessibleDir(internals.RESULTS_DIR);
+    ensureAccessibleDir(internals.ASYNC_DIR);
     watcher.startResultWatcher();
     watcher.primeExistingResults();
   }
