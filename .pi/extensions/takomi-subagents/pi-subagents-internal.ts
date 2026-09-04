@@ -9,19 +9,42 @@
 const dynamicImport = async <T = any>(specifier: string): Promise<T> => import(specifier) as Promise<T>;
 const spec = (path: string) => `pi-subagents/${path}.ts`;
 
+function requireExports(moduleName: string, module: Record<string, unknown>, names: readonly string[]): void {
+  const missing = names.filter((name) => module[name] === undefined);
+  if (missing.length > 0) {
+    throw new Error(
+      `Unsupported pi-subagents private API in ${moduleName}: missing ${missing.join(", ")}. ` +
+        "Run the Takomi compatibility check before starting Pi.",
+    );
+  }
+}
+
 let cachedInternals: any | null = null;
 
 export async function loadPiSubagentsInternals() {
   if (cachedInternals) return cachedInternals;
 
   const [executorModule, agentsModule, sharedTypesModule, renderModule, watcherModule, sessionModule] = await Promise.all([
-    dynamicImport(spec("src/runs/foreground/subagent-executor")),
-    dynamicImport(spec("src/agents/agents")),
-    dynamicImport(spec("src/shared/types")),
-    dynamicImport(spec("src/tui/render")),
-    dynamicImport(spec("src/runs/background/result-watcher")),
-    dynamicImport(spec("src/shared/session-identity")),
+    dynamicImport<Record<string, unknown>>(spec("src/runs/foreground/subagent-executor")),
+    dynamicImport<Record<string, unknown>>(spec("src/agents/agents")),
+    dynamicImport<Record<string, unknown>>(spec("src/shared/types")),
+    dynamicImport<Record<string, unknown>>(spec("src/tui/render")),
+    dynamicImport<Record<string, unknown>>(spec("src/runs/background/result-watcher")),
+    dynamicImport<Record<string, unknown>>(spec("src/shared/session-identity")),
   ]);
+
+  requireExports("subagent-executor", executorModule, ["createSubagentExecutor"]);
+  requireExports("agents", agentsModule, ["discoverAgents"]);
+  requireExports("types", sharedTypesModule, [
+    "DEFAULT_ARTIFACT_CONFIG",
+    "ASYNC_DIR",
+    "RESULTS_DIR",
+    "TEMP_ARTIFACTS_DIR",
+    "WIDGET_KEY",
+  ]);
+  requireExports("render", renderModule, ["renderSubagentResult", "renderWidget"]);
+  requireExports("result-watcher", watcherModule, ["createResultWatcher"]);
+  requireExports("session-identity", sessionModule, ["resolveCurrentSessionId"]);
 
   cachedInternals = {
     createSubagentExecutor: executorModule.createSubagentExecutor,

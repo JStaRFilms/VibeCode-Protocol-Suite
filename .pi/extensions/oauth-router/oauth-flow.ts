@@ -1,8 +1,13 @@
 import { spawn } from "node:child_process";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
-import type { OAuthCredentials, OAuthSelectPrompt } from "@earendil-works/pi-ai/oauth";
-import { getOAuthProvider } from "@earendil-works/pi-ai/oauth";
+import type { AuthEvent, AuthPrompt, ModelAuth, OAuthCredential, OAuthCredentials, Provider } from "@earendil-works/pi-ai";
+import { anthropicProvider } from "@earendil-works/pi-ai/providers/anthropic";
+import { githubCopilotProvider } from "@earendil-works/pi-ai/providers/github-copilot";
+import { kimiCodingProvider } from "@earendil-works/pi-ai/providers/kimi-coding";
+import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
+import { openrouterProvider } from "@earendil-works/pi-ai/providers/openrouter";
+import { xaiProvider } from "@earendil-works/pi-ai/providers/xai";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { RouterProviderQuotaWindow, RouterProviderUsageSnapshot, RouterUpstreamConfig, StoredRouterAccount } from "./types.ts";
 
@@ -11,7 +16,7 @@ function now() {
 }
 
 function normalizeCredentials(credentials: OAuthCredentials) {
-  const { access, refresh, expires, ...meta } = credentials;
+  const { access, refresh, expires, type: _type, ...meta } = credentials;
   return {
     access,
     refresh,
@@ -52,15 +57,58 @@ async function promptRequired(ctx: ExtensionContext, message: string, placeholde
   return response;
 }
 
-async function selectOAuthOption(ctx: ExtensionContext, prompt: OAuthSelectPrompt): Promise<string | undefined> {
-  if (!prompt.options.length) return undefined;
-  if (!ctx.hasUI) return prompt.options[0]?.id;
+const oauthProviders: readonly Provider[] = [
+  anthropicProvider(),
+  githubCopilotProvider(),
+  kimiCodingProvider(),
+  openaiCodexProvider(),
+  openrouterProvider(),
+  xaiProvider(),
+];
+
+function getOAuthProvider(providerId: string) {
+  const provider = oauthProviders.find((candidate) => candidate.id === providerId);
+  return provider?.auth.oauth ? { name: provider.name, oauth: provider.auth.oauth } : undefined;
+}
+
+async function handleAuthPrompt(ctx: ExtensionContext, prompt: AuthPrompt): Promise<string> {
+  if (prompt.signal?.aborted) throw new Error("Cancelled by user");
+
+  if (prompt.type !== "select") {
+    return promptRequired(ctx, prompt.message, prompt.placeholder);
+  }
+
+  if (!prompt.options.length) throw new Error("OAuth provider supplied no choices");
+  if (!ctx.hasUI) return prompt.options[0].id;
 
   const labels = prompt.options.map((option) => `${option.id} — ${option.label}`);
   const choice = await ctx.ui.select(prompt.message, labels);
-  if (!choice) return undefined;
+  if (!choice) throw new Error("Cancelled by user");
   const id = choice.split(" — ")[0]?.trim();
-  return prompt.options.find((option) => option.id === id)?.id;
+  const selected = prompt.options.find((option) => option.id === id)?.id;
+  if (!selected) throw new Error("OAuth provider returned an unknown choice");
+  return selected;
+}
+
+function handleAuthEvent(ctx: ExtensionContext, providerName: string, event: AuthEvent): void {
+  switch (event.type) {
+    case "auth_url":
+      openUrlInBrowser(event.url);
+      ctx.ui.notify(`${providerName}: ${event.instructions ?? "Finish login in your browser."}`, "info");
+      ctx.ui.notify(event.url, "info");
+      return;
+    case "device_code":
+      openUrlInBrowser(event.verificationUri);
+      ctx.ui.notify(`${providerName}: device code ${event.userCode}`, "info");
+      ctx.ui.notify(`Open ${event.verificationUri} and enter code ${event.userCode}`, "info");
+      return;
+    case "progress":
+      ctx.ui.notify(event.message, "info");
+      return;
+    case "info":
+      ctx.ui.notify(`${providerName}: ${event.message}`, "info");
+      for (const link of event.links ?? []) ctx.ui.notify(link.url, "info");
+  }
 }
 
 export async function createAccountFromUpstream(
@@ -97,27 +145,10 @@ export async function createAccountFromUpstream(
     throw new Error(`OAuth provider not available: ${upstream.oauthProviderId}`);
   }
 
-  const credentials = await provider.login({
-    onAuth(info) {
-      openUrlInBrowser(info.url);
-      ctx.ui.notify(`${provider.name}: ${info.instructions ?? "Finish login in your browser."}`, "info");
-      ctx.ui.notify(info.url, "info");
-    },
-    onDeviceCode(info) {
-      openUrlInBrowser(info.verificationUri);
-      ctx.ui.notify(`${provider.name}: device code ${info.userCode}`, "info");
-      ctx.ui.notify(`Open ${info.verificationUri} and enter code ${info.userCode}`, "info");
-    },
-    onPrompt(prompt) {
-      return promptRequired(ctx, prompt.message, prompt.placeholder);
-    },
-    onProgress(message) {
-      ctx.ui.notify(message, "info");
-    },
-    onSelect(prompt) {
-      return selectOAuthOption(ctx, prompt);
-    },
-    signal: ctx.signal,
+  const credentials = await provider.oauth.login({
+    prompt: (prompt) => handleAuthPrompt(ctx, prompt),
+    notify: (event) => handleAuthEvent(ctx, provider.name, event),
+    signal: ctx.signal ?? new AbortController().signal,
   });
 
   const normalized = normalizeCredentials(credentials);
@@ -138,8 +169,9 @@ export async function createAccountFromUpstream(
   };
 }
 
-function toCredentials(account: StoredRouterAccount): OAuthCredentials {
+function toCredentials(account: StoredRouterAccount): OAuthCredential {
   return {
+    type: "oauth",
     access: account.access,
     refresh: account.refresh,
     expires: account.expires,
@@ -481,13 +513,16 @@ export async function refreshProviderUsageSnapshot(account: StoredRouterAccount,
   };
 }
 
-export async function refreshAccountCredentials(account: StoredRouterAccount): Promise<StoredRouterAccount> {
+export async function refreshAccountCredentials(
+  account: StoredRouterAccount,
+  signal: AbortSignal = new AbortController().signal,
+): Promise<StoredRouterAccount> {
   if (account.provider === "api-key") return account;
 
   const provider = getOAuthProvider(account.provider);
   if (!provider) throw new Error(`OAuth provider not available: ${account.provider}`);
 
-  const refreshed = await provider.refreshToken(toCredentials(account));
+  const refreshed = await provider.oauth.refresh(toCredentials(account), signal);
   const normalized = normalizeCredentials(refreshed);
 
   return {
@@ -500,10 +535,14 @@ export async function refreshAccountCredentials(account: StoredRouterAccount): P
   };
 }
 
-export async function getApiKeyForAccount(account: StoredRouterAccount): Promise<string> {
-  if (account.provider === "api-key") return account.access;
+export async function getModelAuthForAccount(account: StoredRouterAccount): Promise<ModelAuth> {
+  if (account.provider === "api-key") return { apiKey: account.access };
 
   const provider = getOAuthProvider(account.provider);
   if (!provider) throw new Error(`OAuth provider not available: ${account.provider}`);
-  return provider.getApiKey(toCredentials(account));
+  const auth = await provider.oauth.toAuth(toCredentials(account));
+  if (!auth.apiKey && !auth.headers) {
+    throw new Error(`OAuth provider supplied no routable credentials: ${account.provider}`);
+  }
+  return auth;
 }

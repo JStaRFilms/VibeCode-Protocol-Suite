@@ -334,8 +334,8 @@ try {
   await lifecycleHandlers.get("session_shutdown")({});
 
   const oauthFlow = await fs.readFile(path.join(extensionRoot, "oauth-flow.ts"), "utf8");
-  assert.match(oauthFlow, /ctx\.ui\.notify\(`\$\{provider\.name\}: \$\{info\.instructions \?\? "Finish login in your browser\."\}`, "info"\)/, "OAuth instruction notification remains exact");
-  assert.match(oauthFlow, /ctx\.ui\.notify\(`Open \$\{info\.verificationUri\} and enter code \$\{info\.userCode\}`, "info"\)/, "device-code notification remains exact");
+  assert.match(oauthFlow, /ctx\.ui\.notify\(`\$\{providerName\}: \$\{event\.instructions \?\? "Finish login in your browser\."\}`, "info"\)/, "OAuth instruction notification remains exact");
+  assert.match(oauthFlow, /ctx\.ui\.notify\(`Open \$\{event\.verificationUri\} and enter code \$\{event\.userCode\}`, "info"\)/, "device-code notification remains exact");
   console.log("✓ oauth-router themed report tests passed");
 } finally {
   await fs.rm(tempRoot, { recursive: true, force: true });

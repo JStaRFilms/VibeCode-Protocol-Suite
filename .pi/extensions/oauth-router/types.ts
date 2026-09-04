@@ -1,4 +1,4 @@
-import type { Api, AssistantMessage, Context, Model, SimpleStreamOptions } from "@earendil-works/pi-ai";
+import type { Api, AssistantMessage, Context, Model, ModelAuth, ProviderHeaders, SimpleStreamOptions } from "@earendil-works/pi-ai";
 
 export type RouterUpstreamApi = "openai-completions" | "openai-responses" | "openai-codex-responses";
 export type RouterAuthMode = "oauth" | "api-key";
@@ -207,8 +207,8 @@ export interface DelegateSelection {
   account: StoredRouterAccount;
   upstream: RouterUpstreamConfig;
   modelConfig: RouterModelConfig;
-  apiKey: string;
-  headers: Record<string, string>;
+  auth: ModelAuth;
+  headers: ProviderHeaders;
   delegatedModel: Model<Api>;
 }
 

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "piVersion": "0.84.4",
+  "piSubagentsVersion": "0.31.0",
+  "privateModules": [
+    {
+      "specifier": "pi-subagents/src/runs/foreground/subagent-executor.ts",
+      "requiredExports": ["createSubagentExecutor"]
+    },
+    {
+      "specifier": "pi-subagents/src/agents/agents.ts",
+      "requiredExports": ["discoverAgents"]
+    },
+    {
+      "specifier": "pi-subagents/src/shared/types.ts",
+      "requiredExports": ["DEFAULT_ARTIFACT_CONFIG", "ASYNC_DIR", "RESULTS_DIR", "TEMP_ARTIFACTS_DIR", "WIDGET_KEY"]
+    },
+    {
+      "specifier": "pi-subagents/src/tui/render.ts",
+      "requiredExports": ["renderSubagentResult", "renderWidget"]
+    },
+    {
+      "specifier": "pi-subagents/src/runs/background/result-watcher.ts",
+      "requiredExports": ["createResultWatcher"]
+    },
+    {
+      "specifier": "pi-subagents/src/shared/session-identity.ts",
+      "requiredExports": ["resolveCurrentSessionId"]
+    }
+  ]
+}

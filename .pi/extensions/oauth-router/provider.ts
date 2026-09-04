@@ -10,10 +10,10 @@ import {
   streamSimpleOpenAICodexResponses,
   streamSimpleOpenAICompletions,
   streamSimpleOpenAIResponses,
-} from "@earendil-works/pi-ai";
+} from "@earendil-works/pi-ai/compat";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadRouterConfig } from "./config.ts";
-import { refreshAccountCredentials, getApiKeyForAccount, refreshProviderUsageSnapshot } from "./oauth-flow.ts";
+import { refreshAccountCredentials, getModelAuthForAccount, refreshProviderUsageSnapshot } from "./oauth-flow.ts";
 import { RouterAccountStore } from "./oauth-store.ts";
 import { chooseEligibleAccount } from "./policies.ts";
 import { RouterStateStore } from "./state.ts";
@@ -429,8 +429,11 @@ export class RouterRuntime {
       this.state.clearHealth(account.id);
     }
 
-    const apiKey = await getApiKeyForAccount(account);
-    const headers = { ...(eligible.upstream.headers ?? {}) };
+    const auth = await getModelAuthForAccount(account);
+    const headers = {
+      ...(eligible.upstream.headers ?? {}),
+      ...(auth.headers ?? {}),
+    };
     const delegatedModel = {
       ...model,
       id: eligible.modelConfig.id,
@@ -442,7 +445,7 @@ export class RouterRuntime {
       maxTokens: eligible.modelConfig.maxTokens,
       compat: eligible.modelConfig.compat,
       api: eligible.upstream.api,
-      baseUrl: eligible.upstream.baseUrl,
+      baseUrl: auth.baseUrl ?? eligible.upstream.baseUrl,
       headers,
     } as Model<Api>;
 
@@ -450,7 +453,7 @@ export class RouterRuntime {
       account,
       upstream: eligible.upstream,
       modelConfig: eligible.modelConfig,
-      apiKey,
+      auth,
       headers,
       delegatedModel,
     };
@@ -556,7 +559,7 @@ export class RouterRuntime {
 
     const streamOptions: SimpleStreamOptions = {
       ...options,
-      apiKey: selection.apiKey,
+      apiKey: selection.auth.apiKey,
       headers: {
         ...(options?.headers ?? {}),
         ...selection.headers,
